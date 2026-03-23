@@ -1,19 +1,13 @@
-![](https://github.com/openark/orchestrator/workflows/CI/badge.svg)
-![](https://github.com/openark/orchestrator/workflows/upgrade/badge.svg)
-![](https://github.com/openark/orchestrator/workflows/system%20tests/badge.svg)
-[![downloads](https://img.shields.io/github/downloads/openark/orchestrator/total.svg)](https://github.com/openark/orchestrator/releases) [![release](https://img.shields.io/github/release/openark/orchestrator.svg)](https://github.com/openark/orchestrator/releases)
+![](https://github.com/proxysql/orchestrator/workflows/CI/badge.svg)
+![](https://github.com/proxysql/orchestrator/workflows/upgrade/badge.svg)
+![](https://github.com/proxysql/orchestrator/workflows/system%20tests/badge.svg)
+[![downloads](https://img.shields.io/github/downloads/proxysql/orchestrator/total.svg)](https://github.com/proxysql/orchestrator/releases) [![release](https://img.shields.io/github/release/proxysql/orchestrator.svg)](https://github.com/proxysql/orchestrator/releases)
 
-> **NOTE:** This is a fork of the abandoned [Orchestrator](https://github.com/openark/orchestrator) project. Percona is not the public maintainer of the Orchestrator project. We modify this fork almost exclusively for use in our Kubernetes Operators, but we make our changes available to the open-source community if they suit your needs.
+> **Maintained by [ProxySQL LLC](https://proxysql.com).** Orchestrator is actively maintained and open to contributions. We believe in orchestrator's potential as the go-to MySQL HA tool, especially when paired with ProxySQL. Bug reports, feature requests, and pull requests are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) to get started.
 
->We are not currently entertaining external enhancements or feature requests.  We do, however, believe Orchestrator has potential and are open to exploring its future as a community-driven project. We welcome collaboration with interested organizations. Our priority is determining whether sufficient resources (time and funding) can be secured to ensure Orchestrator's continued maintenance and development. We're open to discussing potential partnerships with organizations who might be interested in supporting this effort. 
+# orchestrator [[Documentation]](https://github.com/proxysql/orchestrator/tree/master/docs)
 
->If you or your organization are willing to contribute resources or funding, please reach out to orchestrator@percona.com.
-
-
-# orchestrator [[Documentation]](https://github.com/percona/orchestrator/tree/master/docs)
-
-
-![Orchestrator logo](https://github.com/openark/orchestrator/raw/master/docs/images/orchestrator-logo-wide.png)
+![Orchestrator logo](docs/images/orchestrator-logo-wide.png)
 
 `orchestrator` is a MySQL high availability and replication management tool, runs as a service and provides command line access, HTTP API and Web interface. `orchestrator` supports:
 
@@ -61,17 +55,34 @@ recovery itself.
 - Datacenter/physical location awareness
 - MySQL-Pool association
 - HTTP security/authentication methods
-- There is also an [orchestrator-mysql](https://groups.google.com/forum/#!forum/orchestrator-mysql) Google groups forum to discuss topics related to orchestrator
 - More...
 
-Read the [Orchestrator documentation](https://github.com/openark/orchestrator/tree/master/docs)
+#### Future Vision
+
+- **ProxySQL-native integration** — built-in hooks and topology awareness for seamless orchestrator + ProxySQL HA workflows, no custom scripts needed.
+- **PostgreSQL exploration** — a database-provider abstraction layer to support PostgreSQL streaming replication alongside MySQL.
+
+Read the [Orchestrator documentation](https://github.com/proxysql/orchestrator/tree/master/docs)
+
+#### Lineage
 
 Authored by [Shlomi Noach](https://github.com/shlomi-noach):
 
-- 2020- as https://github.com/openark/orchestrator
-- 2016-2020 at [GitHub](http://github.com) as https://github.com/github/orchestrator
-- 2015 at [Booking.com](http://booking.com) as https://github.com/outbrain/orchestrator
 - 2014 at [Outbrain](http://outbrain.com) as https://github.com/outbrain/orchestrator
+- 2015 at [Booking.com](http://booking.com) as https://github.com/outbrain/orchestrator
+- 2016-2020 at [GitHub](http://github.com) as https://github.com/github/orchestrator
+- 2020- as https://github.com/openark/orchestrator
+
+Maintained by [Percona](https://percona.com) as https://github.com/percona/orchestrator
+
+Maintained since 2026 by [ProxySQL LLC](https://proxysql.com) as https://github.com/proxysql/orchestrator
+
+#### Community
+
+- [Contributing Guide](CONTRIBUTING.md) — how to file issues, submit PRs, and coding standards
+- [Code of Conduct](CODE_OF_CONDUCT.md) — expected behavior in the community
+- [Security Policy](SECURITY.md) — how to report vulnerabilities
+- [Maintainers](MAINTAINERS.md) — current project maintainers
 
 #### Related projects
 
