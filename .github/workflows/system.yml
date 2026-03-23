@@ -16,6 +16,7 @@ jobs:
       uses: actions/setup-go@v5
       with:
         go-version: '1.25.7'
+        cache: true
 
     - name: check out
       uses: actions/checkout@v4

@@ -15,6 +15,7 @@ jobs:
       uses: actions/setup-go@v5
       with:
         go-version: '1.25.7'
+        cache: true
 
     - name: Start local MySQL
       run: sudo /etc/init.d/mysql start
