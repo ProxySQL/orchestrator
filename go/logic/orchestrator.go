@@ -36,6 +36,7 @@ import (
 	ometrics "github.com/proxysql/orchestrator/go/metrics"
 	"github.com/proxysql/orchestrator/go/process"
 	orcraft "github.com/proxysql/orchestrator/go/raft"
+	"github.com/proxysql/orchestrator/go/proxysql"
 	"github.com/proxysql/orchestrator/go/util"
 	"github.com/patrickmn/go-cache"
 	"github.com/rcrowley/go-metrics"
@@ -586,6 +587,7 @@ func ContinuousDiscovery() {
 	go ometrics.InitGraphiteMetrics()
 	go acceptSignals()
 	go kv.InitKVStores()
+	go proxysql.InitHook()
 	if config.Config.RaftEnabled {
 		if err := orcraft.Setup(NewCommandApplier(), NewSnapshotDataCreatorApplier(), process.ThisHostname); err != nil {
 			log.Fatale(err)

@@ -34,6 +34,7 @@ import (
 	"github.com/proxysql/orchestrator/go/kv"
 	"github.com/proxysql/orchestrator/go/logic"
 	"github.com/proxysql/orchestrator/go/process"
+	"github.com/proxysql/orchestrator/go/proxysql"
 )
 
 var thisInstanceKey *inst.InstanceKey
@@ -213,6 +214,7 @@ func Cli(command string, strict bool, instance string, destination string, owner
 		process.ContinuousRegistration(string(process.OrchestratorExecutionCliMode), command)
 	}
 	kv.InitKVStores()
+	proxysql.InitHook()
 
 	// begin commands
 	switch command {
