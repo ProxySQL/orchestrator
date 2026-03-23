@@ -143,5 +143,13 @@
   "GraphiteConvertHostnameDotsToUnderscores": true,
   "ConsulAddress": "",
   "ConsulAclToken": "",
-  "ConsulKVStoreProvider": "consul"
+  "ConsulKVStoreProvider": "consul",
+  "ProxySQLAdminAddress": "",
+  "ProxySQLAdminPort": 6032,
+  "ProxySQLAdminUser": "admin",
+  "ProxySQLAdminPassword": "",
+  "ProxySQLAdminUseTLS": false,
+  "ProxySQLWriterHostgroup": 0,
+  "ProxySQLReaderHostgroup": 0,
+  "ProxySQLPreFailoverAction": "offline_soft"
 }
