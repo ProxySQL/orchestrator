@@ -11,6 +11,9 @@ jobs:
     #     backend: [sqlite, MySQL]
 
     steps:
+    - name: check out
+      uses: actions/checkout@v4
+
     - name: Set up Go
       uses: actions/setup-go@v5
       with:
@@ -19,9 +22,6 @@ jobs:
 
     - name: Start local MySQL
       run: sudo /etc/init.d/mysql start
-
-    - name: check out
-      uses: actions/checkout@v4
 
     - name: copy config file template
       run: |
