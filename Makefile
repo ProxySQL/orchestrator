@@ -3,7 +3,7 @@
 # Build orchestrator binary
 build:
 	@mkdir -p bin
-	go build -o bin/orchestrator ./go/cmd/orchestrator/main.go
+	go build -o bin/orchestrator ./go/cmd/orchestrator
 
 # Run all unit tests
 test:

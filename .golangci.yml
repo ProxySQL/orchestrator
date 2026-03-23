@@ -1,7 +1,5 @@
 run:
   timeout: 5m
-  skip-dirs:
-    - vendor
 
 linters:
   disable-all: true
@@ -12,7 +10,3 @@ linters:
     - ineffassign
     - unused
     - gosimple
-
-issues:
-  exclude-dirs:
-    - vendor
