@@ -69,6 +69,19 @@ go test ./go/inst/...
 go test ./go/inst/... -run TestBinlogCoordinates
 ```
 
+### Using the Makefile
+
+The project includes a root-level Makefile for common tasks:
+
+```bash
+make build      # Build bin/orchestrator
+make test       # Run unit tests
+make lint       # Run golangci-lint
+make fmt        # Format code with gofmt
+make check-fmt  # Check formatting (CI)
+make clean      # Remove build artifacts
+```
+
 See [docs/build.md](docs/build.md) for detailed build and test instructions.
 
 ## Code Review
