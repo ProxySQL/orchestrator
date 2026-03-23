@@ -12,13 +12,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Set up Go 1.16
-      uses: actions/setup-go@v1
+    - name: Set up Go
+      uses: actions/setup-go@v5
       with:
-        go-version: 1.16
+        go-version: '1.25.7'
 
     - name: check out
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
 
     - name: build
       run:  script/test-build
@@ -26,7 +26,7 @@ jobs:
     - name: clone orchestrator-ci-env
       run: |
         # Only clone if not already running locally at latest commit
-        remote_commit=$(git ls-remote https://github.com/openark/orchestrator-ci-env.git HEAD | cut -f1)
+        remote_commit=$(git ls-remote https://github.com/percona/orchestrator-ci-env.git HEAD | cut -f1)
         local_commit="unknown"
         [ -d "orchestrator-ci-env" ] && local_commit=$(cd orchestrator-ci-env && git log --format="%H" -n 1)
 
@@ -35,7 +35,7 @@ jobs:
 
         if [ "$remote_commit" != "$local_commit" ] ; then
           rm -rf ./orchestrator-ci-env
-          git clone https://github.com/openark/orchestrator-ci-env.git
+          git clone https://github.com/percona/orchestrator-ci-env.git
         fi
 
     - name: apt-get update
