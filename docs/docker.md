@@ -8,7 +8,7 @@ Multiple Dockerfiles are available, to:
 - Run a 3-node raft setup
 - Run a full blown CI environment
 
-[`script/dock`](https://github.com/openark/orchestrator/blob/master/script/dock) is a convenience script to build/spawn each of these docker images.
+[`script/dock`](https://github.com/proxysql/orchestrator/blob/master/script/dock) is a convenience script to build/spawn each of these docker images.
 
 ## Build and test
 
@@ -19,7 +19,7 @@ If you wish to build and test on your host, but do not want to set up a developm
 $ script/dock test
 ```
 
-This will use [`docker/Dockerfile.test`](https://github.com/openark/orchestrator/blob/master/docker/Dockerfile.test) to build, unit test, integration test, run doc validation on your behalf.
+This will use [`docker/Dockerfile.test`](https://github.com/proxysql/orchestrator/blob/master/docker/Dockerfile.test) to build, unit test, integration test, run doc validation on your behalf.
 
 ## Build and run
 
@@ -27,7 +27,7 @@ Run this command:
 ```shell
 $ script/dock alpine
 ```
-which uses [`docker/Dockerfile`](https://github.com/openark/orchestrator/blob/master/docker/Dockerfile) to build `orchestrator` on an Alpine Linux, and run the service. Docker will map port `:3000` onto your machine, you may browse onto `http://127.0.0.1:3000` to access the orchestrator web interface.
+which uses [`docker/Dockerfile`](https://github.com/proxysql/orchestrator/blob/master/docker/Dockerfile) to build `orchestrator` on an Alpine Linux, and run the service. Docker will map port `:3000` onto your machine, you may browse onto `http://127.0.0.1:3000` to access the orchestrator web interface.
 
 The following environment variables are available and take effect if no config
 file is bind mounted into container at `/etc/orchestrator.conf.json`
@@ -53,9 +53,9 @@ To create (via [`fpm`](https://fpm.readthedocs.io/en/latest/)) release packages:
 - `.rpm`
 - `.tgz`
 
-for Linux `amd64`, with `Systemd` or `SysVinit`, all binaries or just client scripts. It uses the same methods as used for [official releases](https://github.com/openark/orchestrator/releases).
+for Linux `amd64`, with `Systemd` or `SysVinit`, all binaries or just client scripts. It uses the same methods as used for [official releases](https://github.com/proxysql/orchestrator/releases).
 
-Uses [`Dockerfile.packaging`](https://github.com/openark/orchestrator/blob/master/docker/Dockerfile.packaging)
+Uses [`Dockerfile.packaging`](https://github.com/proxysql/orchestrator/blob/master/docker/Dockerfile.packaging)
 
 ## Run full CI environment
 
@@ -81,7 +81,7 @@ Tips:
   `mysqladmin -uci -pci -h 127.0.0.1 --port 13306 processlist`
 - Use `redeploy-ci-env` to re-create the MySQL topology, and recreate and restart the heartbeat, consul, consul-template and haproxy services. This resets the services to their original state.
 
-Uses [`Dockerfile.system`](https://github.com/openark/orchestrator/blob/master/docker/Dockerfile.system)
+Uses [`Dockerfile.system`](https://github.com/proxysql/orchestrator/blob/master/docker/Dockerfile.system)
 
 ## Run a raft setup
 

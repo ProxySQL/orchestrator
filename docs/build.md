@@ -42,7 +42,7 @@ Requirements:
 Run:
 
 ```
-    git clone git@github.com:openark/orchestrator.git
+    git clone git@github.com:proxysql/orchestrator.git
     cd orchestrator
 ```
 
