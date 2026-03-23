@@ -1786,6 +1786,57 @@ func Cli(command string, strict bool, instance string, destination string, owner
 
 			fmt.Printf("%s\n", strings.Join(asciiPromotionRules, "\n"))
 		}
+	case registerCliCommand("proxysql-test", "ProxySQL", `Test connectivity to ProxySQL Admin interface`):
+		{
+			proxysql.InitHook()
+			hook := proxysql.GetHook()
+			if !hook.IsConfigured() {
+				log.Fatal("ProxySQL is not configured. Set ProxySQLAdminAddress and ProxySQLWriterHostgroup in config.")
+			}
+			client := proxysql.NewClient(
+				config.Config.ProxySQLAdminAddress,
+				config.Config.ProxySQLAdminPort,
+				config.Config.ProxySQLAdminUser,
+				config.Config.ProxySQLAdminPassword,
+				config.Config.ProxySQLAdminUseTLS,
+			)
+			if err := client.Ping(); err != nil {
+				log.Fatale(err)
+			}
+			fmt.Println("ProxySQL Admin connection: OK")
+			fmt.Printf("Writer hostgroup: %d\n", config.Config.ProxySQLWriterHostgroup)
+			fmt.Printf("Reader hostgroup: %d\n", config.Config.ProxySQLReaderHostgroup)
+		}
+	case registerCliCommand("proxysql-servers", "ProxySQL", `Show mysql_servers from ProxySQL`):
+		{
+			proxysql.InitHook()
+			client := proxysql.NewClient(
+				config.Config.ProxySQLAdminAddress,
+				config.Config.ProxySQLAdminPort,
+				config.Config.ProxySQLAdminUser,
+				config.Config.ProxySQLAdminPassword,
+				config.Config.ProxySQLAdminUseTLS,
+			)
+			if client == nil {
+				log.Fatal("ProxySQL is not configured.")
+			}
+			rows, db, err := client.Query("SELECT hostgroup_id, hostname, port, status, weight FROM runtime_mysql_servers ORDER BY hostgroup_id, hostname, port")
+			if err != nil {
+				log.Fatale(err)
+			}
+			defer db.Close()
+			defer rows.Close()
+			fmt.Printf("%-12s %-30s %-6s %-15s %-6s\n", "HOSTGROUP", "HOSTNAME", "PORT", "STATUS", "WEIGHT")
+			for rows.Next() {
+				var hg, port, weight int
+				var hostname, status string
+				if err := rows.Scan(&hg, &hostname, &port, &status, &weight); err != nil {
+					log.Errorf("Error scanning row: %v", err)
+					continue
+				}
+				fmt.Printf("%-12d %-30s %-6d %-15s %-6d\n", hg, hostname, port, status, weight)
+			}
+		}
 		// Help
 	case "help":
 		{
