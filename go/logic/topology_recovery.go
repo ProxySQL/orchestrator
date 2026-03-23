@@ -27,16 +27,16 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/openark/golib/log"
-	"github.com/openark/orchestrator/go/attributes"
-	"github.com/openark/orchestrator/go/config"
-	"github.com/openark/orchestrator/go/inst"
-	"github.com/openark/orchestrator/go/kv"
-	ometrics "github.com/openark/orchestrator/go/metrics"
-	"github.com/openark/orchestrator/go/os"
-	"github.com/openark/orchestrator/go/process"
-	orcraft "github.com/openark/orchestrator/go/raft"
-	"github.com/openark/orchestrator/go/util"
+	"github.com/proxysql/golib/log"
+	"github.com/proxysql/orchestrator/go/attributes"
+	"github.com/proxysql/orchestrator/go/config"
+	"github.com/proxysql/orchestrator/go/inst"
+	"github.com/proxysql/orchestrator/go/kv"
+	ometrics "github.com/proxysql/orchestrator/go/metrics"
+	"github.com/proxysql/orchestrator/go/os"
+	"github.com/proxysql/orchestrator/go/process"
+	orcraft "github.com/proxysql/orchestrator/go/raft"
+	"github.com/proxysql/orchestrator/go/util"
 	"github.com/patrickmn/go-cache"
 	"github.com/rcrowley/go-metrics"
 )
@@ -1638,7 +1638,7 @@ func emergentlyRestartReplicationOnTopologyInstance(instanceKey *inst.InstanceKe
 			// we want to restart IO thread to see if lag is actually caused by locked primary. If this results
 			// with losing relay logs, then we've lost data.
 			// So, unfortunately we avoid this step in MariaDB GTID.
-			// See https://github.com/openark/orchestrator/issues/1260
+			// See https://github.com/proxysql/orchestrator/issues/1260
 			return
 		}
 

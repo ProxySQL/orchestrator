@@ -94,13 +94,6 @@ github.com/mitchellh/go-homedir
 # github.com/montanaflynn/stats v0.7.1
 ## explicit; go 1.13
 github.com/montanaflynn/stats
-# github.com/openark/golib v0.0.0-20210531070646-355f37940af8 => ./go/golib
-## explicit; go 1.18
-github.com/openark/golib/log
-github.com/openark/golib/math
-github.com/openark/golib/sqlutils
-github.com/openark/golib/tests
-github.com/openark/golib/util
 # github.com/outbrain/golib v0.0.0-20200503083229-2531e5dbcc71
 ## explicit
 github.com/outbrain/golib/log
@@ -113,6 +106,13 @@ github.com/oxtoacart/bpool
 # github.com/patrickmn/go-cache v2.1.0+incompatible
 ## explicit
 github.com/patrickmn/go-cache
+# github.com/proxysql/golib v0.0.0-20210531070646-355f37940af8 => ./go/golib
+## explicit; go 1.18
+github.com/proxysql/golib/log
+github.com/proxysql/golib/math
+github.com/proxysql/golib/sqlutils
+github.com/proxysql/golib/tests
+github.com/proxysql/golib/util
 # github.com/rcrowley/go-metrics v0.0.0-20250401214520-65e299d6c5c9
 ## explicit
 github.com/rcrowley/go-metrics
@@ -147,6 +147,6 @@ gopkg.in/gcfg.v1/types
 ## explicit
 gopkg.in/warnings.v0
 # github.com/hashicorp/raft => github.com/openark/raft v0.0.0-20170918052300-fba9f909f7fe
-# github.com/openark/golib => ./go/golib
+# github.com/proxysql/golib => ./go/golib
 # golang.org/x/text v0.3.0 => golang.org/x/text v0.3.8
 # golang.org/x/text v0.3.7 => golang.org/x/text v0.3.8

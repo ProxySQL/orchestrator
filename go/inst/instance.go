@@ -24,9 +24,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/openark/golib/log"
-	"github.com/openark/golib/math"
-	"github.com/openark/orchestrator/go/config"
+	"github.com/proxysql/golib/log"
+	"github.com/proxysql/golib/math"
+	"github.com/proxysql/orchestrator/go/config"
 )
 
 const ReasonableDiscoveryLatency = 500 * time.Millisecond

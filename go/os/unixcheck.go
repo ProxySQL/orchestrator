@@ -20,7 +20,7 @@ import (
 	"os/user"
 	"strings"
 
-	"github.com/openark/golib/log"
+	"github.com/proxysql/golib/log"
 )
 
 // UserInGroups checks if the given username is in the given unix

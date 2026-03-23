@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/openark/orchestrator/go/config"
+	"github.com/proxysql/orchestrator/go/config"
 )
 
 type KVPair struct {

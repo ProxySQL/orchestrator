@@ -3,7 +3,7 @@ package inst
 import (
 	"testing"
 
-	test "github.com/openark/golib/tests"
+	test "github.com/proxysql/golib/tests"
 )
 
 func TestNewOracleGtidSetEntry(t *testing.T) {

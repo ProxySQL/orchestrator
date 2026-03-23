@@ -17,7 +17,7 @@
 package inst
 
 import (
-	"github.com/openark/orchestrator/go/config"
+	"github.com/proxysql/orchestrator/go/config"
 )
 
 // Maintenance indicates a maintenance entry (also in the database)

@@ -5,10 +5,10 @@ import (
 	"net/http/httputil"
 	"net/url"
 
-	"github.com/openark/golib/log"
+	"github.com/proxysql/golib/log"
 
 	"github.com/go-martini/martini"
-	"github.com/openark/orchestrator/go/raft"
+	"github.com/proxysql/orchestrator/go/raft"
 )
 
 func raftReverseProxy(w http.ResponseWriter, r *http.Request, c martini.Context) {

@@ -25,10 +25,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/openark/orchestrator/go/config"
-	"github.com/openark/orchestrator/go/ssl"
+	"github.com/proxysql/orchestrator/go/config"
+	"github.com/proxysql/orchestrator/go/ssl"
 
-	"github.com/openark/golib/log"
+	"github.com/proxysql/golib/log"
 )
 
 var (

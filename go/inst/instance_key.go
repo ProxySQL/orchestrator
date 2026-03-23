@@ -18,7 +18,7 @@ package inst
 
 import (
 	"fmt"
-	"github.com/openark/orchestrator/go/config"
+	"github.com/proxysql/orchestrator/go/config"
 	"regexp"
 	"strconv"
 	"strings"

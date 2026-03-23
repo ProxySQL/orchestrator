@@ -22,12 +22,12 @@ import (
 	"encoding/json"
 	"io"
 
-	"github.com/openark/orchestrator/go/db"
-	"github.com/openark/orchestrator/go/inst"
+	"github.com/proxysql/orchestrator/go/db"
+	"github.com/proxysql/orchestrator/go/inst"
 
-	"github.com/openark/golib/log"
-	"github.com/openark/golib/sqlutils"
-	orcraft "github.com/openark/orchestrator/go/raft"
+	"github.com/proxysql/golib/log"
+	"github.com/proxysql/golib/sqlutils"
+	orcraft "github.com/proxysql/orchestrator/go/raft"
 )
 
 type SnapshotData struct {

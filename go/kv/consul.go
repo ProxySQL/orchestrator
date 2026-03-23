@@ -23,12 +23,12 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/openark/orchestrator/go/config"
+	"github.com/proxysql/orchestrator/go/config"
 
 	consulapi "github.com/armon/consul-api"
 	"github.com/patrickmn/go-cache"
 
-	"github.com/openark/golib/log"
+	"github.com/proxysql/golib/log"
 )
 
 // getConsulKVCacheKey returns a Consul KV cache key for a given datacenter

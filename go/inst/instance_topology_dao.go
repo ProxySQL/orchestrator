@@ -24,11 +24,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/openark/golib/log"
-	"github.com/openark/golib/sqlutils"
-	"github.com/openark/orchestrator/go/config"
-	"github.com/openark/orchestrator/go/db"
-	"github.com/openark/orchestrator/go/util"
+	"github.com/proxysql/golib/log"
+	"github.com/proxysql/golib/sqlutils"
+	"github.com/proxysql/orchestrator/go/config"
+	"github.com/proxysql/orchestrator/go/db"
+	"github.com/proxysql/orchestrator/go/util"
 	"github.com/patrickmn/go-cache"
 )
 
@@ -996,7 +996,7 @@ func ChangeMasterTo(instanceKey *InstanceKey, masterKey *InstanceKey, masterBinl
 			// This instance is currently a master. As per https://mariadb.com/kb/en/change-master-to/#master_use_gtid
 			// we should be using current_pos.
 			// See also:
-			// - https://github.com/openark/orchestrator/issues/1146
+			// - https://github.com/proxysql/orchestrator/issues/1146
 			// - https://dba.stackexchange.com/a/234323
 			mariadbGTIDHint = "current_pos"
 		}

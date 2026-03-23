@@ -7,7 +7,7 @@ import (
 
 	"github.com/montanaflynn/stats"
 
-	"github.com/openark/orchestrator/go/collection"
+	"github.com/proxysql/orchestrator/go/collection"
 )
 
 type AggregatedQueryMetrics struct {

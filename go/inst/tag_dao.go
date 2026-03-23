@@ -19,9 +19,9 @@ package inst
 import (
 	"fmt"
 
-	"github.com/openark/golib/log"
-	"github.com/openark/golib/sqlutils"
-	"github.com/openark/orchestrator/go/db"
+	"github.com/proxysql/golib/log"
+	"github.com/proxysql/golib/sqlutils"
+	"github.com/proxysql/orchestrator/go/db"
 )
 
 func PutInstanceTag(instanceKey *InstanceKey, tag *Tag) (err error) {

@@ -19,7 +19,7 @@ package discovery
 import (
 	"github.com/montanaflynn/stats"
 
-	"github.com/openark/golib/log"
+	"github.com/proxysql/golib/log"
 )
 
 // AggregatedQueueMetrics contains aggregate information some part queue metrics

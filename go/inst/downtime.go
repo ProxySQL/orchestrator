@@ -19,7 +19,7 @@ package inst
 import (
 	"time"
 
-	"github.com/openark/orchestrator/go/config"
+	"github.com/proxysql/orchestrator/go/config"
 )
 
 type Downtime struct {

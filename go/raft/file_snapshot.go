@@ -5,7 +5,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/openark/golib/log"
+	"github.com/proxysql/golib/log"
 	"hash"
 	"hash/crc64"
 	"io"

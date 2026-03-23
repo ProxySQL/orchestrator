@@ -24,13 +24,13 @@ import (
 	"time"
 
 	"github.com/go-sql-driver/mysql"
-	"github.com/openark/golib/log"
-	"github.com/openark/golib/sqlutils"
+	"github.com/proxysql/golib/log"
+	"github.com/proxysql/golib/sqlutils"
 	"github.com/patrickmn/go-cache"
 	"github.com/rcrowley/go-metrics"
 
-	"github.com/openark/orchestrator/go/config"
-	"github.com/openark/orchestrator/go/ssl"
+	"github.com/proxysql/orchestrator/go/config"
+	"github.com/proxysql/orchestrator/go/ssl"
 )
 
 const Error3159 = "Error 3159:"

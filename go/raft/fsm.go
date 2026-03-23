@@ -21,7 +21,7 @@ import (
 	"io"
 	"strings"
 
-	"github.com/openark/golib/log"
+	"github.com/proxysql/golib/log"
 
 	"github.com/hashicorp/raft"
 )

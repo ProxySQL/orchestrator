@@ -31,20 +31,20 @@ import (
 
 	"github.com/go-sql-driver/mysql"
 
-	"github.com/openark/golib/log"
-	"github.com/openark/golib/math"
-	"github.com/openark/golib/sqlutils"
+	"github.com/proxysql/golib/log"
+	"github.com/proxysql/golib/math"
+	"github.com/proxysql/golib/sqlutils"
 	"github.com/patrickmn/go-cache"
 	"github.com/rcrowley/go-metrics"
 	"github.com/sjmudd/stopwatch"
 
-	"github.com/openark/orchestrator/go/attributes"
-	"github.com/openark/orchestrator/go/collection"
-	"github.com/openark/orchestrator/go/config"
-	"github.com/openark/orchestrator/go/db"
-	"github.com/openark/orchestrator/go/kv"
-	"github.com/openark/orchestrator/go/metrics/query"
-	"github.com/openark/orchestrator/go/util"
+	"github.com/proxysql/orchestrator/go/attributes"
+	"github.com/proxysql/orchestrator/go/collection"
+	"github.com/proxysql/orchestrator/go/config"
+	"github.com/proxysql/orchestrator/go/db"
+	"github.com/proxysql/orchestrator/go/kv"
+	"github.com/proxysql/orchestrator/go/metrics/query"
+	"github.com/proxysql/orchestrator/go/util"
 )
 
 const (

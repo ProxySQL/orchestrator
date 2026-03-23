@@ -20,14 +20,14 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/openark/golib/log"
-	"github.com/openark/golib/sqlutils"
-	"github.com/openark/orchestrator/go/config"
-	"github.com/openark/orchestrator/go/db"
-	"github.com/openark/orchestrator/go/inst"
-	"github.com/openark/orchestrator/go/process"
-	"github.com/openark/orchestrator/go/raft"
-	"github.com/openark/orchestrator/go/util"
+	"github.com/proxysql/golib/log"
+	"github.com/proxysql/golib/sqlutils"
+	"github.com/proxysql/orchestrator/go/config"
+	"github.com/proxysql/orchestrator/go/db"
+	"github.com/proxysql/orchestrator/go/inst"
+	"github.com/proxysql/orchestrator/go/process"
+	"github.com/proxysql/orchestrator/go/raft"
+	"github.com/proxysql/orchestrator/go/util"
 )
 
 // AttemptFailureDetectionRegistration tries to add a failure-detection entry; if this fails that means the problem has already been detected

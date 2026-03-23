@@ -28,11 +28,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/openark/golib/log"
-	"github.com/openark/golib/sqlutils"
-	"github.com/openark/orchestrator/go/config"
-	"github.com/openark/orchestrator/go/db"
-	"github.com/openark/orchestrator/go/inst"
+	"github.com/proxysql/golib/log"
+	"github.com/proxysql/golib/sqlutils"
+	"github.com/proxysql/orchestrator/go/config"
+	"github.com/proxysql/orchestrator/go/db"
+	"github.com/proxysql/orchestrator/go/inst"
 )
 
 type httpMethodFunc func(uri string) (resp *http.Response, err error)

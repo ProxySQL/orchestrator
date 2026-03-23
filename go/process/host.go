@@ -17,7 +17,7 @@
 package process
 
 import (
-	"github.com/openark/golib/log"
+	"github.com/proxysql/golib/log"
 	"os"
 )
 

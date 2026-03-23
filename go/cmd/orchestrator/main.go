@@ -21,10 +21,10 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/openark/golib/log"
-	"github.com/openark/orchestrator/go/app"
-	"github.com/openark/orchestrator/go/config"
-	"github.com/openark/orchestrator/go/inst"
+	"github.com/proxysql/golib/log"
+	"github.com/proxysql/orchestrator/go/app"
+	"github.com/proxysql/orchestrator/go/config"
+	"github.com/proxysql/orchestrator/go/inst"
 
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/mattn/go-sqlite3"
