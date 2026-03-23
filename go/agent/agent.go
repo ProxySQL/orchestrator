@@ -16,7 +16,7 @@
 
 package agent
 
-import "github.com/openark/orchestrator/go/inst"
+import "github.com/proxysql/orchestrator/go/inst"
 
 // LogicalVolume describes an LVM volume
 type LogicalVolume struct {

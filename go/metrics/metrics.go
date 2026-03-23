@@ -17,7 +17,7 @@
 package metrics
 
 import (
-	"github.com/openark/orchestrator/go/config"
+	"github.com/proxysql/orchestrator/go/config"
 	"time"
 )
 

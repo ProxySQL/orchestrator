@@ -22,11 +22,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/openark/golib/log"
-	"github.com/openark/golib/math"
-	"github.com/openark/golib/sqlutils"
-	"github.com/openark/orchestrator/go/config"
-	"github.com/openark/orchestrator/go/db"
+	"github.com/proxysql/golib/log"
+	"github.com/proxysql/golib/math"
+	"github.com/proxysql/golib/sqlutils"
+	"github.com/proxysql/orchestrator/go/config"
+	"github.com/proxysql/orchestrator/go/db"
 	"github.com/patrickmn/go-cache"
 )
 

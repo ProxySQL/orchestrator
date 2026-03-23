@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	test "github.com/openark/golib/tests"
+	test "github.com/proxysql/golib/tests"
 )
 
 var (

@@ -30,8 +30,8 @@ import (
 	"github.com/rcrowley/go-metrics"
 	"github.com/rcrowley/go-metrics/exp"
 
-	"github.com/openark/orchestrator/go/config"
-	"github.com/openark/orchestrator/go/inst"
+	"github.com/proxysql/orchestrator/go/config"
+	"github.com/proxysql/orchestrator/go/inst"
 )
 
 // HttpWeb is the web requests server, mapping each request to a web page

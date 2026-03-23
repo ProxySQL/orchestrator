@@ -19,11 +19,11 @@ package inst
 import (
 	"fmt"
 
-	"github.com/openark/golib/log"
-	"github.com/openark/golib/sqlutils"
+	"github.com/proxysql/golib/log"
+	"github.com/proxysql/golib/sqlutils"
 
-	"github.com/openark/orchestrator/go/config"
-	"github.com/openark/orchestrator/go/db"
+	"github.com/proxysql/orchestrator/go/config"
+	"github.com/proxysql/orchestrator/go/db"
 )
 
 // RegisterCandidateInstance markes a given instance as suggested for successoring a master in the event of failover.

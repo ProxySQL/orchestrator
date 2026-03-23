@@ -26,14 +26,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/openark/golib/log"
-	"github.com/openark/golib/util"
-	"github.com/openark/orchestrator/go/agent"
-	"github.com/openark/orchestrator/go/config"
-	"github.com/openark/orchestrator/go/inst"
-	"github.com/openark/orchestrator/go/kv"
-	"github.com/openark/orchestrator/go/logic"
-	"github.com/openark/orchestrator/go/process"
+	"github.com/proxysql/golib/log"
+	"github.com/proxysql/golib/util"
+	"github.com/proxysql/orchestrator/go/agent"
+	"github.com/proxysql/orchestrator/go/config"
+	"github.com/proxysql/orchestrator/go/inst"
+	"github.com/proxysql/orchestrator/go/kv"
+	"github.com/proxysql/orchestrator/go/logic"
+	"github.com/proxysql/orchestrator/go/process"
 )
 
 var thisInstanceKey *inst.InstanceKey

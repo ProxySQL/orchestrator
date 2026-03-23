@@ -29,9 +29,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/openark/golib/log"
-	"github.com/openark/orchestrator/go/config"
-	"github.com/openark/orchestrator/go/inst"
+	"github.com/proxysql/golib/log"
+	"github.com/proxysql/orchestrator/go/config"
+	"github.com/proxysql/orchestrator/go/inst"
 )
 
 // QueueMetric contains the queue's active and queued sizes

@@ -12,8 +12,8 @@ import (
 	"syscall"
 	"testing"
 
-	"github.com/openark/orchestrator/go/config"
-	"github.com/openark/orchestrator/go/ssl"
+	"github.com/proxysql/orchestrator/go/config"
+	"github.com/proxysql/orchestrator/go/ssl"
 )
 
 func TestHasString(t *testing.T) {

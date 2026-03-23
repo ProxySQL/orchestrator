@@ -12,8 +12,8 @@ import (
 
 	"github.com/go-martini/martini"
 	"github.com/howeyc/gopass"
-	"github.com/openark/golib/log"
-	"github.com/openark/orchestrator/go/config"
+	"github.com/proxysql/golib/log"
+	"github.com/proxysql/orchestrator/go/config"
 )
 
 // Determine if a string element is in a string array

@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	consulapi "github.com/hashicorp/consul/api"
-	"github.com/openark/orchestrator/go/config"
+	"github.com/proxysql/orchestrator/go/config"
 )
 
 func TestGroupKVPairsByKeyPrefix(t *testing.T) {

@@ -24,11 +24,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/openark/golib/log"
-	"github.com/openark/golib/math"
-	"github.com/openark/golib/util"
-	"github.com/openark/orchestrator/go/config"
-	"github.com/openark/orchestrator/go/os"
+	"github.com/proxysql/golib/log"
+	"github.com/proxysql/golib/math"
+	"github.com/proxysql/golib/util"
+	"github.com/proxysql/orchestrator/go/config"
+	"github.com/proxysql/orchestrator/go/os"
 )
 
 type StopReplicationMethod string

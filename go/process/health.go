@@ -21,11 +21,11 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/openark/orchestrator/go/config"
-	"github.com/openark/orchestrator/go/util"
+	"github.com/proxysql/orchestrator/go/config"
+	"github.com/proxysql/orchestrator/go/util"
 
-	"github.com/openark/golib/log"
-	"github.com/openark/orchestrator/go/raft"
+	"github.com/proxysql/golib/log"
+	"github.com/proxysql/orchestrator/go/raft"
 	"github.com/patrickmn/go-cache"
 )
 

@@ -6,9 +6,9 @@ import (
 
 	"github.com/go-martini/martini"
 
-	"github.com/openark/golib/log"
-	test "github.com/openark/golib/tests"
-	"github.com/openark/orchestrator/go/config"
+	"github.com/proxysql/golib/log"
+	test "github.com/proxysql/golib/tests"
+	"github.com/proxysql/orchestrator/go/config"
 )
 
 func init() {

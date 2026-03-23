@@ -20,9 +20,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/openark/orchestrator/go/config"
+	"github.com/proxysql/orchestrator/go/config"
 
-	"github.com/openark/golib/log"
+	"github.com/proxysql/golib/log"
 )
 
 // PoolInstancesMap lists instance keys per pool name

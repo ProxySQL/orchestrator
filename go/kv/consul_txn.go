@@ -24,12 +24,12 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/openark/orchestrator/go/config"
+	"github.com/proxysql/orchestrator/go/config"
 
 	consulapi "github.com/hashicorp/consul/api"
 	"github.com/patrickmn/go-cache"
 
-	"github.com/openark/golib/log"
+	"github.com/proxysql/golib/log"
 )
 
 // groupKVPairsByKeyPrefix groups Consul Transaction operations by KV key prefix. This

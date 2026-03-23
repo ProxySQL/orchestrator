@@ -17,12 +17,12 @@
 package process
 
 import (
-	"github.com/openark/golib/log"
-	"github.com/openark/golib/sqlutils"
-	"github.com/openark/orchestrator/go/config"
-	"github.com/openark/orchestrator/go/db"
-	"github.com/openark/orchestrator/go/raft"
-	"github.com/openark/orchestrator/go/util"
+	"github.com/proxysql/golib/log"
+	"github.com/proxysql/golib/sqlutils"
+	"github.com/proxysql/orchestrator/go/config"
+	"github.com/proxysql/orchestrator/go/db"
+	"github.com/proxysql/orchestrator/go/raft"
+	"github.com/proxysql/orchestrator/go/util"
 )
 
 // AttemptElection tries to grab leadership (become active node)

@@ -30,19 +30,19 @@ import (
 	"github.com/martini-contrib/auth"
 	"github.com/martini-contrib/render"
 
-	"github.com/openark/golib/log"
-	"github.com/openark/golib/util"
+	"github.com/proxysql/golib/log"
+	"github.com/proxysql/golib/util"
 
 	fqdn "github.com/Showmax/go-fqdn"
-	"github.com/openark/orchestrator/go/agent"
-	"github.com/openark/orchestrator/go/collection"
-	"github.com/openark/orchestrator/go/config"
-	"github.com/openark/orchestrator/go/discovery"
-	"github.com/openark/orchestrator/go/inst"
-	"github.com/openark/orchestrator/go/logic"
-	"github.com/openark/orchestrator/go/metrics/query"
-	"github.com/openark/orchestrator/go/process"
-	orcraft "github.com/openark/orchestrator/go/raft"
+	"github.com/proxysql/orchestrator/go/agent"
+	"github.com/proxysql/orchestrator/go/collection"
+	"github.com/proxysql/orchestrator/go/config"
+	"github.com/proxysql/orchestrator/go/discovery"
+	"github.com/proxysql/orchestrator/go/inst"
+	"github.com/proxysql/orchestrator/go/logic"
+	"github.com/proxysql/orchestrator/go/metrics/query"
+	"github.com/proxysql/orchestrator/go/process"
+	orcraft "github.com/proxysql/orchestrator/go/raft"
 )
 
 // APIResponseCode is an OK/ERROR response code
@@ -2544,7 +2544,7 @@ func (this *HttpAPI) WriteBufferMetricsAggregated(params martini.Params, r rende
 	r.JSON(http.StatusOK, aggregated)
 }
 
-// Agents provides complete list of registered agents (See https://github.com/openark/orchestrator-agent)
+// Agents provides complete list of registered agents (See https://github.com/proxysql/orchestrator-agent)
 func (this *HttpAPI) Agents(params martini.Params, r render.Render, req *http.Request, user auth.User) {
 	if !isAuthorizedForAction(req, user) {
 		Respond(r, &APIResponse{Code: ERROR, Message: "Unauthorized"})

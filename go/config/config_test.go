@@ -3,8 +3,8 @@ package config
 import (
 	"testing"
 
-	"github.com/openark/golib/log"
-	test "github.com/openark/golib/tests"
+	"github.com/proxysql/golib/log"
+	test "github.com/proxysql/golib/tests"
 )
 
 func init() {
