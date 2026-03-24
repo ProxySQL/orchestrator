@@ -289,6 +289,14 @@ type Configuration struct {
 	ReasonableLockedSemiSyncMasterSeconds      uint              // Time to evaluate the LockedSemiSyncHypothesis before triggering the LockedSemiSync analysis; falls back to ReasonableReplicationLagSeconds if not set
 	PrependMessagesWithOrcIdentity             string            // use FQDN/hostname/custom to prefix error message returned to the client. Empty string (default)/none skips prefixing.
 	CustomOrcIdentity                          string            // use if PrependMessagesWithOrcIdentity is 'custom'
+	ProxySQLAdminAddress                       string            // Address of ProxySQL Admin interface. Example: 127.0.0.1
+	ProxySQLAdminPort                          int               // Port of ProxySQL Admin interface. Default: 6032
+	ProxySQLAdminUser                          string            // Username for ProxySQL Admin. Default: admin
+	ProxySQLAdminPassword                      string            // Password for ProxySQL Admin
+	ProxySQLAdminUseTLS                        bool              // Use TLS for ProxySQL Admin connection
+	ProxySQLWriterHostgroup                    int               // ProxySQL hostgroup ID for the writer (master). 0 means unconfigured.
+	ProxySQLReaderHostgroup                    int               // ProxySQL hostgroup ID for readers (replicas). 0 means unconfigured.
+	ProxySQLPreFailoverAction                  string            // Action on old master before failover: "offline_soft" (default), "weight_zero", "none"
 }
 
 // ToJSONString will marshal this configuration as JSON
@@ -474,6 +482,9 @@ func newConfiguration() *Configuration {
 		ReasonableLockedSemiSyncMasterSeconds:      0,
 		PrependMessagesWithOrcIdentity:             "",
 		CustomOrcIdentity:                          "",
+		ProxySQLAdminPort:                          6032,
+		ProxySQLAdminUser:                          "admin",
+		ProxySQLPreFailoverAction:                  "offline_soft",
 	}
 }
 

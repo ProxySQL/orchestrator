@@ -37,6 +37,22 @@ func TestReplicationLagQuery(t *testing.T) {
 	}
 }
 
+func TestProxySQLConfigDefaults(t *testing.T) {
+	cfg := newConfiguration()
+	if cfg.ProxySQLAdminPort != 6032 {
+		t.Errorf("expected default ProxySQLAdminPort=6032, got %d", cfg.ProxySQLAdminPort)
+	}
+	if cfg.ProxySQLAdminUser != "admin" {
+		t.Errorf("expected default ProxySQLAdminUser=admin, got %s", cfg.ProxySQLAdminUser)
+	}
+	if cfg.ProxySQLWriterHostgroup != 0 {
+		t.Errorf("expected default ProxySQLWriterHostgroup=0, got %d", cfg.ProxySQLWriterHostgroup)
+	}
+	if cfg.ProxySQLReaderHostgroup != 0 {
+		t.Errorf("expected default ProxySQLReaderHostgroup=0, got %d", cfg.ProxySQLReaderHostgroup)
+	}
+}
+
 func TestPostponeReplicaRecoveryOnLagMinutes(t *testing.T) {
 	{
 		c := newConfiguration()

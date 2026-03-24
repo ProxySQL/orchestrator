@@ -27,6 +27,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/patrickmn/go-cache"
 	"github.com/proxysql/golib/log"
 	"github.com/proxysql/orchestrator/go/attributes"
 	"github.com/proxysql/orchestrator/go/config"
@@ -35,9 +36,9 @@ import (
 	ometrics "github.com/proxysql/orchestrator/go/metrics"
 	"github.com/proxysql/orchestrator/go/os"
 	"github.com/proxysql/orchestrator/go/process"
+	"github.com/proxysql/orchestrator/go/proxysql"
 	orcraft "github.com/proxysql/orchestrator/go/raft"
 	"github.com/proxysql/orchestrator/go/util"
-	"github.com/patrickmn/go-cache"
 	"github.com/rcrowley/go-metrics"
 )
 
@@ -525,6 +526,10 @@ func recoverDeadMaster(topologyRecovery *TopologyRecovery, candidateInstanceKey 
 			return false, nil, lostReplicas, topologyRecovery.AddError(err)
 		}
 	}
+	if err := proxysql.GetHook().PreFailover(failedInstanceKey.Hostname, failedInstanceKey.Port); err != nil {
+		log.Errorf("ProxySQL pre-failover failed (non-blocking): %v", err)
+		AuditTopologyRecovery(topologyRecovery, fmt.Sprintf("ProxySQL pre-failover failed: %v", err))
+	}
 
 	AuditTopologyRecovery(topologyRecovery, fmt.Sprintf("RecoverDeadMaster: will recover %+v", *failedInstanceKey))
 
@@ -946,6 +951,13 @@ func checkAndRecoverDeadMaster(analysisEntry inst.ReplicationAnalysis, candidate
 			AuditTopologyRecovery(topologyRecovery, fmt.Sprintf("Distributing KV %+v", kvPairs))
 			err := kv.DistributePairs(kvPairs)
 			log.Errore(err)
+		}
+		if err := proxysql.GetHook().PostFailover(
+			promotedReplica.Key.Hostname, promotedReplica.Key.Port,
+			analysisEntry.AnalyzedInstanceKey.Hostname, analysisEntry.AnalyzedInstanceKey.Port,
+		); err != nil {
+			log.Errorf("ProxySQL post-failover failed: %v", err)
+			AuditTopologyRecovery(topologyRecovery, fmt.Sprintf("ProxySQL post-failover failed: %v", err))
 		}
 		if config.Config.MasterFailoverDetachReplicaMasterHost {
 			postponedFunction := func() error {
@@ -2228,6 +2240,15 @@ func GracefulMasterTakeover(clusterName string, designatedKey *inst.InstanceKey,
 		_, startReplicationErr := inst.StartReplication(&clusterMaster.Key)
 		if err == nil {
 			err = startReplicationErr
+		}
+	}
+	if topologyRecovery.SuccessorKey != nil {
+		if err := proxysql.GetHook().PostFailover(
+			topologyRecovery.SuccessorKey.Hostname, topologyRecovery.SuccessorKey.Port,
+			clusterMaster.Key.Hostname, clusterMaster.Key.Port,
+		); err != nil {
+			log.Errorf("ProxySQL post-graceful-takeover failed: %v", err)
+			AuditTopologyRecovery(topologyRecovery, fmt.Sprintf("ProxySQL post-graceful-takeover failed: %v", err))
 		}
 	}
 	executeProcesses(config.Config.PostGracefulTakeoverProcesses, "PostGracefulTakeoverProcesses", topologyRecovery, false)
