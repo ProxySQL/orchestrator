@@ -77,17 +77,19 @@ echo "--- ProxySQL ---"
 test_endpoint "GET /api/proxysql/servers" "$ORC_URL/api/proxysql/servers" "200"
 test_body_contains "ProxySQL returns server data" "$ORC_URL/api/proxysql/servers" "mysql1"
 
-# CLI tests (run against the built binary)
+# CLI tests: run via docker exec inside the orchestrator container
+# (CLI needs to reach ProxySQL by Docker hostname)
 echo ""
 echo "--- ProxySQL CLI ---"
-PSQL_TEST=$(bin/orchestrator -config tests/functional/orchestrator-test.conf.json -c proxysql-test 2>&1 || true)
+COMPOSE="docker compose -f tests/functional/docker-compose.yml"
+PSQL_TEST=$($COMPOSE exec -T orchestrator orchestrator -config orchestrator.conf.json -c proxysql-test 2>&1 || true)
 if echo "$PSQL_TEST" | grep -q "connection: OK"; then
     pass "proxysql-test CLI"
 else
     fail "proxysql-test CLI" "$(echo "$PSQL_TEST" | tail -1)"
 fi
 
-PSQL_SERVERS=$(bin/orchestrator -config tests/functional/orchestrator-test.conf.json -c proxysql-servers 2>&1 || true)
+PSQL_SERVERS=$($COMPOSE exec -T orchestrator orchestrator -config orchestrator.conf.json -c proxysql-servers 2>&1 || true)
 if echo "$PSQL_SERVERS" | grep -q "mysql1"; then
     pass "proxysql-servers CLI"
 else
