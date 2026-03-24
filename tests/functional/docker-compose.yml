@@ -1,0 +1,127 @@
+version: "3.8"
+
+services:
+  mysql1:
+    image: mysql:8.4
+    hostname: mysql1
+    environment:
+      MYSQL_ROOT_PASSWORD: testpass
+    ports:
+      - "13306:3306"
+    volumes:
+      - ./mysql/master.cnf:/etc/mysql/conf.d/repl.cnf
+      - ./mysql/init-master.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-ptestpass"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    networks:
+      orchnet:
+        aliases:
+          - mysql1
+
+  mysql2:
+    image: mysql:8.4
+    hostname: mysql2
+    environment:
+      MYSQL_ROOT_PASSWORD: testpass
+    ports:
+      - "13307:3306"
+    volumes:
+      - ./mysql/replica.cnf:/etc/mysql/conf.d/repl.cnf
+      - ./mysql/init-replica.sql:/docker-entrypoint-initdb.d/init.sql
+    depends_on:
+      mysql1:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-ptestpass"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    networks:
+      orchnet:
+        aliases:
+          - mysql2
+
+  mysql3:
+    image: mysql:8.4
+    hostname: mysql3
+    environment:
+      MYSQL_ROOT_PASSWORD: testpass
+    ports:
+      - "13308:3306"
+    volumes:
+      - ./mysql/replica2.cnf:/etc/mysql/conf.d/repl.cnf
+      - ./mysql/init-replica.sql:/docker-entrypoint-initdb.d/init.sql
+    depends_on:
+      mysql1:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-ptestpass"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    networks:
+      orchnet:
+        aliases:
+          - mysql3
+
+  proxysql:
+    image: proxysql/proxysql:latest
+    hostname: proxysql
+    ports:
+      - "16032:6032"
+      - "16033:6033"
+    volumes:
+      - ./proxysql/proxysql.cnf:/etc/proxysql.cnf
+    depends_on:
+      mysql1:
+        condition: service_healthy
+      mysql2:
+        condition: service_healthy
+      mysql3:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-P6032", "-uradmin", "-pradmin"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    networks:
+      orchnet:
+        aliases:
+          - proxysql
+
+  orchestrator:
+    image: ubuntu:24.04
+    hostname: orchestrator
+    volumes:
+      - ../../bin/orchestrator:/usr/local/bin/orchestrator:ro
+      - ../../resources:/orchestrator/resources:ro
+      - ./orchestrator-test.conf.json:/orchestrator/orchestrator.conf.json:ro
+    command: >
+      bash -c "
+        apt-get update -qq && apt-get install -y -qq curl sqlite3 > /dev/null 2>&1 &&
+        rm -f /tmp/orchestrator-test.sqlite3 &&
+        cd /orchestrator &&
+        orchestrator -config orchestrator.conf.json http
+      "
+    ports:
+      - "3099:3099"
+    depends_on:
+      proxysql:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:3099/api/clusters"]
+      interval: 5s
+      timeout: 3s
+      retries: 60
+      start_period: 15s
+    networks:
+      orchnet:
+        aliases:
+          - orchestrator
+
+networks:
+  orchnet:
+    driver: bridge
