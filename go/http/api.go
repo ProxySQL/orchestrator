@@ -42,6 +42,7 @@ import (
 	"github.com/proxysql/orchestrator/go/logic"
 	"github.com/proxysql/orchestrator/go/metrics/query"
 	"github.com/proxysql/orchestrator/go/process"
+	"github.com/proxysql/orchestrator/go/proxysql"
 	orcraft "github.com/proxysql/orchestrator/go/raft"
 )
 
@@ -3762,6 +3763,41 @@ func (this *HttpAPI) registerSingleAPIRequest(m *martini.ClassicMartini, path st
 	}
 }
 
+// ProxySQLServers returns all servers from ProxySQL's runtime_mysql_servers table.
+func (this *HttpAPI) ProxySQLServers(params martini.Params, r render.Render, req *http.Request) {
+	hook := proxysql.GetHook()
+	if hook == nil || !hook.IsConfigured() {
+		Respond(r, &APIResponse{Code: ERROR, Message: "ProxySQL is not configured"})
+		return
+	}
+	servers, err := hook.GetClient().GetServers()
+	if err != nil {
+		Respond(r, &APIResponse{Code: ERROR, Message: fmt.Sprintf("Failed to query ProxySQL servers: %v", err)})
+		return
+	}
+	Respond(r, &APIResponse{Code: OK, Message: fmt.Sprintf("Found %d servers", len(servers)), Details: servers})
+}
+
+// ProxySQLServersByHostgroup returns servers for a specific hostgroup from ProxySQL.
+func (this *HttpAPI) ProxySQLServersByHostgroup(params martini.Params, r render.Render, req *http.Request) {
+	hook := proxysql.GetHook()
+	if hook == nil || !hook.IsConfigured() {
+		Respond(r, &APIResponse{Code: ERROR, Message: "ProxySQL is not configured"})
+		return
+	}
+	hostgroupID, err := strconv.Atoi(params["hostgroup"])
+	if err != nil {
+		Respond(r, &APIResponse{Code: ERROR, Message: fmt.Sprintf("Invalid hostgroup ID: %v", err)})
+		return
+	}
+	servers, err := hook.GetClient().GetServersByHostgroup(hostgroupID)
+	if err != nil {
+		Respond(r, &APIResponse{Code: ERROR, Message: fmt.Sprintf("Failed to query ProxySQL servers: %v", err)})
+		return
+	}
+	Respond(r, &APIResponse{Code: OK, Message: fmt.Sprintf("Found %d servers in hostgroup %d", len(servers), hostgroupID), Details: servers})
+}
+
 func (this *HttpAPI) registerAPIRequestInternal(m *martini.ClassicMartini, path string, handler martini.Handler, allowProxy bool) {
 	this.registerSingleAPIRequest(m, path, handler, allowProxy)
 
@@ -4047,6 +4083,10 @@ func (this *HttpAPI) RegisterRequests(m *martini.ClassicMartini) {
 	this.registerAPIRequest(m, "agent-abort-seed/:seedId", this.AbortSeed)
 	this.registerAPIRequest(m, "agent-custom-command/:host/:command", this.AgentCustomCommand)
 	this.registerAPIRequest(m, "seeds", this.Seeds)
+
+	// ProxySQL topology
+	this.registerAPIRequest(m, "proxysql/servers", this.ProxySQLServers)
+	this.registerAPIRequest(m, "proxysql/servers/:hostgroup", this.ProxySQLServersByHostgroup)
 
 	// Configurable status check endpoint
 	if config.Config.StatusEndpoint == config.DefaultStatusAPIEndpoint {

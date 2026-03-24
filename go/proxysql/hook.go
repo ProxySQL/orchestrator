@@ -29,6 +29,14 @@ func (h *Hook) IsConfigured() bool {
 	return h.client != nil && h.writerHostgroup > 0
 }
 
+// GetClient returns the underlying ProxySQL client, or nil if the hook is not configured.
+func (h *Hook) GetClient() *Client {
+	if h == nil {
+		return nil
+	}
+	return h.client
+}
+
 func (h *Hook) PreFailover(oldMasterHost string, oldMasterPort int) error {
 	if !h.IsConfigured() {
 		return nil
