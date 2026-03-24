@@ -7,41 +7,43 @@ import (
 
 	"github.com/proxysql/golib/log"
 
-	"github.com/go-martini/martini"
 	"github.com/proxysql/orchestrator/go/raft"
 )
 
-func raftReverseProxy(w http.ResponseWriter, r *http.Request, c martini.Context) {
-	if !orcraft.IsRaftEnabled() {
-		// No raft, so no reverse proxy to the leader
-		return
-	}
-	if orcraft.IsLeader() {
-		// I am the leader. I will handle the request directly.
-		return
-	}
-	if orcraft.GetLeader() == "" {
-		return
-	}
-	if orcraft.LeaderURI.IsThisLeaderURI() {
-		// Although I'm not the leader, the value I see for LeaderURI is my own.
-		// I'm probably not up-to-date with my raft transaction log and don't have the latest information.
-		// But anyway, obviously not going to redirect to myself.
-		// Gonna return: this isn't ideal, because I'm not really the leader. If the user tries to
-		// run an operation they'll fail.
-		return
-	}
-	url, err := url.Parse(orcraft.LeaderURI.Get())
-	if err != nil {
-		log.Errore(err)
-		return
-	}
-	r.Header.Del("Accept-Encoding")
-	proxy := httputil.NewSingleHostReverseProxy(url)
-	proxy.Transport, err = orcraft.GetRaftHttpTransport()
-	if err != nil {
-		log.Errore(err)
-		return
-	}
-	proxy.ServeHTTP(w, r)
+// raftReverseProxyMiddleware returns chi middleware that proxies requests to
+// the raft leader when the current node is not the leader.
+func raftReverseProxyMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !orcraft.IsRaftEnabled() {
+			next.ServeHTTP(w, r)
+			return
+		}
+		if orcraft.IsLeader() {
+			next.ServeHTTP(w, r)
+			return
+		}
+		if orcraft.GetLeader() == "" {
+			next.ServeHTTP(w, r)
+			return
+		}
+		if orcraft.LeaderURI.IsThisLeaderURI() {
+			next.ServeHTTP(w, r)
+			return
+		}
+		u, err := url.Parse(orcraft.LeaderURI.Get())
+		if err != nil {
+			log.Errore(err)
+			next.ServeHTTP(w, r)
+			return
+		}
+		r.Header.Del("Accept-Encoding")
+		proxy := httputil.NewSingleHostReverseProxy(u)
+		proxy.Transport, err = orcraft.GetRaftHttpTransport()
+		if err != nil {
+			log.Errore(err)
+			next.ServeHTTP(w, r)
+			return
+		}
+		proxy.ServeHTTP(w, r)
+	})
 }
