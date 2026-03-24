@@ -132,6 +132,7 @@ func standardHttp(continuousDiscovery bool) {
 	http.API.URLPrefix = config.Config.URLPrefix
 	http.Web.URLPrefix = config.Config.URLPrefix
 	http.API.RegisterRequests(router)
+	http.RegisterV2Routes(router)
 	http.Web.RegisterRequests(router)
 
 	// Serve
