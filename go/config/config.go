@@ -297,6 +297,7 @@ type Configuration struct {
 	ProxySQLWriterHostgroup                    int               // ProxySQL hostgroup ID for the writer (master). 0 means unconfigured.
 	ProxySQLReaderHostgroup                    int               // ProxySQL hostgroup ID for readers (replicas). 0 means unconfigured.
 	ProxySQLPreFailoverAction                  string            // Action on old master before failover: "offline_soft" (default), "weight_zero", "none"
+	PrometheusEnabled                          bool              // When true (default), expose Prometheus metrics on /metrics endpoint
 }
 
 // ToJSONString will marshal this configuration as JSON
@@ -485,6 +486,7 @@ func newConfiguration() *Configuration {
 		ProxySQLAdminPort:                          6032,
 		ProxySQLAdminUser:                          "admin",
 		ProxySQLPreFailoverAction:                  "offline_soft",
+		PrometheusEnabled:                          true,
 	}
 }
 

@@ -29,6 +29,7 @@ import (
 	"github.com/go-martini/martini"
 	"github.com/martini-contrib/auth"
 	"github.com/martini-contrib/render"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/proxysql/golib/log"
 	"github.com/proxysql/golib/util"
@@ -4094,6 +4095,16 @@ func (this *HttpAPI) RegisterRequests(m *martini.ClassicMartini) {
 	} else {
 		m.Get(config.Config.StatusEndpoint, this.StatusCheck)
 	}
+
+	// Prometheus metrics endpoint
+	if config.Config.PrometheusEnabled {
+		m.Get(fmt.Sprintf("%s/metrics", this.URLPrefix), promhttp.Handler())
+	}
+
+	// Kubernetes health check endpoints
+	m.Get(fmt.Sprintf("%s/health/live", this.URLPrefix), HealthLive)
+	m.Get(fmt.Sprintf("%s/health/ready", this.URLPrefix), HealthReady)
+	m.Get(fmt.Sprintf("%s/health/leader", this.URLPrefix), HealthLeader)
 
 	setupMessagePrefix()
 }
