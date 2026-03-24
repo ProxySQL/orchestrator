@@ -11,4 +11,3 @@ linters:
     - errcheck
     - ineffassign
     - unused
-    - gosimple
