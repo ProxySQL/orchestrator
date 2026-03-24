@@ -10,7 +10,7 @@ const base = rawBase.endsWith('/') ? rawBase : rawBase + '/';
 <Base title="Orchestrator — MySQL High Availability, Simplified">
   <Hero
     title="Orchestrator — MySQL High Availability, Simplified"
-    subtitle="Automated failover, topology management, and ProxySQL integration. Maintained by ProxySQL LLC."
+    subtitle='Automated failover, topology management, and ProxySQL integration. Maintained by <a href="https://proxysql.com">ProxySQL LLC</a>.'
     primaryCta={{ label: "Get Started", href: `${base}docs/` }}
     secondaryCta={{ label: "View on GitHub", href: "https://github.com/ProxySQL/orchestrator" }}
   />
@@ -130,6 +130,11 @@ const base = rawBase.endsWith('/') ? rawBase : rawBase + '/';
     background-color: var(--color-accent);
     color: var(--color-text-inverse);
     border-color: var(--color-accent);
+  }
+
+  .lineage-step.active a {
+    color: var(--color-text-inverse);
+    text-decoration: underline;
   }
 
   .lineage-arrow {

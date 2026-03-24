@@ -12,7 +12,7 @@ const { title, subtitle, primaryCta, secondaryCta } = Astro.props;
 <section class="hero">
   <div class="container hero-inner">
     <h1>{title}</h1>
-    <p class="hero-subtitle">{subtitle}</p>
+    <p class="hero-subtitle" set:html={subtitle} />
     {(primaryCta || secondaryCta) && (
       <div class="hero-actions">
         {primaryCta && <a class="btn btn-primary" href={primaryCta.href}>{primaryCta.label}</a>}
@@ -52,6 +52,11 @@ const { title, subtitle, primaryCta, secondaryCta } = Astro.props;
     max-width: 700px;
     margin: 0 auto 2rem;
     line-height: 1.7;
+  }
+
+  .hero-subtitle a {
+    color: #ffffff;
+    text-decoration: underline;
   }
 
   .hero-actions {
