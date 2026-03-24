@@ -1,0 +1,145 @@
+---
+import Base from '../layouts/Base.astro';
+import Hero from '../components/Hero.astro';
+import FeatureCard from '../components/FeatureCard.astro';
+
+const base = import.meta.env.BASE_URL;
+---
+
+<Base title="Orchestrator — MySQL High Availability, Simplified">
+  <Hero
+    title="Orchestrator — MySQL High Availability, Simplified"
+    subtitle="Automated failover, topology management, and ProxySQL integration. Maintained by ProxySQL LLC."
+    primaryCta={{ label: "Get Started", href: `${base}docs/` }}
+    secondaryCta={{ label: "View on GitHub", href: "https://github.com/ProxySQL/orchestrator" }}
+  />
+
+  <section class="section">
+    <div class="container">
+      <h2 class="text-center section-heading">Why Orchestrator?</h2>
+      <p class="text-center section-subheading">
+        Everything you need to manage MySQL replication at scale.
+      </p>
+      <div class="card-grid">
+        <FeatureCard
+          title="Automated Failover"
+          description="Detect master failures and promote the best replica automatically. GTID-based failover ensures data consistency with minimal downtime."
+        />
+        <FeatureCard
+          title="ProxySQL Integration"
+          description="Native hooks for ProxySQL keep your proxy configuration in sync with topology changes. Seamless traffic routing during failover."
+        />
+        <FeatureCard
+          title="Observability"
+          description="Built-in Prometheus metrics endpoint and Kubernetes-ready health checks. Monitor replication lag, discovery status, and recovery events."
+        />
+        <FeatureCard
+          title="Modern API"
+          description="Structured JSON API with consistent error handling. Manage your entire MySQL topology programmatically."
+        />
+      </div>
+    </div>
+  </section>
+
+  <section class="section section-alt">
+    <div class="container">
+      <h2 class="text-center section-heading">Trusted Lineage</h2>
+      <div class="lineage">
+        <p>
+          Orchestrator was originally created at <strong>Outbrain</strong>, open-sourced on GitHub,
+          and maintained by <strong>Shlomi Noach</strong> under the openark organization. It was then
+          adopted and extended by <strong>Percona</strong> for use in their Kubernetes Operators.
+        </p>
+        <p>
+          Today, <strong>ProxySQL LLC</strong> maintains and evolves orchestrator with a focus on
+          modern MySQL deployments: ProxySQL integration, Prometheus observability, API modernization,
+          and database provider abstraction.
+        </p>
+        <div class="lineage-path">
+          <span class="lineage-step">Outbrain</span>
+          <span class="lineage-arrow">&rarr;</span>
+          <span class="lineage-step">GitHub / openark</span>
+          <span class="lineage-arrow">&rarr;</span>
+          <span class="lineage-step">Percona</span>
+          <span class="lineage-arrow">&rarr;</span>
+          <span class="lineage-step active">ProxySQL LLC</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container text-center">
+      <h2 class="section-heading">Ready to Get Started?</h2>
+      <p class="section-subheading">
+        Deploy orchestrator and take control of your MySQL replication topology.
+      </p>
+      <div class="cta-group">
+        <a class="btn btn-primary" href={`${base}docs/`}>Read the Docs</a>
+        <a class="btn btn-outline" href={`${base}features/`}>Explore Features</a>
+      </div>
+    </div>
+  </section>
+</Base>
+
+<style>
+  .section-heading {
+    margin-bottom: 0.75rem;
+  }
+
+  .section-subheading {
+    color: var(--color-text-light);
+    font-size: 1.1rem;
+    max-width: 600px;
+    margin: 0 auto 2.5rem;
+  }
+
+  .lineage {
+    max-width: 700px;
+    margin: 0 auto;
+    text-align: center;
+  }
+
+  .lineage p {
+    color: var(--color-text-light);
+    font-size: 1.05rem;
+    line-height: 1.7;
+  }
+
+  .lineage-path {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 2rem;
+  }
+
+  .lineage-step {
+    background-color: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    padding: 0.5rem 1.25rem;
+    border-radius: var(--radius);
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--color-text);
+  }
+
+  .lineage-step.active {
+    background-color: var(--color-accent);
+    color: var(--color-text-inverse);
+    border-color: var(--color-accent);
+  }
+
+  .lineage-arrow {
+    color: var(--color-text-light);
+    font-size: 1.25rem;
+  }
+
+  .cta-group {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+</style>

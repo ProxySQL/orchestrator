@@ -1,0 +1,146 @@
+---
+const base = import.meta.env.BASE_URL;
+const navItems = [
+  { label: "Home", href: `${base}` },
+  { label: "Features", href: `${base}features/` },
+  { label: "Documentation", href: `${base}docs/` },
+  { label: "Support", href: `${base}support/` },
+  { label: "GitHub", href: "https://github.com/ProxySQL/orchestrator", external: true },
+];
+---
+
+<header class="site-header">
+  <div class="container header-inner">
+    <a class="logo" href={base}>
+      <img src={`${base}images/orchestrator-logo-wide.png`} alt="Orchestrator" height="36" />
+    </a>
+    <button class="menu-toggle" aria-label="Toggle navigation" aria-expanded="false">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+    <nav class="main-nav" aria-label="Main navigation">
+      <ul>
+        {navItems.map((item) => (
+          <li>
+            <a
+              href={item.href}
+              {...(item.external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+            >
+              {item.label}
+              {item.external && <span class="external-icon" aria-hidden="true">&nearr;</span>}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<style>
+  .site-header {
+    background-color: var(--color-primary);
+    height: var(--header-height);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: var(--shadow-md);
+  }
+
+  .header-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 100%;
+  }
+
+  .logo img {
+    display: block;
+  }
+
+  .main-nav ul {
+    display: flex;
+    list-style: none;
+    gap: 0.25rem;
+  }
+
+  .main-nav a {
+    color: var(--color-text-inverse);
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius);
+    font-weight: 500;
+    font-size: 0.95rem;
+    transition: background-color 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+
+  .main-nav a:hover {
+    background-color: var(--color-primary-light);
+    color: var(--color-text-inverse);
+  }
+
+  .external-icon {
+    font-size: 0.8em;
+  }
+
+  .menu-toggle {
+    display: none;
+    flex-direction: column;
+    gap: 5px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.5rem;
+  }
+
+  .menu-toggle span {
+    display: block;
+    width: 24px;
+    height: 2px;
+    background-color: var(--color-text-inverse);
+    transition: transform 0.2s;
+  }
+
+  @media (max-width: 768px) {
+    .menu-toggle {
+      display: flex;
+    }
+
+    .main-nav {
+      display: none;
+      position: absolute;
+      top: var(--header-height);
+      left: 0;
+      right: 0;
+      background-color: var(--color-primary);
+      padding: 1rem;
+      box-shadow: var(--shadow-lg);
+    }
+
+    .main-nav.open {
+      display: block;
+    }
+
+    .main-nav ul {
+      flex-direction: column;
+    }
+
+    .main-nav a {
+      padding: 0.75rem 1rem;
+    }
+  }
+</style>
+
+<script>
+  const toggle = document.querySelector('.menu-toggle');
+  const nav = document.querySelector('.main-nav');
+  if (toggle && nav) {
+    toggle.addEventListener('click', () => {
+      const expanded = toggle.getAttribute('aria-expanded') === 'true';
+      toggle.setAttribute('aria-expanded', String(!expanded));
+      nav.classList.toggle('open');
+    });
+  }
+</script>

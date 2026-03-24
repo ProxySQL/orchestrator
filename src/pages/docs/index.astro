@@ -1,0 +1,154 @@
+---
+import Base from '../../layouts/Base.astro';
+import Hero from '../../components/Hero.astro';
+
+const ghBase = "https://github.com/ProxySQL/orchestrator/blob/master/docs";
+
+const sections = [
+  {
+    title: "Getting Started",
+    links: [
+      { label: "Quick Start", href: `${ghBase}/quickstart.md` },
+      { label: "First Steps Tutorial", href: `${ghBase}/first-steps.md` },
+      { label: "FAQ", href: `${ghBase}/faq.md` },
+    ],
+  },
+  {
+    title: "Guides",
+    links: [
+      { label: "User Manual", href: `${ghBase}/execution.md` },
+      { label: "Configuration", href: `${ghBase}/configuration.md` },
+      { label: "Deployment", href: `${ghBase}/deployment.md` },
+      { label: "Security", href: `${ghBase}/security.md` },
+      { label: "SSL / TLS", href: `${ghBase}/ssl-and-tls.md` },
+    ],
+  },
+  {
+    title: "Reference",
+    links: [
+      { label: "Reference Manual", href: `${ghBase}/` },
+      { label: "Configuration Reference", href: `${ghBase}/configuration-discovery-classifying.md` },
+      { label: "Failure Detection", href: `${ghBase}/failure-detection.md` },
+      { label: "Topology Recovery", href: `${ghBase}/topology-recovery.md` },
+    ],
+  },
+  {
+    title: "Integration",
+    links: [
+      { label: "ProxySQL Hooks", href: `${ghBase}/configuration-discovery-resolve.md` },
+      { label: "Key-Value Stores", href: `${ghBase}/kv.md` },
+      { label: "Orchestrator & Raft", href: `${ghBase}/raft.md` },
+      { label: "Using the Web UI", href: `${ghBase}/using-the-web-interface.md` },
+      { label: "Using the API", href: `${ghBase}/using-the-web-api.md` },
+      { label: "Using the CLI", href: `${ghBase}/executing-via-command-line.md` },
+    ],
+  },
+];
+---
+
+<Base title="Documentation — Orchestrator">
+  <Hero
+    title="Documentation"
+    subtitle="Guides, references, and tutorials for deploying and operating orchestrator."
+  />
+
+  <section class="section">
+    <div class="container">
+      <div class="docs-grid">
+        {sections.map((section) => (
+          <div class="docs-section">
+            <h3>{section.title}</h3>
+            <ul>
+              {section.links.map((link) => (
+                <li>
+                  <a href={link.href} target="_blank" rel="noopener noreferrer">
+                    {link.label}
+                    <span class="arrow">&rarr;</span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+
+      <div class="docs-note">
+        <p>
+          Documentation is currently hosted on GitHub. We are working on bringing the full docs
+          into this site. In the meantime, all links open the relevant page on GitHub.
+        </p>
+      </div>
+    </div>
+  </section>
+</Base>
+
+<style>
+  .docs-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 2rem;
+  }
+
+  .docs-section {
+    background-color: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    padding: 2rem;
+  }
+
+  .docs-section h3 {
+    margin-bottom: 1.25rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 2px solid var(--color-accent);
+    font-size: 1.2rem;
+  }
+
+  .docs-section ul {
+    list-style: none;
+    padding: 0;
+  }
+
+  .docs-section li {
+    margin-bottom: 0.25rem;
+  }
+
+  .docs-section a {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0.75rem;
+    border-radius: calc(var(--radius) / 2);
+    font-size: 0.95rem;
+    color: var(--color-text);
+    transition: background-color 0.2s, color 0.2s;
+  }
+
+  .docs-section a:hover {
+    background-color: var(--color-accent-light);
+    color: var(--color-accent);
+  }
+
+  .arrow {
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  .docs-section a:hover .arrow {
+    opacity: 1;
+  }
+
+  .docs-note {
+    margin-top: 3rem;
+    padding: 1.5rem;
+    background-color: var(--color-bg-alt);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    text-align: center;
+  }
+
+  .docs-note p {
+    color: var(--color-text-light);
+    margin: 0;
+    font-size: 0.95rem;
+  }
+</style>

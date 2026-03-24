@@ -1,0 +1,198 @@
+---
+import Base from '../layouts/Base.astro';
+import Hero from '../components/Hero.astro';
+---
+
+<Base title="Support — Orchestrator">
+  <Hero
+    title="Support"
+    subtitle="Get help with orchestrator, whether you need community assistance or enterprise-grade support."
+  />
+
+  <section class="section">
+    <div class="container">
+      <div class="support-grid">
+        <div class="support-card">
+          <h2>Community Support</h2>
+          <p>
+            Orchestrator is open source and community-driven. The best way to get help,
+            report bugs, or request features is through GitHub.
+          </p>
+          <ul>
+            <li>
+              <a href="https://github.com/ProxySQL/orchestrator/issues" target="_blank" rel="noopener noreferrer">
+                <strong>GitHub Issues</strong>
+                <span>Report bugs, request features, or ask questions.</span>
+              </a>
+            </li>
+            <li>
+              <a href="https://github.com/ProxySQL/orchestrator/discussions" target="_blank" rel="noopener noreferrer">
+                <strong>GitHub Discussions</strong>
+                <span>Join the community conversation.</span>
+              </a>
+            </li>
+            <li>
+              <a href="https://github.com/ProxySQL/orchestrator/blob/master/CONTRIBUTING.md" target="_blank" rel="noopener noreferrer">
+                <strong>Contributing</strong>
+                <span>Learn how to contribute to orchestrator.</span>
+              </a>
+            </li>
+          </ul>
+        </div>
+
+        <div class="support-card commercial">
+          <h2>Commercial Support</h2>
+          <p>
+            ProxySQL LLC offers enterprise support for orchestrator, including SLAs,
+            priority bug fixes, custom development, and consulting services.
+          </p>
+          <ul>
+            <li>
+              <div class="feature-item">
+                <strong>Enterprise SLAs</strong>
+                <span>Guaranteed response times and resolution commitments.</span>
+              </div>
+            </li>
+            <li>
+              <div class="feature-item">
+                <strong>Priority Bug Fixes</strong>
+                <span>Expedited fixes for critical issues affecting your deployment.</span>
+              </div>
+            </li>
+            <li>
+              <div class="feature-item">
+                <strong>Consulting & Architecture Review</strong>
+                <span>Expert guidance on MySQL HA design and orchestrator deployment.</span>
+              </div>
+            </li>
+            <li>
+              <div class="feature-item">
+                <strong>Custom Development</strong>
+                <span>Tailored features and integrations for your infrastructure.</span>
+              </div>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section-alt">
+    <div class="container">
+      <div class="contact-section text-center">
+        <h2>Contact Us</h2>
+        <p>
+          Interested in commercial support or have questions about orchestrator?
+          Reach out to the ProxySQL team.
+        </p>
+        <div class="contact-info">
+          <a href="mailto:support@proxysql.com" class="btn btn-primary">
+            support@proxysql.com
+          </a>
+        </div>
+        <p class="contact-sub">
+          You can also reach us through
+          <a href="https://github.com/ProxySQL/orchestrator/issues" target="_blank" rel="noopener noreferrer">GitHub Issues</a>
+          for open source support.
+        </p>
+      </div>
+    </div>
+  </section>
+</Base>
+
+<style>
+  .support-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 2rem;
+  }
+
+  .support-card {
+    background-color: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    padding: 2.5rem;
+  }
+
+  .support-card.commercial {
+    border-color: var(--color-accent);
+    border-width: 2px;
+  }
+
+  .support-card h2 {
+    margin-bottom: 1rem;
+    font-size: 1.5rem;
+  }
+
+  .support-card > p {
+    color: var(--color-text-light);
+    margin-bottom: 1.5rem;
+    line-height: 1.7;
+  }
+
+  .support-card ul {
+    list-style: none;
+    padding: 0;
+  }
+
+  .support-card li {
+    margin-bottom: 0.5rem;
+  }
+
+  .support-card a,
+  .feature-item {
+    display: block;
+    padding: 1rem;
+    border-radius: calc(var(--radius) / 2);
+    transition: background-color 0.2s;
+  }
+
+  .support-card a:hover {
+    background-color: var(--color-accent-light);
+  }
+
+  .support-card a {
+    color: var(--color-text);
+  }
+
+  .support-card strong {
+    display: block;
+    margin-bottom: 0.25rem;
+    color: var(--color-primary);
+  }
+
+  .support-card span {
+    font-size: 0.9rem;
+    color: var(--color-text-light);
+  }
+
+  .contact-section {
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  .contact-section h2 {
+    margin-bottom: 1rem;
+  }
+
+  .contact-section > p {
+    color: var(--color-text-light);
+    font-size: 1.1rem;
+    line-height: 1.7;
+  }
+
+  .contact-info {
+    margin: 2rem 0;
+  }
+
+  .contact-sub {
+    font-size: 0.95rem;
+    color: var(--color-text-light);
+  }
+
+  @media (max-width: 768px) {
+    .support-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

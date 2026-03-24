@@ -1,0 +1,93 @@
+---
+import Base from '../layouts/Base.astro';
+import Hero from '../components/Hero.astro';
+import FeatureCard from '../components/FeatureCard.astro';
+---
+
+<Base title="Features — Orchestrator">
+  <Hero
+    title="Features"
+    subtitle="A comprehensive toolkit for MySQL high availability and replication management."
+  />
+
+  <section class="section">
+    <div class="container">
+      <div class="card-grid">
+        <FeatureCard
+          title="Topology Discovery & Visualization"
+          description="Automatically discovers MySQL replication topologies by crawling instances. Visualize your entire replication tree through the web UI with real-time status updates, lag monitoring, and interactive topology manipulation."
+        />
+        <FeatureCard
+          title="Automated Master Failover"
+          description="GTID-based failover detects master failures and promotes the best candidate replica automatically. Configurable promotion rules, anti-flapping, and acknowledgment workflows ensure safe, predictable recovery."
+        />
+        <FeatureCard
+          title="ProxySQL Native Integration"
+          description="Built-in hooks keep ProxySQL server groups synchronized with topology changes. When a failover occurs, orchestrator updates ProxySQL automatically so application traffic is rerouted with minimal disruption."
+        />
+        <FeatureCard
+          title="Prometheus Metrics & Kubernetes Health"
+          description="Exposes a /metrics endpoint with replication lag, discovery cycle, recovery event, and backend health metrics. Kubernetes-ready liveness and readiness probes for container-native deployments."
+        />
+        <FeatureCard
+          title="API v2 with Structured Responses"
+          description="A modern JSON API with consistent request/response envelopes, proper HTTP status codes, and structured error reporting. Manage topology operations, run recoveries, and query instance state programmatically."
+        />
+        <FeatureCard
+          title="Extensible Architecture"
+          description="Database provider abstraction layer designed for future multi-database support. MySQL is the fully supported backend, with the architecture ready to add new providers as needed."
+        />
+        <FeatureCard
+          title="High Availability via Raft Consensus"
+          description="Run multiple orchestrator nodes in a Raft cluster for leader election and state replication. If the active node fails, a standby takes over seamlessly — no single point of failure for your HA manager."
+        />
+      </div>
+    </div>
+  </section>
+
+  <section class="section section-alt">
+    <div class="container">
+      <h2 class="text-center">Additional Capabilities</h2>
+      <div class="capabilities">
+        <ul>
+          <li><strong>Topology refactoring:</strong> Move replicas between masters, repoint replication, and restructure topologies through the UI or API.</li>
+          <li><strong>Downtime management:</strong> Mark instances as in-maintenance to prevent automated failover during planned work.</li>
+          <li><strong>Hooks and scripts:</strong> Execute custom scripts on topology events — pre/post failover, discovery, and more.</li>
+          <li><strong>Pseudo-GTID support:</strong> Failover for legacy topologies without native GTID, using orchestrator's pseudo-GTID injection.</li>
+          <li><strong>Cluster aliasing:</strong> Assign human-readable names to clusters for easier management and monitoring.</li>
+          <li><strong>Access control:</strong> Role-based access through HTTP authentication, with read-only and read-write modes.</li>
+          <li><strong>Key-value store publishing:</strong> Publish master discovery to Consul or ZooKeeper for service discovery integration.</li>
+          <li><strong>CLI interface:</strong> Full-featured command-line tool for scripting and automation alongside the HTTP API.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+</Base>
+
+<style>
+  .capabilities {
+    max-width: 800px;
+    margin: 2rem auto 0;
+  }
+
+  .capabilities ul {
+    list-style: none;
+    padding: 0;
+  }
+
+  .capabilities li {
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--color-border);
+    font-size: 1.05rem;
+    line-height: 1.6;
+    color: var(--color-text);
+  }
+
+  .capabilities li:last-child {
+    border-bottom: none;
+  }
+
+  .capabilities strong {
+    color: var(--color-primary);
+  }
+</style>

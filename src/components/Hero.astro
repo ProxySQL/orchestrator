@@ -1,0 +1,87 @@
+---
+interface Props {
+  title: string;
+  subtitle: string;
+  primaryCta?: { label: string; href: string };
+  secondaryCta?: { label: string; href: string };
+}
+
+const { title, subtitle, primaryCta, secondaryCta } = Astro.props;
+---
+
+<section class="hero">
+  <div class="container hero-inner">
+    <h1>{title}</h1>
+    <p class="hero-subtitle">{subtitle}</p>
+    {(primaryCta || secondaryCta) && (
+      <div class="hero-actions">
+        {primaryCta && <a class="btn btn-primary" href={primaryCta.href}>{primaryCta.label}</a>}
+        {secondaryCta && (
+          <a
+            class="btn btn-outline btn-outline-light"
+            href={secondaryCta.href}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {secondaryCta.label}
+          </a>
+        )}
+      </div>
+    )}
+  </div>
+</section>
+
+<style>
+  .hero {
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-light) 100%);
+    color: var(--color-text-inverse);
+    padding: 5rem 0;
+    text-align: center;
+  }
+
+  .hero h1 {
+    color: var(--color-text-inverse);
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    font-weight: 800;
+  }
+
+  .hero-subtitle {
+    font-size: 1.25rem;
+    color: #cbd5e1;
+    max-width: 700px;
+    margin: 0 auto 2rem;
+    line-height: 1.7;
+  }
+
+  .hero-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .btn-outline-light {
+    color: var(--color-text-inverse);
+    border-color: var(--color-text-inverse);
+  }
+
+  .btn-outline-light:hover {
+    background-color: var(--color-text-inverse);
+    color: var(--color-primary);
+  }
+
+  @media (max-width: 768px) {
+    .hero {
+      padding: 3rem 0;
+    }
+
+    .hero h1 {
+      font-size: 2rem;
+    }
+
+    .hero-subtitle {
+      font-size: 1.1rem;
+    }
+  }
+</style>
