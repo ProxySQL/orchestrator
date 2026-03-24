@@ -32,6 +32,7 @@ import (
 	"github.com/proxysql/orchestrator/go/process"
 	"github.com/proxysql/orchestrator/go/ssl"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/go-martini/martini"
 	"github.com/martini-contrib/auth"
 	"github.com/martini-contrib/gzip"
@@ -137,6 +138,11 @@ func standardHttp(continuousDiscovery bool) {
 	http.API.RegisterRequests(m)
 	http.Web.RegisterRequests(m)
 
+	// Register v2 API routes on a chi router, composed with the martini handler
+	v2Router := chi.NewRouter()
+	v2Router.Mount(config.Config.URLPrefix+"/api/v2", http.RegisterV2Routes())
+	handler := composeHandlers(v2Router, m)
+
 	// Serve
 	if config.Config.ListenSocket != "" {
 		log.Infof("Starting HTTP listener on unix socket %v", config.Config.ListenSocket)
@@ -145,7 +151,7 @@ func standardHttp(continuousDiscovery bool) {
 			log.Fatale(err)
 		}
 		defer unixListener.Close()
-		if err := nethttp.Serve(unixListener, m); err != nil {
+		if err := nethttp.Serve(unixListener, handler); err != nil {
 			log.Fatale(err)
 		}
 	} else if config.Config.UseSSL {
@@ -158,12 +164,12 @@ func standardHttp(continuousDiscovery bool) {
 		if err = ssl.AppendKeyPairWithPassword(tlsConfig, config.Config.SSLCertFile, config.Config.SSLPrivateKeyFile, sslPEMPassword); err != nil {
 			log.Fatale(err)
 		}
-		if err = ssl.ListenAndServeTLS(config.Config.ListenAddress, m, tlsConfig); err != nil {
+		if err = ssl.ListenAndServeTLS(config.Config.ListenAddress, handler, tlsConfig); err != nil {
 			log.Fatale(err)
 		}
 	} else {
 		log.Infof("Starting HTTP listener on %+v", config.Config.ListenAddress)
-		if err := nethttp.ListenAndServe(config.Config.ListenAddress, m); err != nil {
+		if err := nethttp.ListenAndServe(config.Config.ListenAddress, handler); err != nil {
 			log.Fatale(err)
 		}
 	}
@@ -208,4 +214,20 @@ func agentsHttp() {
 		}
 	}
 	log.Info("Agent server started")
+}
+
+// composeHandlers returns an http.Handler that tries the v2 chi router first,
+// falling back to the martini handler for all other requests. Chi returns 405
+// for matched routes with wrong methods, so we only intercept when chi has a
+// matching route (non-404/405 response).
+func composeHandlers(v2 *chi.Mux, fallback nethttp.Handler) nethttp.Handler {
+	return nethttp.HandlerFunc(func(w nethttp.ResponseWriter, r *nethttp.Request) {
+		// Check if chi has a matching route
+		rctx := chi.NewRouteContext()
+		if v2.Match(rctx, r.Method, r.URL.Path) {
+			v2.ServeHTTP(w, r)
+			return
+		}
+		fallback.ServeHTTP(w, r)
+	})
 }

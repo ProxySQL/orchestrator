@@ -26,6 +26,9 @@ github.com/cyberdelia/go-metrics-graphite
 # github.com/fatih/color v1.19.0
 ## explicit; go 1.25.0
 github.com/fatih/color
+# github.com/go-chi/chi/v5 v5.2.5
+## explicit; go 1.22
+github.com/go-chi/chi/v5
 # github.com/go-martini/martini v0.0.0-20170121215854-22fa46961aab
 ## explicit
 github.com/go-martini/martini
