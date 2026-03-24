@@ -1,6 +1,6 @@
 #!/bin/bash
 # Tier B: Failover tests — verify failover and ProxySQL hooks against real services
-set -euo pipefail
+set -uo pipefail  # no -e: we handle failures ourselves
 cd "$(dirname "$0")/../.."
 source tests/functional/lib.sh
 
@@ -32,7 +32,7 @@ fi
 echo ""
 echo "--- Test 1: Graceful master takeover ---"
 
-RESULT=$(curl -s "$ORC_URL/api/graceful-master-takeover/mysql1:3306/mysql2/3306")
+RESULT=$(curl -s "$ORC_URL/api/graceful-master-takeover/$CLUSTER_NAME/mysql2/3306")
 CODE=$(echo "$RESULT" | python3 -c "import json,sys; print(json.load(sys.stdin).get('Code',''))" 2>/dev/null)
 if [ "$CODE" = "OK" ]; then
     pass "Graceful takeover API returned OK"

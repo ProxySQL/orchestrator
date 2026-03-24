@@ -68,27 +68,37 @@ wait_for_orchestrator() {
 }
 
 # Seed discovery and wait for all instances
+# Sets CLUSTER_NAME as a global variable
+CLUSTER_NAME=""
 discover_topology() {
     local MASTER_HOST="$1"
     echo "Seeding discovery with $MASTER_HOST..."
     curl -s "$ORC_URL/api/discover/$MASTER_HOST/3306" > /dev/null
 
+    # Also seed replicas directly
+    curl -s "$ORC_URL/api/discover/mysql2/3306" > /dev/null 2>&1
+    curl -s "$ORC_URL/api/discover/mysql3/3306" > /dev/null 2>&1
+
     echo "Waiting for topology discovery..."
     for i in $(seq 1 60); do
-        local COUNT
-        COUNT=$(curl -s "$ORC_URL/api/cluster/$MASTER_HOST:3306" 2>/dev/null | python3 -c "import json,sys; print(len(json.load(sys.stdin)))" 2>/dev/null)
-        if [ "$COUNT" = "3" ]; then
-            echo "Full topology discovered (3 instances) after ${i}s"
-            return 0
+        # Get the cluster name dynamically
+        CLUSTER_NAME=$(curl -s "$ORC_URL/api/clusters" 2>/dev/null | python3 -c "import json,sys; c=json.load(sys.stdin); print(c[0] if c else '')" 2>/dev/null || echo "")
+        if [ -n "$CLUSTER_NAME" ]; then
+            local COUNT
+            COUNT=$(curl -s "$ORC_URL/api/cluster/$CLUSTER_NAME" 2>/dev/null | python3 -c "import json,sys; print(len(json.load(sys.stdin)))" 2>/dev/null || echo "0")
+            if [ "$COUNT" -ge 3 ] 2>/dev/null; then
+                echo "Full topology discovered (${COUNT} instances, cluster=$CLUSTER_NAME) after ${i}s"
+                return 0
+            fi
         fi
-        # Also try to discover replicas directly
-        if [ "$i" = "10" ] || [ "$i" = "20" ]; then
+        # Re-seed replicas periodically
+        if [ "$((i % 10))" = "0" ]; then
             curl -s "$ORC_URL/api/discover/mysql2/3306" > /dev/null 2>&1
             curl -s "$ORC_URL/api/discover/mysql3/3306" > /dev/null 2>&1
         fi
         sleep 1
     done
-    echo "WARNING: Only discovered $COUNT instances after 60s"
+    echo "WARNING: Cluster=$CLUSTER_NAME, instances=${COUNT:-0} after 60s"
     return 1
 }
 

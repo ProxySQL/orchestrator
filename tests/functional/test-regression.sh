@@ -1,6 +1,6 @@
 #!/bin/bash
 # Tier C: Regression tests — verify all API endpoints and features
-set -euo pipefail
+set -uo pipefail  # no -e: we handle failures ourselves
 cd "$(dirname "$0")/../.."
 source tests/functional/lib.sh
 

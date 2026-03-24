@@ -1,6 +1,6 @@
 #!/bin/bash
 # Tier A: Smoke tests — verify basic functionality against real services
-set -euo pipefail
+set -uo pipefail  # no -e: we handle failures ourselves
 cd "$(dirname "$0")/../.."
 source tests/functional/lib.sh
 
@@ -12,9 +12,19 @@ discover_topology "mysql1"
 
 echo ""
 echo "--- Discovery ---"
-test_body_contains "Cluster discovered" "$ORC_URL/api/clusters" "mysql1"
 
-INST_COUNT=$(curl -s "$ORC_URL/api/cluster/mysql1:3306" 2>/dev/null | python3 -c "import json,sys; print(len(json.load(sys.stdin)))" 2>/dev/null || echo "0")
+# Get the actual cluster name (may differ from simple "mysql1")
+CLUSTERS=$(curl -s "$ORC_URL/api/clusters" 2>/dev/null)
+CLUSTER_NAME=$(echo "$CLUSTERS" | python3 -c "import json,sys; c=json.load(sys.stdin); print(c[0] if c else '')" 2>/dev/null || echo "")
+echo "  Cluster name: $CLUSTER_NAME"
+
+if [ -n "$CLUSTER_NAME" ]; then
+    pass "Cluster discovered: $CLUSTER_NAME"
+else
+    fail "No cluster discovered" "Response: $CLUSTERS"
+fi
+
+INST_COUNT=$(curl -s "$ORC_URL/api/cluster/$CLUSTER_NAME" 2>/dev/null | python3 -c "import json,sys; print(len(json.load(sys.stdin)))" 2>/dev/null || echo "0")
 if [ "$INST_COUNT" -ge 2 ]; then
     pass "Instances discovered: $INST_COUNT"
 else
