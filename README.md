@@ -44,23 +44,34 @@ recovery itself.
 
 ![Orcehstrator screenshot](docs/images/orchestrator-topology-8-screenshot.png)
 
+#### ProxySQL Integration
+
+Built-in failover hooks that update [ProxySQL](https://proxysql.com) hostgroups automatically — no custom scripts needed:
+
+- **Pre-failover:** Drains the old master in ProxySQL (OFFLINE_SOFT)
+- **Post-failover:** Updates writer/reader hostgroups to route traffic to the new master
+- **Topology API:** Query ProxySQL server configuration via `/api/proxysql/servers`
+- **CLI tools:** `proxysql-test` and `proxysql-servers` commands
+
+See [ProxySQL hooks documentation](docs/proxysql-hooks.md).
+
+#### Observability
+
+- **Prometheus metrics** at `/metrics` — discovery, replication, recovery, and cluster gauges
+- **Kubernetes health endpoints** — `/health/live`, `/health/ready`, `/health/leader`
+- **Structured API** — versioned `/api/v2/` with JSON envelopes and proper HTTP status codes
+
+See [Observability documentation](docs/observability.md) and [API v2 documentation](docs/api-v2.md).
+
 #### Additional perks
 
-- Highly available
+- Highly available (shared backend or Raft consensus)
 - Controlled master takeovers
-- Manual failovers
-- Failover auditing
-- Audited operations
-- Pseudo-GTID
+- Manual and automated failovers with full audit trail
+- Pseudo-GTID and Oracle GTID support
 - Datacenter/physical location awareness
-- MySQL-Pool association
+- Database provider abstraction (MySQL, PostgreSQL foundation)
 - HTTP security/authentication methods
-- More...
-
-#### Future Vision
-
-- **ProxySQL-native integration** — built-in hooks and topology awareness for seamless orchestrator + ProxySQL HA workflows, no custom scripts needed.
-- **PostgreSQL exploration** — a database-provider abstraction layer to support PostgreSQL streaming replication alongside MySQL.
 
 Read the [Orchestrator documentation](https://github.com/proxysql/orchestrator/tree/master/docs)
 
@@ -92,9 +103,34 @@ Maintained since 2026 by [ProxySQL LLC](https://proxysql.com) as https://github.
 - Nagios / Icinga check based on Orchestrator API: https://github.com/mcrauwel/go-check-orchestrator
 - Light Python wrapper for Orchestrator API: https://github.com/stirlab/python-mysql-orchestrator
 
+#### Quick Start
+
+```bash
+# Build
+go build -o bin/orchestrator ./go/cmd/orchestrator
+
+# Start with SQLite backend
+bin/orchestrator -config conf/orchestrator-sample.conf.json http
+
+# Discover your MySQL topology
+curl http://localhost:3000/api/discover/your-master-host/3306
+
+# Open the web UI
+open http://localhost:3000
+```
+
+See the [Quick Start Guide](docs/quickstart.md) for a complete 5-minute walkthrough.
+
 #### Developers
 
-Get started developing Orchestrator by [reading the developer docs](/docs/developers.md). Thanks for your interest!
+Get started developing Orchestrator by [reading the developer docs](/docs/developers.md). Common commands:
+
+```bash
+make build      # Build binary
+make test       # Run unit tests
+make lint       # Run golangci-lint
+make fmt        # Format code
+```
 
 #### License
 
