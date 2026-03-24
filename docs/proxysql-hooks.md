@@ -87,6 +87,57 @@ orchestrator-client -c proxysql-test
 orchestrator-client -c proxysql-servers
 ```
 
+## Topology Query API
+
+Orchestrator exposes HTTP API endpoints for querying ProxySQL's runtime server list. These are useful for monitoring, debugging, and integration with other tools.
+
+### List all servers
+
+```
+GET /api/proxysql/servers
+```
+
+Returns all servers from ProxySQL's `runtime_mysql_servers` table:
+
+```json
+{
+  "Code": "OK",
+  "Message": "Found 4 servers",
+  "Details": [
+    {
+      "hostgroup_id": 10,
+      "hostname": "db1.example.com",
+      "port": 3306,
+      "status": "ONLINE",
+      "weight": 1000,
+      "max_connections": 100,
+      "comment": ""
+    }
+  ]
+}
+```
+
+### List servers by hostgroup
+
+```
+GET /api/proxysql/servers/:hostgroup
+```
+
+Returns servers filtered by hostgroup ID. Example:
+
+```bash
+curl http://localhost:3000/api/proxysql/servers/10
+```
+
+If ProxySQL is not configured, both endpoints return an error response:
+
+```json
+{
+  "Code": "ERROR",
+  "Message": "ProxySQL is not configured"
+}
+```
+
 ## Multiple ProxySQL Instances
 
 For ProxySQL Cluster deployments, configure orchestrator to connect to **one** ProxySQL node. Changes propagate automatically across the cluster via ProxySQL's built-in cluster synchronization (`proxysql_servers` table).
