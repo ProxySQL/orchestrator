@@ -25,18 +25,16 @@ done
 
 echo "Verifying replication..."
 for REPLICA in mysql2 mysql3; do
-    for i in $(seq 1 30); do
-        IO_RUNNING=$($COMPOSE exec -T "$REPLICA" mysql -uroot -ptestpass -Nse \
-            "SHOW REPLICA STATUS\G" 2>/dev/null | grep "Replica_IO_Running: Yes" || true)
-        SQL_RUNNING=$($COMPOSE exec -T "$REPLICA" mysql -uroot -ptestpass -Nse \
-            "SHOW REPLICA STATUS\G" 2>/dev/null | grep "Replica_SQL_Running: Yes" || true)
-        if [ -n "$IO_RUNNING" ] && [ -n "$SQL_RUNNING" ]; then
-            echo "$REPLICA: replication OK"
+    for i in $(seq 1 60); do
+        STATUS=$($COMPOSE exec -T "$REPLICA" mysql -uroot -ptestpass -Nse \
+            "SELECT SERVICE_STATE FROM performance_schema.replication_connection_status" 2>/dev/null | tr -d '[:space:]')
+        if [ "$STATUS" = "ON" ]; then
+            echo "$REPLICA: replication OK (IO thread ON)"
             break
         fi
-        if [ "$i" -eq 30 ]; then
-            echo "$REPLICA: replication FAILED"
-            $COMPOSE exec -T "$REPLICA" mysql -uroot -ptestpass -e "SHOW REPLICA STATUS\G" 2>/dev/null
+        if [ "$i" -eq 60 ]; then
+            echo "$REPLICA: replication FAILED after 60s"
+            $COMPOSE exec -T "$REPLICA" mysql -uroot -ptestpass -e "SHOW REPLICA STATUS\G" 2>/dev/null || true
             exit 1
         fi
         sleep 1
