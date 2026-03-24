@@ -93,16 +93,18 @@ services:
           - proxysql
 
   orchestrator:
-    image: golang:1.25.7
+    image: ubuntu:24.04
     hostname: orchestrator
-    working_dir: /orchestrator
     volumes:
-      - ../../:/orchestrator
+      - ../../bin/orchestrator:/usr/local/bin/orchestrator:ro
+      - ../../resources:/orchestrator/resources:ro
+      - ./orchestrator-test.conf.json:/orchestrator/orchestrator.conf.json:ro
     command: >
       bash -c "
-        go build -o /tmp/orchestrator ./go/cmd/orchestrator &&
+        apt-get update -qq && apt-get install -y -qq curl sqlite3 > /dev/null 2>&1 &&
         rm -f /tmp/orchestrator-test.sqlite3 &&
-        /tmp/orchestrator -config tests/functional/orchestrator-test.conf.json http
+        cd /orchestrator &&
+        orchestrator -config orchestrator.conf.json http
       "
     ports:
       - "3099:3099"
@@ -114,7 +116,7 @@ services:
       interval: 5s
       timeout: 3s
       retries: 60
-      start_period: 30s
+      start_period: 15s
     networks:
       orchnet:
         aliases:
