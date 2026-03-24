@@ -158,7 +158,7 @@ func setupMessagePrefix() {
 	if hostname != "" {
 		messagePrefix = fmt.Sprintf("Orchestrator %+v says: ", hostname)
 	} else {
-		log.Warning("Prepending messages with Orchestrator identity was requested, but identity cannot be determined. Skipping prefix.")
+		_ = log.Warning("Prepending messages with Orchestrator identity was requested, but identity cannot be determined. Skipping prefix.")
 	}
 }
 

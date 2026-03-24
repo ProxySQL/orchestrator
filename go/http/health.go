@@ -65,9 +65,9 @@ func HealthLeader(w http.ResponseWriter, r *http.Request) {
 
 	if isLeader {
 		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(map[string]string{"status": "leader"})
+		_ = json.NewEncoder(w).Encode(map[string]string{"status": "leader"})
 	} else {
 		w.WriteHeader(http.StatusServiceUnavailable)
-		json.NewEncoder(w).Encode(map[string]string{"status": "not leader"})
+		_ = json.NewEncoder(w).Encode(map[string]string{"status": "not leader"})
 	}
 }

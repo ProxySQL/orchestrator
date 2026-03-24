@@ -120,7 +120,7 @@ func SubmitAgent(hostname string, port int, token string) (string, error) {
 	}
 
 	// Try to discover topology instances when an agent submits
-	go DiscoverAgentInstance(hostname, port)
+	go func() { _ = DiscoverAgentInstance(hostname, port) }()
 
 	return hostname, err
 }
@@ -129,14 +129,14 @@ func SubmitAgent(hostname string, port int, token string) (string, error) {
 func DiscoverAgentInstance(hostname string, port int) error {
 	agent, err := GetAgent(hostname)
 	if err != nil {
-		log.Errorf("Couldn't get agent for %s: %v", hostname, err)
+		_ = log.Errorf("Couldn't get agent for %s: %v", hostname, err)
 		return err
 	}
 
 	instanceKey := agent.GetInstance()
 	instance, err := inst.ReadTopologyInstance(instanceKey)
 	if err != nil {
-		log.Errorf("Failed to read topology for %v. err=%+v", instanceKey, err)
+		_ = log.Errorf("Failed to read topology for %v. err=%+v", instanceKey, err)
 		return err
 	}
 	if instance == nil {
@@ -177,7 +177,7 @@ func ReadOutdatedAgentsHosts() ([]string, error) {
 	})
 
 	if err != nil {
-		log.Errore(err)
+		_ = log.Errore(err)
 	}
 	return res, err
 }
@@ -210,7 +210,7 @@ func ReadAgents() ([]Agent, error) {
 	})
 
 	if err != nil {
-		log.Errore(err)
+		_ = log.Errore(err)
 	}
 	return res, err
 
@@ -322,7 +322,7 @@ func GetAgent(hostname string) (Agent, error) {
 				err = json.Unmarshal(body, &agent.AvailableLocalSnapshots)
 			}
 			if err != nil {
-				log.Errore(err)
+				_ = log.Errore(err)
 			}
 		}
 		{
@@ -434,7 +434,7 @@ func executeAgentCommandWithMethodFunc(hostname string, command string, methodFu
 	if onResponse != nil {
 		(*onResponse)(body)
 	}
-	auditAgentOperation("agent-command", &agent, command)
+	_ = auditAgentOperation("agent-command", &agent, command)
 
 	return agent, err
 }
@@ -543,7 +543,7 @@ func AbortSeed(seedId int64) error {
 	}
 
 	for _, seedOperation := range seedOperations {
-		AbortSeedCommand(seedOperation.TargetHostname, seedId)
+		_, _ = AbortSeedCommand(seedOperation.TargetHostname, seedId)
 		AbortSeedCommand(seedOperation.SourceHostname, seedId)
 	}
 	updateSeedComplete(seedId, errors.New("Aborted"))

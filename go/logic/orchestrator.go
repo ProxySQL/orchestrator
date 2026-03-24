@@ -189,7 +189,7 @@ func handleDiscoveryRequests() {
 		deadInstancesDiscoveryQueue = discovery.CreateOrReturnQueue("DEADINSTANCES")
 
 		// Register dead instances queue gauge only if the queue exists
-		metrics.Register("discoveries.dead_instances_queue_length", deadInstancesDiscoveryQueueLengthGauge)
+		_ = metrics.Register("discoveries.dead_instances_queue_length", deadInstancesDiscoveryQueueLengthGauge)
 		ometrics.OnMetricsTick(func() {
 			deadInstancesDiscoveryQueueLengthGauge.Update(int64(deadInstancesDiscoveryQueue.QueueLen()))
 		})

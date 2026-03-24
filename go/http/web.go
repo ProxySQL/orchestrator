@@ -468,7 +468,7 @@ func (this *HttpWeb) RegisterDebug(router chi.Router) {
 			first = false
 			_, _ = fmt.Fprintf(w, "%q: %s", kv.Key, kv.Value)
 		})
-		fmt.Fprintf(w, "\n}\n")
+		_, _ = fmt.Fprintf(w, "\n}\n")
 	})
 
 	// list all the /debug/ endpoints we want

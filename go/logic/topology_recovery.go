@@ -200,8 +200,8 @@ var recoverDeadReplicationGroupMemberFailureCounter = metrics.NewCounter()
 var countPendingRecoveriesGauge = metrics.NewGauge()
 
 func init() {
-	metrics.Register("recover.dead_master.start", recoverDeadMasterCounter)
-	metrics.Register("recover.dead_master.success", recoverDeadMasterSuccessCounter)
+	_ = metrics.Register("recover.dead_master.start", recoverDeadMasterCounter)
+	_ = metrics.Register("recover.dead_master.success", recoverDeadMasterSuccessCounter)
 	metrics.Register("recover.dead_master.fail", recoverDeadMasterFailureCounter)
 	metrics.Register("recover.dead_intermediate_master.start", recoverDeadIntermediateMasterCounter)
 	metrics.Register("recover.dead_intermediate_master.success", recoverDeadIntermediateMasterSuccessCounter)
@@ -1220,7 +1220,7 @@ func RecoverDeadIntermediateMaster(topologyRecovery *TopologyRecovery, skipProce
 				// There could have been a local replica taking over its siblings. We'd like to consider that one as successor.
 				successorInstance = masterInstance
 			}
-			inst.AuditOperation("recover-dead-intermediate-master", failedInstanceKey, fmt.Sprintf("Relocated replicas under: %+v %d errors: %+v", successorInstance.Key, len(errs), errs))
+			_ = inst.AuditOperation("recover-dead-intermediate-master", failedInstanceKey, fmt.Sprintf("Relocated replicas under: %+v %d errors: %+v", successorInstance.Key, len(errs), errs))
 		} else {
 			err = log.Errorf("topology_recovery: RecoverDeadIntermediateMaster failed to match up any replica from %+v", *failedInstanceKey)
 			_ = topologyRecovery.AddError(err)
@@ -1239,7 +1239,7 @@ func RecoverDeadReplicationGroupMemberWithReplicas(topologyRecovery *TopologyRec
 	topologyRecovery.Type = ReplicationGroupMemberRecovery
 	analysisEntry := &topologyRecovery.AnalysisEntry
 	failedGroupMemberInstanceKey := &analysisEntry.AnalyzedInstanceKey
-	inst.AuditOperation("recover-dead-replication-group-member-with-replicas", failedGroupMemberInstanceKey, "problem found; will recover")
+	_ = inst.AuditOperation("recover-dead-replication-group-member-with-replicas", failedGroupMemberInstanceKey, "problem found; will recover")
 	if !skipProcesses {
 		if err := executeProcesses(config.Config.PreFailoverProcesses, "PreFailoverProcesses", topologyRecovery, true); err != nil {
 			return nil, topologyRecovery.AddError(err)
@@ -1310,7 +1310,7 @@ func RecoverDeadCoMaster(topologyRecovery *TopologyRecovery, skipProcesses bool)
 	if otherCoMaster == nil || !found {
 		return nil, lostReplicas, topologyRecovery.AddError(log.Errorf("RecoverDeadCoMaster: could not read info for co-master %+v of %+v", *otherCoMasterKey, *failedInstanceKey))
 	}
-	inst.AuditOperation("recover-dead-co-master", failedInstanceKey, "problem found; will recover")
+	_ = inst.AuditOperation("recover-dead-co-master", failedInstanceKey, "problem found; will recover")
 	if !skipProcesses {
 		if err := executeProcesses(config.Config.PreFailoverProcesses, "PreFailoverProcesses", topologyRecovery, true); err != nil {
 			return nil, lostReplicas, topologyRecovery.AddError(err)
@@ -1360,7 +1360,7 @@ func RecoverDeadCoMaster(topologyRecovery *TopologyRecovery, skipProcesses bool)
 	}
 	if promotedReplica != nil {
 		if mustPromoteOtherCoMaster && !promotedReplica.Key.Equals(otherCoMasterKey) {
-			topologyRecovery.AddError(log.Errorf("RecoverDeadCoMaster: could not manage to promote other-co-master %+v; was only able to promote %+v; mustPromoteOtherCoMaster is true (either CoMasterRecoveryMustPromoteOtherCoMaster is true, or co-master is writeable), therefore failing", *otherCoMasterKey, promotedReplica.Key))
+			_ = topologyRecovery.AddError(log.Errorf("RecoverDeadCoMaster: could not manage to promote other-co-master %+v; was only able to promote %+v; mustPromoteOtherCoMaster is true (either CoMasterRecoveryMustPromoteOtherCoMaster is true, or co-master is writeable), therefore failing", *otherCoMasterKey, promotedReplica.Key))
 			promotedReplica = nil
 		}
 	}
@@ -1391,7 +1391,7 @@ func RecoverDeadCoMaster(topologyRecovery *TopologyRecovery, skipProcesses bool)
 	// So in the case we promoted not-the-other-co-master, we issue a detach-replica-master-host, which is a reversible operation
 	if promotedReplica != nil && !promotedReplica.Key.Equals(otherCoMasterKey) {
 		_, err = inst.DetachReplicaMasterHost(&promotedReplica.Key)
-		topologyRecovery.AddError(log.Errore(err))
+		_ = topologyRecovery.AddError(log.Errore(err))
 	}
 
 	if promotedReplica != nil && len(lostReplicas) > 0 && config.Config.DetachLostReplicasAfterMasterFailover {
@@ -2160,7 +2160,7 @@ func GracefulMasterTakeover(clusterName string, designatedKey *inst.InstanceKey,
 				}
 				if directReplica.IsDowntimed {
 					// obviously we skip this one
-					log.Warningf("GracefulMasterTakeover: unable to relocate %+v below designated %+v, but since it is downtimed (downtime reason: %s) I will proceed", directReplica.Key, designatedInstance.Key, directReplica.DowntimeReason)
+					_ = log.Warningf("GracefulMasterTakeover: unable to relocate %+v below designated %+v, but since it is downtimed (downtime reason: %s) I will proceed", directReplica.Key, designatedInstance.Key, directReplica.DowntimeReason)
 					continue
 				}
 				return nil, nil, fmt.Errorf("Desginated instance %+v cannot take over all of its siblings. Error: %+v", designatedInstance.Key, err)

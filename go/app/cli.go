@@ -234,7 +234,7 @@ func Cli(command string, strict bool, instance string, destination string, owner
 			}
 			replicas, _, errs, err := inst.RelocateReplicas(instanceKey, destinationKey, pattern)
 			if err != nil {
-				log.Fatale(err)
+				_ = log.Fatale(err)
 			} else {
 				for _, e := range errs {
 					log.Errore(e)
@@ -252,7 +252,7 @@ func Cli(command string, strict bool, instance string, destination string, owner
 			}
 			_, _, err := inst.TakeSiblings(instanceKey)
 			if err != nil {
-				log.Fatale(err)
+				_ = log.Fatale(err)
 			}
 			fmt.Println(instanceKey.DisplayString())
 		}
@@ -274,7 +274,7 @@ func Cli(command string, strict bool, instance string, destination string, owner
 			fmt.Println(fmt.Sprintf("%s lost: %d, trivial: %d, pseudo-gtid: %d",
 				promotedReplica.Key.DisplayString(), len(lostReplicas), len(equalReplicas), len(aheadReplicas)))
 			if err != nil {
-				log.Fatale(err)
+				_ = log.Fatale(err)
 			}
 		}
 		// General replication commands
@@ -323,7 +323,7 @@ func Cli(command string, strict bool, instance string, destination string, owner
 		{
 			instanceKey, _ = inst.FigureInstanceKey(instanceKey, thisInstanceKey)
 			if destinationKey == nil {
-				log.Fatal("Cannot deduce destination:", destination)
+				_ = log.Fatal("Cannot deduce destination:", destination)
 			}
 			_, err := inst.MoveEquivalent(instanceKey, destinationKey)
 			if err != nil {
@@ -360,7 +360,7 @@ func Cli(command string, strict bool, instance string, destination string, owner
 		{
 			instanceKey, _ = inst.FigureInstanceKey(instanceKey, thisInstanceKey)
 			if instanceKey == nil {
-				log.Fatal("Cannot deduce instance:", instance)
+				_ = log.Fatal("Cannot deduce instance:", instance)
 			}
 			_, err := inst.TakeMaster(instanceKey, false)
 			if err != nil {
@@ -381,7 +381,7 @@ func Cli(command string, strict bool, instance string, destination string, owner
 		{
 			instanceKey, _ = inst.FigureInstanceKey(instanceKey, thisInstanceKey)
 			if instanceKey == nil {
-				log.Fatal("Cannot deduce instance:", instance)
+				_ = log.Fatal("Cannot deduce instance:", instance)
 			}
 
 			instance, _, _, _, _, err := inst.GetCandidateReplica(instanceKey, false)
@@ -451,7 +451,7 @@ func Cli(command string, strict bool, instance string, destination string, owner
 			lostReplicas = append(lostReplicas, cannotReplicateReplicas...)
 
 			if promotedReplica == nil {
-				log.Fatalf("Could not regroup replicas of %+v; error: %+v", *instanceKey, err)
+				_ = log.Fatalf("Could not regroup replicas of %+v; error: %+v", *instanceKey, err)
 			}
 			fmt.Println(fmt.Sprintf("%s lost: %d, moved: %d",
 				promotedReplica.Key.DisplayString(), len(lostReplicas), len(movedReplicas)))
