@@ -1,6 +1,6 @@
 # Contributing to Orchestrator
 
-Thank you for your interest in contributing to orchestrator! This project is maintained by [ProxySQL LLC](https://proxysql.com) and we welcome contributions from the community.
+Thank you for your interest in contributing to orchestrator! This project is maintained by [ProxySQL](https://proxysql.com) and we welcome contributions from the community.
 
 ## How to Contribute
 

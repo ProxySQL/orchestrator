@@ -4,7 +4,7 @@
 [![downloads](https://img.shields.io/github/downloads/proxysql/orchestrator/total.svg)](https://github.com/proxysql/orchestrator/releases)
 [![license](https://img.shields.io/github/license/proxysql/orchestrator.svg)](https://github.com/proxysql/orchestrator/blob/master/LICENSE)
 
-> **Maintained by [ProxySQL LLC](https://proxysql.com).** Orchestrator is actively maintained and open to contributions. We believe in orchestrator's potential as the go-to MySQL HA tool, especially when paired with ProxySQL. Bug reports, feature requests, and pull requests are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) to get started.
+> **Maintained by [ProxySQL](https://proxysql.com).** Orchestrator is actively maintained and open to contributions. We believe in orchestrator's potential as the go-to MySQL HA tool, especially when paired with ProxySQL. Bug reports, feature requests, and pull requests are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) to get started.
 
 # orchestrator [[Documentation]](https://github.com/proxysql/orchestrator/tree/master/docs)
 
@@ -87,7 +87,7 @@ Authored by [Shlomi Noach](https://github.com/shlomi-noach):
 
 Maintained by [Percona](https://percona.com) as https://github.com/percona/orchestrator
 
-Maintained since 2026 by [ProxySQL LLC](https://proxysql.com) as https://github.com/proxysql/orchestrator
+Maintained since 2026 by [ProxySQL](https://proxysql.com) as https://github.com/proxysql/orchestrator
 
 #### Community
 

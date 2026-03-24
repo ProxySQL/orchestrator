@@ -1,6 +1,6 @@
 # Maintainers
 
-Orchestrator is maintained by [ProxySQL LLC](https://proxysql.com).
+Orchestrator is maintained by [ProxySQL](https://proxysql.com).
 
 ## Current Maintainers
 
