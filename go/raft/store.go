@@ -18,8 +18,7 @@ type Store struct {
 	raftBind      string
 	raftAdvertise string
 
-	raft      *raft.Raft // The consensus mechanism
-	peerStore raft.PeerStore
+	raft *raft.Raft // The consensus mechanism
 
 	applier                CommandApplier
 	snapshotCreatorApplier SnapshotCreatorApplier
@@ -41,6 +40,16 @@ func NewStore(raftDir string, raftBind string, raftAdvertise string, applier Com
 	}
 }
 
+// addUniquePeer adds a peer to the slice if not already present.
+func addUniquePeer(peers []string, peer string) []string {
+	for _, p := range peers {
+		if p == peer {
+			return peers
+		}
+	}
+	return append(peers, peer)
+}
+
 // Open opens the store. If enableSingle is set, and there are no existing peers,
 // then this node becomes the first node, and therefore leader, of the cluster.
 func (store *Store) Open(peerNodes []string) error {
@@ -49,6 +58,7 @@ func (store *Store) Open(peerNodes []string) error {
 	config.SnapshotThreshold = 1
 	config.SnapshotInterval = snapshotInterval
 	config.ShutdownOnRemove = false
+	config.LocalID = raft.ServerID(store.raftAdvertise)
 
 	// Setup Raft communication.
 	advertise, err := net.ResolveTCPAddr("tcp", store.raftAdvertise)
@@ -66,23 +76,9 @@ func (store *Store) Open(peerNodes []string) error {
 	peers := make([]string, 0, 10)
 	for _, peerNode := range peerNodes {
 		peerNode = strings.TrimSpace(peerNode)
-		peers = raft.AddUniquePeer(peers, peerNode)
+		peers = addUniquePeer(peers, peerNode)
 	}
 	log.Debugf("raft: peers=%+v", peers)
-
-	// Create peer storage.
-	peerStore := &raft.StaticPeers{}
-	if err := peerStore.SetPeers(peers); err != nil {
-		return err
-	}
-
-	// Allow the node to enter single-mode, potentially electing itself, if
-	// explicitly enabled and there is only 1 node in the cluster already.
-	if len(peerNodes) == 0 && len(peers) <= 1 {
-		log.Infof("enabling single-node mode")
-		config.EnableSingleNode = true
-		config.DisableBootstrapAfterElect = false
-	}
 
 	if _, err := os.Stat(store.raftDir); err != nil {
 		if os.IsNotExist(err) {
@@ -107,11 +103,43 @@ func (store *Store) Open(peerNodes []string) error {
 	logStore := NewRelationalStore(store.raftDir)
 	log.Debugf("raft: logStore=%+v", logStore)
 
+	// Bootstrap the cluster if no existing state and this is a single-node setup
+	// or the initial set of peers is provided.
+	hasState, err := raft.HasExistingState(logStore, logStore, snapshots)
+	if err != nil {
+		return fmt.Errorf("error checking existing state: %s", err)
+	}
+	if !hasState {
+		var servers []raft.Server
+		if len(peerNodes) == 0 && len(peers) <= 1 {
+			// Single-node mode: bootstrap with just this server
+			log.Infof("bootstrapping single-node cluster")
+			servers = []raft.Server{
+				{
+					ID:      raft.ServerID(store.raftAdvertise),
+					Address: raft.ServerAddress(store.raftAdvertise),
+				},
+			}
+		} else {
+			// Multi-node mode: bootstrap with all known peers
+			log.Infof("bootstrapping cluster with peers: %+v", peers)
+			for _, peer := range peers {
+				servers = append(servers, raft.Server{
+					ID:      raft.ServerID(peer),
+					Address: raft.ServerAddress(peer),
+				})
+			}
+		}
+		configuration := raft.Configuration{Servers: servers}
+		if err := raft.BootstrapCluster(config, logStore, logStore, snapshots, transport, configuration); err != nil {
+			return fmt.Errorf("error bootstrapping cluster: %s", err)
+		}
+	}
+
 	// Instantiate the Raft systems.
-	if store.raft, err = raft.NewRaft(config, (*fsm)(store), logStore, logStore, snapshots, peerStore, transport); err != nil {
+	if store.raft, err = raft.NewRaft(config, (*fsm)(store), logStore, logStore, snapshots, transport); err != nil {
 		return fmt.Errorf("error creating new raft: %s", err)
 	}
-	store.peerStore = peerStore
 	log.Infof("new raft created")
 
 	return nil
@@ -122,7 +150,7 @@ func (store *Store) Open(peerNodes []string) error {
 func (store *Store) AddPeer(addr string) error {
 	log.Infof("received join request for remote node %s", addr)
 
-	f := store.raft.AddPeer(addr)
+	f := store.raft.AddVoter(raft.ServerID(addr), raft.ServerAddress(addr), 0, 0)
 	if f.Error() != nil {
 		return f.Error()
 	}
@@ -134,7 +162,7 @@ func (store *Store) AddPeer(addr string) error {
 func (store *Store) RemovePeer(addr string) error {
 	log.Infof("received remove request for remote node %s", addr)
 
-	f := store.raft.RemovePeer(addr)
+	f := store.raft.RemoveServer(raft.ServerID(addr), 0, 0)
 	if f.Error() != nil {
 		return f.Error()
 	}

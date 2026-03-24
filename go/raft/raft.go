@@ -232,7 +232,7 @@ func GetLeader() string {
 	if !isRaftSetupComplete() {
 		return ""
 	}
-	return getRaft().Leader()
+	return string(getRaft().Leader())
 }
 
 func QuorumSize() (int, error) {
@@ -274,14 +274,18 @@ func AsyncSnapshot() error {
 }
 
 func StepDown() {
-	_ = getRaft().StepDown()
+	future := getRaft().LeadershipTransfer()
+	if err := future.Error(); err != nil {
+		_ = log.Errore(err)
+	}
 }
 
 func Yield() error {
 	if !IsRaftEnabled() {
 		return ErrRaftNotRunning
 	}
-	return getRaft().Yield()
+	future := getRaft().LeadershipTransfer()
+	return future.Error()
 }
 
 func GetRaftBind() string {
@@ -296,7 +300,15 @@ func GetPeers() ([]string, error) {
 	if !IsRaftEnabled() {
 		return []string{}, ErrRaftNotRunning
 	}
-	return store.peerStore.Peers()
+	future := store.raft.GetConfiguration()
+	if err := future.Error(); err != nil {
+		return nil, err
+	}
+	var peers []string
+	for _, server := range future.Configuration().Servers {
+		peers = append(peers, string(server.Address))
+	}
+	return peers, nil
 }
 
 func IsPeer(peer string) (bool, error) {
