@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/go-martini/martini"
+	"github.com/go-chi/chi/v5"
 
 	"github.com/proxysql/golib/log"
 	test "github.com/proxysql/golib/tests"
@@ -33,10 +33,10 @@ func TestGetSynonymPath(t *testing.T) {
 }
 
 func TestKnownPaths(t *testing.T) {
-	m := martini.Classic()
+	router := chi.NewRouter()
 	api := HttpAPI{}
 
-	api.RegisterRequests(m)
+	api.RegisterRequests(router)
 
 	pathsMap := make(map[string]bool)
 	for _, path := range registeredPaths {

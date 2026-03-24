@@ -17,11 +17,13 @@
 package http
 
 import (
+	"context"
+	"crypto/subtle"
 	"fmt"
 	"net/http"
 	"strings"
 
-	"github.com/martini-contrib/auth"
+	"github.com/go-chi/chi/v5"
 
 	"github.com/proxysql/orchestrator/go/config"
 	"github.com/proxysql/orchestrator/go/inst"
@@ -29,6 +31,19 @@ import (
 	"github.com/proxysql/orchestrator/go/process"
 	"github.com/proxysql/orchestrator/go/raft"
 )
+
+// contextKey is used for storing values in context.
+type contextKey string
+
+const userContextKey contextKey = "auth-user"
+
+// getUserFromContext retrieves the authenticated user from the request context.
+func getUserFromContext(r *http.Request) string {
+	if user, ok := r.Context().Value(userContextKey).(string); ok {
+		return user
+	}
+	return ""
+}
 
 func getProxyAuthUser(req *http.Request) string {
 	for _, user := range req.Header[config.Config.AuthUserHeader] {
@@ -39,7 +54,7 @@ func getProxyAuthUser(req *http.Request) string {
 
 // isAuthorizedForAction checks req to see whether authenticated user has write-privileges.
 // This depends on configured authentication method.
-func isAuthorizedForAction(req *http.Request, user auth.User) bool {
+func isAuthorizedForAction(req *http.Request) bool {
 	if config.Config.ReadOnly {
 		return false
 	}
@@ -49,6 +64,7 @@ func isAuthorizedForAction(req *http.Request, user auth.User) bool {
 		return false
 	}
 
+	user := getUserFromContext(req)
 	switch strings.ToLower(config.Config.AuthenticationMethod) {
 	case "basic":
 		{
@@ -57,7 +73,7 @@ func isAuthorizedForAction(req *http.Request, user auth.User) bool {
 		}
 	case "multi":
 		{
-			if string(user) == "readonly" {
+			if user == "readonly" {
 				// read only
 				return false
 			}
@@ -113,20 +129,21 @@ func authenticateToken(publicToken string, resp http.ResponseWriter) error {
 	return nil
 }
 
-// getUserId returns the authenticated user id, if available, depending on authertication method.
-func getUserId(req *http.Request, user auth.User) string {
+// getUserId returns the authenticated user id, if available, depending on authentication method.
+func getUserId(req *http.Request) string {
 	if config.Config.ReadOnly {
 		return ""
 	}
 
+	user := getUserFromContext(req)
 	switch strings.ToLower(config.Config.AuthenticationMethod) {
 	case "basic":
 		{
-			return string(user)
+			return user
 		}
 	case "multi":
 		{
-			return string(user)
+			return user
 		}
 	case "proxy":
 		{
@@ -156,6 +173,32 @@ func getClusterHint(params map[string]string) string {
 	return ""
 }
 
+// getClusterHintFromRequest extracts the cluster hint from chi URL params.
+func getClusterHintFromRequest(r *http.Request) string {
+	if v := chi.URLParam(r, "clusterHint"); v != "" {
+		return v
+	}
+	if v := chi.URLParam(r, "clusterName"); v != "" {
+		return v
+	}
+	if host := chi.URLParam(r, "host"); host != "" {
+		if port := chi.URLParam(r, "port"); port != "" {
+			return fmt.Sprintf("%s:%s", host, port)
+		}
+	}
+	return ""
+}
+
+// getClusterNameIfExistsFromRequest returns a cluster name by request hint, or an empty cluster name
+// if no hint is given
+func getClusterNameIfExistsFromRequest(r *http.Request) (clusterName string, err error) {
+	if clusterHint := getClusterHintFromRequest(r); clusterHint == "" {
+		return "", nil
+	} else {
+		return figureClusterName(clusterHint)
+	}
+}
+
 // figureClusterName is a convenience function to get a cluster name from hints
 func figureClusterName(hint string) (clusterName string, err error) {
 	if hint == "" {
@@ -172,5 +215,49 @@ func getClusterNameIfExists(params map[string]string) (clusterName string, err e
 		return "", nil
 	} else {
 		return figureClusterName(clusterHint)
+	}
+}
+
+// BasicAuthMiddleware returns a middleware that performs HTTP Basic Authentication.
+func BasicAuthMiddleware(username, password string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			u, p, ok := r.BasicAuth()
+			if !ok || subtle.ConstantTimeCompare([]byte(u), []byte(username)) != 1 || subtle.ConstantTimeCompare([]byte(p), []byte(password)) != 1 {
+				w.Header().Set("WWW-Authenticate", `Basic realm="Restricted"`)
+				http.Error(w, "Unauthorized", http.StatusUnauthorized)
+				return
+			}
+			ctx := context.WithValue(r.Context(), userContextKey, u)
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
+	}
+}
+
+// MultiAuthMiddleware returns a middleware that performs HTTP Basic Authentication
+// with a special "readonly" user.
+func MultiAuthMiddleware(username, password string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			u, p, ok := r.BasicAuth()
+			if !ok {
+				w.Header().Set("WWW-Authenticate", `Basic realm="Restricted"`)
+				http.Error(w, "Unauthorized", http.StatusUnauthorized)
+				return
+			}
+			if u == "readonly" {
+				// Will be treated as "read-only"
+				ctx := context.WithValue(r.Context(), userContextKey, u)
+				next.ServeHTTP(w, r.WithContext(ctx))
+				return
+			}
+			if subtle.ConstantTimeCompare([]byte(u), []byte(username)) != 1 || subtle.ConstantTimeCompare([]byte(p), []byte(password)) != 1 {
+				w.Header().Set("WWW-Authenticate", `Basic realm="Restricted"`)
+				http.Error(w, "Unauthorized", http.StatusUnauthorized)
+				return
+			}
+			ctx := context.WithValue(r.Context(), userContextKey, u)
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
 	}
 }

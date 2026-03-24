@@ -10,7 +10,6 @@ import (
 	nethttp "net/http"
 	"strings"
 
-	"github.com/go-martini/martini"
 	"github.com/howeyc/gopass"
 	"github.com/proxysql/golib/log"
 	"github.com/proxysql/orchestrator/go/config"
@@ -91,13 +90,18 @@ func Verify(r *nethttp.Request, validOUs []string) error {
 	return errors.New("Invalid OU")
 }
 
-// TODO: make this testable?
-func VerifyOUs(validOUs []string) martini.Handler {
-	return func(res nethttp.ResponseWriter, req *nethttp.Request, c martini.Context) {
-		log.Debug("Verifying client OU")
-		if err := Verify(req, validOUs); err != nil {
-			nethttp.Error(res, err.Error(), nethttp.StatusUnauthorized)
-		}
+// VerifyOUsMiddleware returns an http.Handler middleware that verifies client
+// certificate OUs against the provided list of valid OUs.
+func VerifyOUsMiddleware(validOUs []string) func(nethttp.Handler) nethttp.Handler {
+	return func(next nethttp.Handler) nethttp.Handler {
+		return nethttp.HandlerFunc(func(res nethttp.ResponseWriter, req *nethttp.Request) {
+			log.Debug("Verifying client OU")
+			if err := Verify(req, validOUs); err != nil {
+				nethttp.Error(res, err.Error(), nethttp.StatusUnauthorized)
+				return
+			}
+			next.ServeHTTP(res, req)
+		})
 	}
 }
 

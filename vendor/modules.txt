@@ -17,18 +17,16 @@ github.com/beorn7/perks/quantile
 # github.com/cespare/xxhash/v2 v2.3.0
 ## explicit; go 1.11
 github.com/cespare/xxhash/v2
-# github.com/codegangsta/inject v0.0.0-20150114235600-33e0aa1cb7c0
-## explicit
-github.com/codegangsta/inject
 # github.com/cyberdelia/go-metrics-graphite v0.0.0-20161219230853-39f87cc3b432
 ## explicit
 github.com/cyberdelia/go-metrics-graphite
 # github.com/fatih/color v1.19.0
 ## explicit; go 1.25.0
 github.com/fatih/color
-# github.com/go-martini/martini v0.0.0-20170121215854-22fa46961aab
-## explicit
-github.com/go-martini/martini
+# github.com/go-chi/chi/v5 v5.2.5
+## explicit; go 1.22
+github.com/go-chi/chi/v5
+github.com/go-chi/chi/v5/middleware
 # github.com/go-sql-driver/mysql v1.9.3
 ## explicit; go 1.21.0
 github.com/go-sql-driver/mysql
@@ -76,15 +74,6 @@ github.com/hashicorp/serf/coordinate
 # github.com/howeyc/gopass v0.0.0-20210920133722-c8aef6fb66ef
 ## explicit
 github.com/howeyc/gopass
-# github.com/martini-contrib/auth v0.0.0-20150219114609-fa62c19b7ae8
-## explicit
-github.com/martini-contrib/auth
-# github.com/martini-contrib/gzip v0.0.0-20151124214156-6c035326b43f
-## explicit
-github.com/martini-contrib/gzip
-# github.com/martini-contrib/render v0.0.0-20150707142108-ec18f8345a11
-## explicit
-github.com/martini-contrib/render
 # github.com/mattn/go-colorable v0.1.14
 ## explicit; go 1.18
 github.com/mattn/go-colorable
@@ -109,9 +98,6 @@ github.com/outbrain/golib/log
 # github.com/outbrain/zookeepercli v1.0.12
 ## explicit
 github.com/outbrain/zookeepercli/go/zk
-# github.com/oxtoacart/bpool v0.0.0-20190530202638-03653db5a59c
-## explicit; go 1.12
-github.com/oxtoacart/bpool
 # github.com/patrickmn/go-cache v2.1.0+incompatible
 ## explicit
 github.com/patrickmn/go-cache

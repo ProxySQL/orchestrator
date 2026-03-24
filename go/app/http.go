@@ -22,6 +22,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-chi/chi/v5"
+	chimiddleware "github.com/go-chi/chi/v5/middleware"
+
 	"github.com/proxysql/orchestrator/go/agent"
 	"github.com/proxysql/orchestrator/go/collection"
 	"github.com/proxysql/orchestrator/go/config"
@@ -32,10 +35,6 @@ import (
 	"github.com/proxysql/orchestrator/go/process"
 	"github.com/proxysql/orchestrator/go/ssl"
 
-	"github.com/go-martini/martini"
-	"github.com/martini-contrib/auth"
-	"github.com/martini-contrib/gzip"
-	"github.com/martini-contrib/render"
 	"github.com/proxysql/golib/log"
 )
 
@@ -51,7 +50,6 @@ func Http(continuousDiscovery bool) {
 	ometrics.InitPrometheus()
 	process.ContinuousRegistration(process.OrchestratorExecutionHttpMode, "")
 
-	martini.Env = martini.Prod
 	if config.Config.ServeAgentsHttp {
 		go agentsHttp()
 	}
@@ -75,7 +73,12 @@ func promptForSSLPasswords() {
 
 // standardHttp starts serving HTTP or HTTPS (api/web) requests, to be used by normal clients
 func standardHttp(continuousDiscovery bool) {
-	m := martini.Classic()
+	router := chi.NewRouter()
+
+	// Middleware
+	router.Use(chimiddleware.Logger)
+	router.Use(chimiddleware.Recoverer)
+	router.Use(chimiddleware.Compress(5))
 
 	switch strings.ToLower(config.Config.AuthenticationMethod) {
 	case "basic":
@@ -84,7 +87,7 @@ func standardHttp(continuousDiscovery bool) {
 				// Still allowed; may be disallowed in future versions
 				log.Warning("AuthenticationMethod is configured as 'basic' but HTTPAuthUser undefined. Running without authentication.")
 			}
-			m.Use(auth.Basic(config.Config.HTTPAuthUser, config.Config.HTTPAuthPassword))
+			router.Use(http.BasicAuthMiddleware(config.Config.HTTPAuthUser, config.Config.HTTPAuthPassword))
 		}
 	case "multi":
 		{
@@ -93,31 +96,25 @@ func standardHttp(continuousDiscovery bool) {
 				log.Fatal("AuthenticationMethod is configured as 'multi' but HTTPAuthUser undefined")
 			}
 
-			m.Use(auth.BasicFunc(func(username, password string) bool {
-				if username == "readonly" {
-					// Will be treated as "read-only"
-					return true
-				}
-				return auth.SecureCompare(username, config.Config.HTTPAuthUser) && auth.SecureCompare(password, config.Config.HTTPAuthPassword)
-			}))
+			router.Use(http.MultiAuthMiddleware(config.Config.HTTPAuthUser, config.Config.HTTPAuthPassword))
 		}
 	default:
 		{
-			// We inject a dummy User object because we have function signatures with User argument in api.go
-			m.Map(auth.User(""))
+			// No authentication method - nothing to add
 		}
 	}
 
-	m.Use(gzip.All())
-	// Render html templates from templates directory
-	m.Use(render.Renderer(render.Options{
-		Directory:       "resources",
-		Layout:          "templates/layout",
-		HTMLContentType: "text/html",
-	}))
-	m.Use(martini.Static("resources/public", martini.StaticOptions{Prefix: config.Config.URLPrefix}))
+	// Static file serving
+	prefix := config.Config.URLPrefix
+	fileServer := nethttp.FileServer(nethttp.Dir("resources/public"))
+	if prefix != "" {
+		router.Handle(prefix+"/*", nethttp.StripPrefix(prefix, fileServer))
+	} else {
+		router.Handle("/*", fileServer)
+	}
+
 	if config.Config.UseMutualTLS {
-		m.Use(ssl.VerifyOUs(config.Config.SSLValidOUs))
+		router.Use(ssl.VerifyOUsMiddleware(config.Config.SSLValidOUs))
 	}
 
 	inst.SetMaintenanceOwner(process.ThisHostname)
@@ -134,8 +131,8 @@ func standardHttp(continuousDiscovery bool) {
 	log.Info("Registering endpoints")
 	http.API.URLPrefix = config.Config.URLPrefix
 	http.Web.URLPrefix = config.Config.URLPrefix
-	http.API.RegisterRequests(m)
-	http.Web.RegisterRequests(m)
+	http.API.RegisterRequests(router)
+	http.Web.RegisterRequests(router)
 
 	// Serve
 	if config.Config.ListenSocket != "" {
@@ -145,7 +142,7 @@ func standardHttp(continuousDiscovery bool) {
 			log.Fatale(err)
 		}
 		defer unixListener.Close()
-		if err := nethttp.Serve(unixListener, m); err != nil {
+		if err := nethttp.Serve(unixListener, router); err != nil {
 			log.Fatale(err)
 		}
 	} else if config.Config.UseSSL {
@@ -158,25 +155,25 @@ func standardHttp(continuousDiscovery bool) {
 		if err = ssl.AppendKeyPairWithPassword(tlsConfig, config.Config.SSLCertFile, config.Config.SSLPrivateKeyFile, sslPEMPassword); err != nil {
 			log.Fatale(err)
 		}
-		if err = ssl.ListenAndServeTLS(config.Config.ListenAddress, m, tlsConfig); err != nil {
+		if err = ssl.ListenAndServeTLS(config.Config.ListenAddress, router, tlsConfig); err != nil {
 			log.Fatale(err)
 		}
 	} else {
 		log.Infof("Starting HTTP listener on %+v", config.Config.ListenAddress)
-		if err := nethttp.ListenAndServe(config.Config.ListenAddress, m); err != nil {
+		if err := nethttp.ListenAndServe(config.Config.ListenAddress, router); err != nil {
 			log.Fatale(err)
 		}
 	}
 	log.Info("Web server started")
 }
 
-// agentsHttp startes serving agents HTTP or HTTPS API requests
+// agentsHttp starts serving agents HTTP or HTTPS API requests
 func agentsHttp() {
-	m := martini.Classic()
-	m.Use(gzip.All())
-	m.Use(render.Renderer())
+	router := chi.NewRouter()
+	router.Use(chimiddleware.Compress(5))
+
 	if config.Config.AgentsUseMutualTLS {
-		m.Use(ssl.VerifyOUs(config.Config.AgentSSLValidOUs))
+		router.Use(ssl.VerifyOUsMiddleware(config.Config.AgentSSLValidOUs))
 	}
 
 	log.Info("Starting agents listener")
@@ -185,7 +182,7 @@ func agentsHttp() {
 	go logic.ContinuousAgentsPoll()
 
 	http.AgentsAPI.URLPrefix = config.Config.URLPrefix
-	http.AgentsAPI.RegisterRequests(m)
+	http.AgentsAPI.RegisterRequests(router)
 
 	// Serve
 	if config.Config.AgentsUseSSL {
@@ -198,12 +195,12 @@ func agentsHttp() {
 		if err = ssl.AppendKeyPairWithPassword(tlsConfig, config.Config.AgentSSLCertFile, config.Config.AgentSSLPrivateKeyFile, agentSSLPEMPassword); err != nil {
 			log.Fatale(err)
 		}
-		if err = ssl.ListenAndServeTLS(config.Config.AgentsServerPort, m, tlsConfig); err != nil {
+		if err = ssl.ListenAndServeTLS(config.Config.AgentsServerPort, router, tlsConfig); err != nil {
 			log.Fatale(err)
 		}
 	} else {
 		log.Info("Starting agent HTTP listener")
-		if err := nethttp.ListenAndServe(config.Config.AgentsServerPort, m); err != nil {
+		if err := nethttp.ListenAndServe(config.Config.AgentsServerPort, router); err != nil {
 			log.Fatale(err)
 		}
 	}
