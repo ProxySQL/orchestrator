@@ -174,7 +174,7 @@ func (s *SnapshotDataCreatorApplier) Restore(rc io.ReadCloser) error {
 				if err := inst.WriteInstance(minimalInstance.ToInstance(), false, nil); err == nil {
 					discoveredKeys++
 				} else {
-					log.Errore(err)
+					_ = log.Errore(err)
 				}
 			}
 		}

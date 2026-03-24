@@ -206,9 +206,9 @@ func init() {
 	_ = metrics.Register("recover.dead_intermediate_master.start", recoverDeadIntermediateMasterCounter)
 	_ = metrics.Register("recover.dead_intermediate_master.success", recoverDeadIntermediateMasterSuccessCounter)
 	_ = metrics.Register("recover.dead_intermediate_master.fail", recoverDeadIntermediateMasterFailureCounter)
-	metrics.Register("recover.dead_co_master.start", recoverDeadCoMasterCounter)
-	metrics.Register("recover.dead_co_master.success", recoverDeadCoMasterSuccessCounter)
-	metrics.Register("recover.dead_co_master.fail", recoverDeadCoMasterFailureCounter)
+	_ = metrics.Register("recover.dead_co_master.start", recoverDeadCoMasterCounter)
+	_ = metrics.Register("recover.dead_co_master.success", recoverDeadCoMasterSuccessCounter)
+	_ = metrics.Register("recover.dead_co_master.fail", recoverDeadCoMasterFailureCounter)
 	metrics.Register("recover.dead_replication_group_member.start", recoverDeadReplicationGroupMemberCounter)
 	metrics.Register("recover.dead_replication_group_member.success", recoverDeadReplicationGroupMemberSuccessCounter)
 	metrics.Register("recover.dead_replication_group_member.fail", recoverDeadReplicationGroupMemberFailureCounter)
@@ -938,14 +938,14 @@ func checkAndRecoverDeadMaster(analysisEntry inst.ReplicationAnalysis, candidate
 		if orcraft.IsRaftEnabled() {
 			for _, kvPair := range kvPairs {
 				_, err := orcraft.PublishCommand("put-key-value", kvPair)
-				log.Errore(err)
+				_ = log.Errore(err)
 			}
 			// since we'll be affecting 3rd party tools here, we _prefer_ to mitigate re-applying
 			// of the put-key-value event upon startup. We _recommend_ a snapshot in the near future.
 			go func() { _, _ = orcraft.PublishCommand("async-snapshot", "") }()
 		} else {
 			err := kv.PutKVPairs(kvPairs)
-			log.Errore(err)
+			_ = log.Errore(err)
 		}
 		{
 			AuditTopologyRecovery(topologyRecovery, fmt.Sprintf("Distributing KV %+v", kvPairs))
@@ -956,7 +956,7 @@ func checkAndRecoverDeadMaster(analysisEntry inst.ReplicationAnalysis, candidate
 			promotedReplica.Key.Hostname, promotedReplica.Key.Port,
 			analysisEntry.AnalyzedInstanceKey.Hostname, analysisEntry.AnalyzedInstanceKey.Port,
 		); err != nil {
-			log.Errorf("ProxySQL post-failover failed: %v", err)
+			_ = log.Errorf("ProxySQL post-failover failed: %v", err)
 			AuditTopologyRecovery(topologyRecovery, fmt.Sprintf("ProxySQL post-failover failed: %v", err))
 		}
 		if config.Config.MasterFailoverDetachReplicaMasterHost {
@@ -1813,7 +1813,7 @@ func executeCheckAndRecoverFunction(analysisEntry inst.ReplicationAnalysis, cand
 	// Check for recovery being disabled globally
 	if recerr != nil {
 		// Unexpected. Shouldn't get this
-		log.Errorf("Unable to determine if recovery is disabled globally: %v", recerr)
+		_ = log.Errorf("Unable to determine if recovery is disabled globally: %v", recerr)
 	}
 	checkAndRecoverFunction, isActionableRecovery := getCheckAndRecoverFunction(analysisEntry.Analysis, &analysisEntry.AnalyzedInstanceKey)
 	analysisEntry.IsActionableRecovery = isActionableRecovery
@@ -1857,7 +1857,7 @@ func executeCheckAndRecoverFunction(analysisEntry inst.ReplicationAnalysis, cand
 		}
 	}
 	if err != nil {
-		log.Errorf("executeCheckAndRecoverFunction: error on failure detection: %+v", err)
+		_ = log.Errorf("executeCheckAndRecoverFunction: error on failure detection: %+v", err)
 		return false, nil, err
 	}
 	// We don't mind whether detection really executed the processes or not

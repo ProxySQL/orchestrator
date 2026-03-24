@@ -405,7 +405,7 @@ func Cli(command string, strict bool, instance string, destination string, owner
 			}
 			fmt.Println(promotedBinlogServer.Key.DisplayString())
 			if err != nil {
-				log.Fatale(err)
+				_ = log.Fatale(err)
 			}
 		}
 	// move, GTID
@@ -417,7 +417,7 @@ func Cli(command string, strict bool, instance string, destination string, owner
 			}
 			_, err := inst.MoveBelowGTID(instanceKey, destinationKey)
 			if err != nil {
-				log.Fatale(err)
+				_ = log.Fatale(err)
 			}
 			fmt.Printf("%s<%s\n", instanceKey.DisplayString(), destinationKey.DisplayString())
 		}
@@ -429,7 +429,7 @@ func Cli(command string, strict bool, instance string, destination string, owner
 			}
 			movedReplicas, _, errs, err := inst.MoveReplicasGTID(instanceKey, destinationKey, pattern)
 			if err != nil {
-				log.Fatale(err)
+				_ = log.Fatale(err)
 			} else {
 				for _, e := range errs {
 					log.Errore(e)
@@ -643,7 +643,7 @@ func Cli(command string, strict bool, instance string, destination string, owner
 		{
 			instanceKey, _ = inst.FigureInstanceKey(instanceKey, thisInstanceKey)
 			if instanceKey == nil {
-				log.Fatal("Cannot deduce instance:", instance)
+				_ = log.Fatal("Cannot deduce instance:", instance)
 			}
 			_, err := inst.DetachReplicaMasterHost(instanceKey)
 			if err != nil {
@@ -655,7 +655,7 @@ func Cli(command string, strict bool, instance string, destination string, owner
 		{
 			instanceKey, _ = inst.FigureInstanceKey(instanceKey, thisInstanceKey)
 			if instanceKey == nil {
-				log.Fatal("Cannot deduce instance:", instance)
+				_ = log.Fatal("Cannot deduce instance:", instance)
 			}
 			_, err := inst.ReattachReplicaMasterHost(instanceKey)
 			if err != nil {
@@ -746,7 +746,7 @@ func Cli(command string, strict bool, instance string, destination string, owner
 			}
 			instance := validateInstanceIsFound(instanceKey)
 			if destinationKey == nil {
-				log.Fatal("Cannot deduce target instance:", destination)
+				_ = log.Fatal("Cannot deduce target instance:", destination)
 			}
 			otherInstance := validateInstanceIsFound(destinationKey)
 
@@ -828,14 +828,14 @@ func Cli(command string, strict bool, instance string, destination string, owner
 		{
 			instanceKey, _ = inst.FigureInstanceKey(instanceKey, thisInstanceKey)
 			if instanceKey == nil {
-				log.Fatalf("Unresolved instance")
+				_ = log.Fatalf("Unresolved instance")
 			}
 			instance, err := inst.ReadTopologyInstance(instanceKey)
 			if err != nil {
 				log.Fatale(err)
 			}
 			if instance == nil {
-				log.Fatalf("Instance not found: %+v", *instanceKey)
+				_ = log.Fatalf("Instance not found: %+v", *instanceKey)
 			}
 			coordinates, text, err := inst.FindLastPseudoGTIDEntry(instance, instance.RelaylogCoordinates, nil, strict, nil)
 			if err != nil {
@@ -847,7 +847,7 @@ func Cli(command string, strict bool, instance string, destination string, owner
 		{
 			instanceKey, _ = inst.FigureInstanceKey(instanceKey, thisInstanceKey)
 			if instanceKey == nil {
-				log.Fatalf("Unresolved instance")
+				_ = log.Fatalf("Unresolved instance")
 			}
 			errantBinlogs, err := inst.LocateErrantGTID(instanceKey)
 			if err != nil {

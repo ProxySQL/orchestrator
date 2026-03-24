@@ -650,9 +650,9 @@ func ContinuousDiscovery() {
 					go func() { _ = process.ExpireNodesHistory() }()
 					go func() { _ = process.ExpireAccessTokens() }()
 					go process.ExpireAvailableNodes()
-					go ExpireFailureDetectionHistory()
-					go ExpireTopologyRecoveryHistory()
-					go ExpireTopologyRecoveryStepsHistory()
+					go func() { _ = ExpireFailureDetectionHistory() }()
+					go func() { _ = ExpireTopologyRecoveryHistory() }()
+					go func() { _ = ExpireTopologyRecoveryStepsHistory() }()
 
 					if runCheckAndRecoverOperationsTimeRipe() && IsLeader() {
 						go SubmitMastersToKvStores("", false)
