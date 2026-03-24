@@ -165,7 +165,7 @@ func ContinuousRegistration(extraInfo string, command string) {
 		tickOperation := func() {
 			healthy, err := RegisterNode(ThisNodeHealth)
 			if err != nil {
-				log.Errorf("ContinuousRegistration: RegisterNode failed: %+v", err)
+				_ = log.Errorf("ContinuousRegistration: RegisterNode failed: %+v", err)
 			}
 			if healthy {
 				atomic.StoreInt64(&LastContinousCheckHealthy, 1)

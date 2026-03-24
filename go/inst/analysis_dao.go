@@ -39,8 +39,8 @@ var analysisChangeWriteCounter = metrics.NewCounter()
 var recentInstantAnalysis *cache.Cache
 
 func init() {
-	metrics.Register("analysis.change.write.attempt", analysisChangeWriteAttemptCounter)
-	metrics.Register("analysis.change.write", analysisChangeWriteCounter)
+	_ = metrics.Register("analysis.change.write.attempt", analysisChangeWriteAttemptCounter)
+	_ = metrics.Register("analysis.change.write", analysisChangeWriteCounter)
 
 	go initializeAnalysisDaoPostConfiguration()
 }
@@ -464,7 +464,7 @@ func GetReplicationAnalysis(clusterName string, hints *ReplicationAnalysisHints)
 		a.ClusterDetails.ReadRecoveryInfo()
 
 		a.Replicas = *NewInstanceKeyMap()
-		a.Replicas.ReadCommaDelimitedList(m.GetString("slave_hosts"))
+		_ = a.Replicas.ReadCommaDelimitedList(m.GetString("slave_hosts"))
 
 		countValidOracleGTIDReplicas := m.GetUint("count_valid_oracle_gtid_replicas")
 		a.OracleGTIDImmediateTopology = countValidOracleGTIDReplicas == a.CountValidReplicas && a.CountValidReplicas > 0
@@ -725,7 +725,7 @@ func GetReplicationAnalysis(clusterName string, hints *ReplicationAnalysisHints)
 
 		if a.CountReplicas > 0 && hints.AuditAnalysis {
 			// Interesting enough for analysis
-			go auditInstanceAnalysisInChangelog(&a.AnalyzedInstanceKey, a.Analysis)
+			go func() { _ = auditInstanceAnalysisInChangelog(&a.AnalyzedInstanceKey, a.Analysis) }()
 		}
 		return nil
 	})
@@ -851,7 +851,7 @@ func ReadReplicationAnalysisChangelog() (res [](*ReplicationAnalysisChangelog), 
 	})
 
 	if err != nil {
-		log.Errore(err)
+		_ = log.Errore(err)
 	}
 	return res, err
 }

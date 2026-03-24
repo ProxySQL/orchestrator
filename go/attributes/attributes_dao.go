@@ -75,7 +75,7 @@ func getHostAttributesByClause(whereClause string, args []interface{}) ([]HostAt
 	})
 
 	if err != nil {
-		log.Errore(err)
+		_ = log.Errore(err)
 	}
 	return res, err
 }

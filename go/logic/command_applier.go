@@ -114,7 +114,7 @@ func (applier *CommandApplier) injectedPseudoGTID(value []byte) interface{} {
 	if err := json.Unmarshal(value, &clusterName); err != nil {
 		return log.Errore(err)
 	}
-	inst.RegisterInjectedPseudoGTID(clusterName)
+	_ = inst.RegisterInjectedPseudoGTID(clusterName)
 	return nil
 }
 
@@ -296,7 +296,7 @@ func (applier *CommandApplier) healthReport(value []byte) interface{} {
 	if err := json.Unmarshal(value, &authenticationToken); err != nil {
 		return log.Errore(err)
 	}
-	orcraft.ReportToRaftLeader(authenticationToken)
+	_ = orcraft.ReportToRaftLeader(authenticationToken)
 	return nil
 }
 

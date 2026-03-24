@@ -124,10 +124,10 @@ func getClusterName(clusterAlias string, instanceKey *inst.InstanceKey) (cluster
 func validateInstanceIsFound(instanceKey *inst.InstanceKey) (instance *inst.Instance) {
 	instance, _, err := inst.ReadInstance(instanceKey)
 	if err != nil {
-		log.Fatale(err)
+		_ = log.Fatale(err)
 	}
 	if instance == nil {
-		log.Fatalf("Instance not found: %+v", *instanceKey)
+		_ = log.Fatalf("Instance not found: %+v", *instanceKey)
 	}
 	return instance
 }
@@ -136,7 +136,7 @@ func validateInstanceIsFound(instanceKey *inst.InstanceKey) (instance *inst.Inst
 // to take multiple instance names separated by a comma or whitespace.
 func CliWrapper(command string, strict bool, instances string, destination string, owner string, reason string, duration string, pattern string, clusterAlias string, pool string, hostnameFlag string) {
 	if config.Config.RaftEnabled && !*config.RuntimeCLIFlags.IgnoreRaftSetup {
-		log.Fatalf(`Orchestrator configured to run raft ("RaftEnabled": true). All access must go through the web API of the active raft node. You may use the orchestrator-client script which has a similar interface to the command line invocation. You may override this with --ignore-raft-setup`)
+		_ = log.Fatalf(`Orchestrator configured to run raft ("RaftEnabled": true). All access must go through the web API of the active raft node. You may use the orchestrator-client script which has a similar interface to the command line invocation. You may override this with --ignore-raft-setup`)
 	}
 	r := regexp.MustCompile(`[ ,\r\n\t]+`)
 	tokens := r.Split(instances, -1)
@@ -199,7 +199,7 @@ func Cli(command string, strict bool, instance string, destination string, owner
 		// get os username as owner
 		usr, err := user.Current()
 		if err != nil {
-			log.Fatale(err)
+			_ = log.Fatale(err)
 		}
 		owner = usr.Username
 	}
@@ -218,11 +218,11 @@ func Cli(command string, strict bool, instance string, destination string, owner
 		{
 			instanceKey, _ = inst.FigureInstanceKey(instanceKey, thisInstanceKey)
 			if destinationKey == nil {
-				log.Fatal("Cannot deduce destination:", destination)
+				_ = log.Fatal("Cannot deduce destination:", destination)
 			}
 			_, err := inst.RelocateBelow(instanceKey, destinationKey)
 			if err != nil {
-				log.Fatale(err)
+				_ = log.Fatale(err)
 			}
 			fmt.Println(fmt.Sprintf("%s<%s", instanceKey.DisplayString(), destinationKey.DisplayString()))
 		}
@@ -230,7 +230,7 @@ func Cli(command string, strict bool, instance string, destination string, owner
 		{
 			instanceKey, _ = inst.FigureInstanceKey(instanceKey, thisInstanceKey)
 			if destinationKey == nil {
-				log.Fatal("Cannot deduce destination:", destination)
+				_ = log.Fatal("Cannot deduce destination:", destination)
 			}
 			replicas, _, errs, err := inst.RelocateReplicas(instanceKey, destinationKey, pattern)
 			if err != nil {
@@ -248,7 +248,7 @@ func Cli(command string, strict bool, instance string, destination string, owner
 		{
 			instanceKey, _ = inst.FigureInstanceKey(instanceKey, thisInstanceKey)
 			if instanceKey == nil {
-				log.Fatal("Cannot deduce instance:", instance)
+				_ = log.Fatal("Cannot deduce instance:", instance)
 			}
 			_, _, err := inst.TakeSiblings(instanceKey)
 			if err != nil {
@@ -269,7 +269,7 @@ func Cli(command string, strict bool, instance string, destination string, owner
 
 			postponedFunctionsContainer.Wait()
 			if promotedReplica == nil {
-				log.Fatalf("Could not regroup replicas of %+v; error: %+v", *instanceKey, err)
+				_ = log.Fatalf("Could not regroup replicas of %+v; error: %+v", *instanceKey, err)
 			}
 			fmt.Println(fmt.Sprintf("%s lost: %d, trivial: %d, pseudo-gtid: %d",
 				promotedReplica.Key.DisplayString(), len(lostReplicas), len(equalReplicas), len(aheadReplicas)))
@@ -1323,7 +1323,7 @@ func Cli(command string, strict bool, instance string, destination string, owner
 			if err != nil {
 				log.Fatale(err)
 			}
-			inst.PutInstanceTag(instanceKey, tag)
+			_ = inst.PutInstanceTag(instanceKey, tag)
 			fmt.Println(instanceKey.DisplayString())
 		}
 	case registerCliCommand("untag", "tags", `Remove a tag from an instance`):
@@ -1659,7 +1659,7 @@ func Cli(command string, strict bool, instance string, destination string, owner
 			}
 			if conn, err := net.Dial("tcp", rawInstanceKey.DisplayString()); err == nil {
 				log.Debugf("tcp test is good; got connection %+v", conn)
-				conn.Close()
+				_ = conn.Close()
 			} else {
 				log.Fatale(err)
 			}
@@ -1820,8 +1820,8 @@ func Cli(command string, strict bool, instance string, destination string, owner
 			if err != nil {
 				log.Fatale(err)
 			}
-			defer db.Close()
-			defer rows.Close()
+			defer func() { _ = db.Close() }()
+			defer func() { _ = rows.Close() }()
 			fmt.Printf("%-12s %-30s %-6s %-15s %-6s\n", "HOSTGROUP", "HOSTNAME", "PORT", "STATUS", "WEIGHT")
 			for rows.Next() {
 				var hg, port, weight int

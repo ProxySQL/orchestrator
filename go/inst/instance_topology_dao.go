@@ -1163,7 +1163,7 @@ func injectEmptyGTIDTransaction(instanceKey *InstanceKey, gtidEntry *OracleGtidS
 	if err != nil {
 		return err
 	}
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 
 	if _, err := conn.ExecContext(ctx, fmt.Sprintf(`SET GTID_NEXT="%s"`, gtidEntry.String())); err != nil {
 		return err

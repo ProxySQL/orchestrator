@@ -87,7 +87,7 @@ func readResponse(res *http.Response, err error) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer res.Body.Close()
+	defer func() { _ = res.Body.Close() }()
 
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
@@ -519,7 +519,7 @@ func CustomCommand(hostname string, cmd string) (output string, err error) {
 func seedCommandCompleted(hostname string, seedId int64) (Agent, bool, error) {
 	result := false
 	onResponse := func(body []byte) {
-		json.Unmarshal(body, &result)
+		_ = json.Unmarshal(body, &result)
 	}
 	agent, err := executeAgentCommand(hostname, fmt.Sprintf("seed-command-completed/%d", seedId), &onResponse)
 	return agent, result, err
@@ -529,7 +529,7 @@ func seedCommandCompleted(hostname string, seedId int64) (Agent, bool, error) {
 func seedCommandSucceeded(hostname string, seedId int64) (Agent, bool, error) {
 	result := false
 	onResponse := func(body []byte) {
-		json.Unmarshal(body, &result)
+		_ = json.Unmarshal(body, &result)
 	}
 	agent, err := executeAgentCommand(hostname, fmt.Sprintf("seed-command-succeeded/%d", seedId), &onResponse)
 	return agent, result, err

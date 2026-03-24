@@ -34,17 +34,17 @@ func writePoolInstances(pool string, instanceKeys [](*InstanceKey)) error {
 		}
 		tx, err := dbh.Begin()
 		if _, err := tx.Exec(`delete from database_instance_pool where pool = ?`, pool); err != nil {
-			tx.Rollback()
+			_ = tx.Rollback()
 			return log.Errore(err)
 		}
 		query := `insert into database_instance_pool (hostname, port, pool, registered_at) values (?, ?, ?, now())`
 		for _, instanceKey := range instanceKeys {
 			if _, err := tx.Exec(query, instanceKey.Hostname, instanceKey.Port, pool); err != nil {
-				tx.Rollback()
+				_ = tx.Rollback()
 				return log.Errore(err)
 			}
 		}
-		tx.Commit()
+		_ = tx.Commit()
 
 		return nil
 	}

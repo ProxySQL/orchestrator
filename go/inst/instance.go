@@ -499,7 +499,7 @@ func (this *Instance) CanReplicateFromEx(other *Instance, logContext string) (bo
 	canReplicate, err := this.CanReplicateFrom(other)
 
 	if config.Config.LowerReplicaVersionAllowed && canReplicate && err != nil {
-		log.Warningf("%v: %v Details: %v", logContext, logPrefix, err)
+		_ = log.Warningf("%v: %v Details: %v", logContext, logPrefix, err)
 		err = nil
 	}
 	return canReplicate, err

@@ -79,15 +79,15 @@ var kvFoundCache = cache.New(10*time.Minute, time.Minute)
 func init() {
 	snapshotDiscoveryKeys = make(chan inst.InstanceKey, 10)
 
-	metrics.Register("discoveries.attempt", discoveriesCounter)
-	metrics.Register("discoveries.fail", failedDiscoveriesCounter)
-	metrics.Register("discoveries.instance_poll_seconds_exceeded", instancePollSecondsExceededCounter)
-	metrics.Register("discoveries.queue_length", discoveryQueueLengthGauge)
-	metrics.Register("discoveries.recent_count", discoveryRecentCountGauge)
-	metrics.Register("elect.is_elected", isElectedGauge)
-	metrics.Register("health.is_healthy", isHealthyGauge)
-	metrics.Register("raft.is_healthy", isRaftHealthyGauge)
-	metrics.Register("raft.is_leader", isRaftLeaderGauge)
+	_ = metrics.Register("discoveries.attempt", discoveriesCounter)
+	_ = metrics.Register("discoveries.fail", failedDiscoveriesCounter)
+	_ = metrics.Register("discoveries.instance_poll_seconds_exceeded", instancePollSecondsExceededCounter)
+	_ = metrics.Register("discoveries.queue_length", discoveryQueueLengthGauge)
+	_ = metrics.Register("discoveries.recent_count", discoveryRecentCountGauge)
+	_ = metrics.Register("elect.is_elected", isElectedGauge)
+	_ = metrics.Register("health.is_healthy", isHealthyGauge)
+	_ = metrics.Register("raft.is_healthy", isRaftHealthyGauge)
+	_ = metrics.Register("raft.is_leader", isRaftLeaderGauge)
 
 	ometrics.OnMetricsTick(func() {
 		discoveryQueueLengthGauge.Update(int64(discoveryQueue.QueueLen()))
@@ -146,14 +146,14 @@ func acceptSignals() {
 			switch sig {
 			case syscall.SIGHUP:
 				log.Infof("Received SIGHUP. Reloading configuration")
-				inst.AuditOperation("reload-configuration", nil, "Triggered via SIGHUP")
+				_ = inst.AuditOperation("reload-configuration", nil, "Triggered via SIGHUP")
 				config.Reload()
 				discoveryMetrics.SetExpirePeriod(time.Duration(config.Config.DiscoveryCollectionRetentionSeconds) * time.Second)
 			case syscall.SIGTERM:
 				log.Infof("Received SIGTERM. Shutting down orchestrator")
 				discoveryMetrics.StopAutoExpiration()
 				// probably should poke other go routines to stop cleanly here ...
-				inst.AuditOperation("shutdown", nil, "Triggered via SIGTERM")
+				_ = inst.AuditOperation("shutdown", nil, "Triggered via SIGTERM")
 				os.Exit(0)
 			}
 		}
@@ -233,7 +233,7 @@ func DiscoverInstance(instanceKey inst.InstanceKey) {
 
 	// create stopwatch entries
 	latency := stopwatch.NewNamedStopwatch()
-	latency.AddMany([]string{
+	_ = latency.AddMany([]string{
 		"backend",
 		"instance",
 		"total"})
@@ -244,11 +244,11 @@ func DiscoverInstance(instanceKey inst.InstanceKey) {
 		discoveryTime := latency.Elapsed("total")
 		if discoveryTime > instancePollSecondsDuration() {
 			instancePollSecondsExceededCounter.Inc(1)
-			log.Warningf("discoverInstance exceeded InstancePollSeconds for %+v, took %.4fs", instanceKey, discoveryTime.Seconds())
+			_ = log.Warningf("discoverInstance exceeded InstancePollSeconds for %+v, took %.4fs", instanceKey, discoveryTime.Seconds())
 		}
 	}()
 
-	instanceKey.ResolveHostname()
+	_, _ = instanceKey.ResolveHostname()
 	if !instanceKey.IsValid() {
 		return
 	}
@@ -289,7 +289,7 @@ func DiscoverInstance(instanceKey inst.InstanceKey) {
 
 	if instance == nil {
 		failedDiscoveriesCounter.Inc(1)
-		discoveryMetrics.Append(&discovery.Metric{
+		_ = discoveryMetrics.Append(&discovery.Metric{
 			Timestamp:       time.Now(),
 			InstanceKey:     instanceKey,
 			TotalLatency:    totalLatency,
@@ -298,7 +298,7 @@ func DiscoverInstance(instanceKey inst.InstanceKey) {
 			Err:             err,
 		})
 		if util.ClearToLog("discoverInstance", instanceKey.StringCode()) {
-			log.Warningf("DiscoverInstance(%+v) instance is nil in %.3fs (Backend: %.3fs, Instance: %.3fs), error=%+v",
+			_ = log.Warningf("DiscoverInstance(%+v) instance is nil in %.3fs (Backend: %.3fs, Instance: %.3fs), error=%+v",
 				instanceKey,
 				totalLatency.Seconds(),
 				backendLatency.Seconds(),
@@ -308,7 +308,7 @@ func DiscoverInstance(instanceKey inst.InstanceKey) {
 		return
 	}
 
-	discoveryMetrics.Append(&discovery.Metric{
+	_ = discoveryMetrics.Append(&discovery.Metric{
 		Timestamp:       time.Now(),
 		InstanceKey:     instanceKey,
 		TotalLatency:    totalLatency,
@@ -374,17 +374,17 @@ func onHealthTick() {
 			atomic.StoreInt64(&isElectedNode, 0)
 		}
 		if process.SinceLastGoodHealthCheck() > yieldAfterUnhealthyDuration {
-			log.Errorf("Health test is failing for over %+v seconds. raft yielding", yieldAfterUnhealthyDuration.Seconds())
-			orcraft.Yield()
+			_ = log.Errorf("Health test is failing for over %+v seconds. raft yielding", yieldAfterUnhealthyDuration.Seconds())
+			_ = orcraft.Yield()
 		}
 		if process.SinceLastGoodHealthCheck() > fatalAfterUnhealthyDuration {
-			orcraft.FatalRaftError(fmt.Errorf("Node is unable to register health. Please check database connnectivity and/or time synchronisation."))
+			_ = orcraft.FatalRaftError(fmt.Errorf("Node is unable to register health. Please check database connnectivity and/or time synchronisation."))
 		}
 	}
 	if !orcraft.IsRaftEnabled() {
 		myIsElectedNode, err := process.AttemptElection()
 		if err != nil {
-			log.Errore(err)
+			_ = log.Errore(err)
 		}
 		if myIsElectedNode {
 			atomic.StoreInt64(&isElectedNode, 1)
@@ -404,13 +404,13 @@ func onHealthTick() {
 	}
 	instanceKeys, err := inst.ReadOutdatedInstanceKeys()
 	if err != nil {
-		log.Errore(err)
+		_ = log.Errore(err)
 	}
 
 	if !wasAlreadyElected {
 		// Just turned to be leader!
-		go process.RegisterNode(process.ThisNodeHealth)
-		go inst.ExpireMaintenance()
+		go func() { _, _ = process.RegisterNode(process.ThisNodeHealth) }()
+		go func() { _ = inst.ExpireMaintenance() }()
 	}
 
 	func() {
@@ -454,7 +454,7 @@ func publishDiscoverMasters() error {
 	if err == nil {
 		for _, instance := range instances {
 			key := instance.Key
-			go orcraft.PublishCommand("discover", key)
+			go func() { _, _ = orcraft.PublishCommand("discover", key) }()
 		}
 	}
 	return log.Errore(err)
@@ -477,10 +477,10 @@ func InjectPseudoGTIDOnWriters() error {
 					// OK to be cached for a while.
 					if _, found := pseudoGTIDPublishCache.Get(clusterName); !found {
 						pseudoGTIDPublishCache.Set(clusterName, true, cache.DefaultExpiration)
-						orcraft.PublishCommand("injected-pseudo-gtid", clusterName)
+						_, _ = orcraft.PublishCommand("injected-pseudo-gtid", clusterName)
 					}
 				} else {
-					inst.RegisterInjectedPseudoGTID(clusterName)
+					_ = inst.RegisterInjectedPseudoGTID(clusterName)
 				}
 			}
 		}()
@@ -535,7 +535,7 @@ func SubmitMastersToKvStores(clusterName string, force bool) (kvPairs [](*kv.KVP
 		}
 	}
 	if err := kv.DistributePairs(kvPairs); err != nil {
-		log.Errore(err)
+		_ = log.Errore(err)
 	}
 	return kvPairs, submittedCount, log.Errore(selectedError)
 }
@@ -545,9 +545,9 @@ func injectSeeds(seedOnce *sync.Once) {
 		for _, seed := range config.Config.DiscoverySeeds {
 			instanceKey, err := inst.ParseRawInstanceKey(seed)
 			if err == nil {
-				inst.InjectSeed(instanceKey)
+				_ = inst.InjectSeed(instanceKey)
 			} else {
-				log.Errorf("Error parsing seed %s: %+v", seed, err)
+				_ = log.Errorf("Error parsing seed %s: %+v", seed, err)
 			}
 		}
 	})
@@ -562,7 +562,7 @@ func ContinuousDiscovery() {
 	checkAndRecoverWaitPeriod := 3 * instancePollSecondsDuration()
 	recentDiscoveryOperationKeys = cache.New(instancePollSecondsDuration(), time.Second)
 
-	inst.LoadHostnameResolveCache()
+	_ = inst.LoadHostnameResolveCache()
 	go handleDiscoveryRequests()
 
 	healthTick := time.Tick(config.HealthPollSeconds * time.Second)
@@ -583,20 +583,20 @@ func ContinuousDiscovery() {
 
 	var seedOnce sync.Once
 
-	go ometrics.InitMetrics()
-	go ometrics.InitGraphiteMetrics()
+	go func() { _ = ometrics.InitMetrics() }()
+	go func() { _ = ometrics.InitGraphiteMetrics() }()
 	go acceptSignals()
 	go kv.InitKVStores()
 	go proxysql.InitHook()
 	if config.Config.RaftEnabled {
 		if err := orcraft.Setup(NewCommandApplier(), NewSnapshotDataCreatorApplier(), process.ThisHostname); err != nil {
-			log.Fatale(err)
+			_ = log.Fatale(err)
 		}
 		go orcraft.Monitor()
 	}
 
 	if *config.RuntimeCLIFlags.GrabElection {
-		process.GrabElection()
+		_ = process.GrabElection()
 	}
 
 	log.Infof("continuous discovery: starting")
@@ -612,43 +612,43 @@ func ContinuousDiscovery() {
 				// But rather should invoke such routinely operations that need to be as (or roughly as) frequent
 				// as instance poll
 				if IsLeaderOrActive() {
-					go inst.UpdateClusterAliases()
-					go inst.ExpireDowntime()
+					go func() { _ = inst.UpdateClusterAliases() }()
+					go func() { _ = inst.ExpireDowntime() }()
 					go injectSeeds(&seedOnce)
 				}
 			}()
 		case <-autoPseudoGTIDTick:
 			go func() {
 				if config.Config.AutoPseudoGTID && IsLeader() {
-					go InjectPseudoGTIDOnWriters()
+					go func() { _ = InjectPseudoGTIDOnWriters() }()
 				}
 			}()
 		case <-caretakingTick:
 			// Various periodic internal maintenance tasks
 			go func() {
 				if IsLeaderOrActive() {
-					go inst.RecordInstanceCoordinatesHistory()
-					go inst.ReviewUnseenInstances()
-					go inst.InjectUnseenMasters()
+					go func() { _ = inst.RecordInstanceCoordinatesHistory() }()
+					go func() { _ = inst.ReviewUnseenInstances() }()
+					go func() { _ = inst.InjectUnseenMasters() }()
 
-					go inst.ForgetLongUnseenInstances()
-					go inst.ForgetLongUnseenClusterAliases()
-					go inst.ForgetUnseenInstancesDifferentlyResolved()
-					go inst.ForgetExpiredHostnameResolves()
-					go inst.DeleteInvalidHostnameResolves()
-					go inst.ResolveUnknownMasterHostnameResolves()
-					go inst.ExpireMaintenance()
-					go inst.ExpireCandidateInstances()
-					go inst.ExpireHostnameUnresolve()
-					go inst.ExpireClusterDomainName()
-					go inst.ExpireAudit()
-					go inst.ExpireMasterPositionEquivalence()
-					go inst.ExpirePoolInstances()
-					go inst.FlushNontrivialResolveCacheToDatabase()
-					go inst.ExpireInjectedPseudoGTID()
-					go inst.ExpireStaleInstanceBinlogCoordinates()
-					go process.ExpireNodesHistory()
-					go process.ExpireAccessTokens()
+					go func() { _ = inst.ForgetLongUnseenInstances() }()
+					go func() { _ = inst.ForgetLongUnseenClusterAliases() }()
+					go func() { _ = inst.ForgetUnseenInstancesDifferentlyResolved() }()
+					go func() { _ = inst.ForgetExpiredHostnameResolves() }()
+					go func() { _ = inst.DeleteInvalidHostnameResolves() }()
+					go func() { _ = inst.ResolveUnknownMasterHostnameResolves() }()
+					go func() { _ = inst.ExpireMaintenance() }()
+					go func() { _ = inst.ExpireCandidateInstances() }()
+					go func() { _ = inst.ExpireHostnameUnresolve() }()
+					go func() { _ = inst.ExpireClusterDomainName() }()
+					go func() { _ = inst.ExpireAudit() }()
+					go func() { _ = inst.ExpireMasterPositionEquivalence() }()
+					go func() { _ = inst.ExpirePoolInstances() }()
+					go func() { _ = inst.FlushNontrivialResolveCacheToDatabase() }()
+					go func() { _ = inst.ExpireInjectedPseudoGTID() }()
+					go func() { _ = inst.ExpireStaleInstanceBinlogCoordinates() }()
+					go func() { _ = process.ExpireNodesHistory() }()
+					go func() { _ = process.ExpireAccessTokens() }()
 					go process.ExpireAvailableNodes()
 					go ExpireFailureDetectionHistory()
 					go ExpireTopologyRecoveryHistory()

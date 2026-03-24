@@ -136,7 +136,7 @@ func init() {
 	metrics.Register("instance.read_topology", readTopologyInstanceCounter)
 	metrics.Register("instance.read", readInstanceCounter)
 	metrics.Register("instance.write", writeInstanceCounter)
-	writeBufferLatency.AddMany([]string{"wait", "write"})
+	_ = writeBufferLatency.AddMany([]string{"wait", "write"})
 	writeBufferLatency.Start("wait")
 
 	go initializeInstanceDao()
@@ -184,7 +184,7 @@ func ExecDBWriteFunc(f func() error) error {
 			}
 		}
 		m.ExecuteLatency = time.Since(m.Timestamp.Add(m.WaitLatency))
-		backendWrites.Append(m)
+		_ = backendWrites.Append(m)
 		<-instanceWriteChan // assume this takes no time
 	}()
 	res := f()
@@ -379,7 +379,7 @@ func ReadTopologyInstanceBufferable(instanceKey *InstanceKey, bufferWrites bool,
 	if !instanceKey.IsValid() {
 		latency.Start("backend")
 		if err := UpdateInstanceLastAttemptedCheck(instanceKey); err != nil {
-			log.Errorf("ReadTopologyInstanceBufferable: %+v: %v", instanceKey, err)
+			_ = log.Errorf("ReadTopologyInstanceBufferable: %+v: %v", instanceKey, err)
 		}
 		latency.Stop("backend")
 		return instance, instanceDiscoverySkipped, fmt.Errorf("ReadTopologyInstance will not act on invalid instance key: %+v", *instanceKey)
@@ -437,10 +437,10 @@ func ReadTopologyInstanceBufferable(instanceKey *InstanceKey, bufferWrites bool,
 		}
 		if isMaxScale110 {
 			// Only this is supported:
-			db.QueryRow("select @@server_id").Scan(&instance.ServerID)
+			_ = db.QueryRow("select @@server_id").Scan(&instance.ServerID)
 		} else {
-			db.QueryRow("select @@global.server_id").Scan(&instance.ServerID)
-			db.QueryRow("select @@global.server_uuid").Scan(&instance.ServerUUID)
+			_ = db.QueryRow("select @@global.server_id").Scan(&instance.ServerID)
+			_ = db.QueryRow("select @@global.server_uuid").Scan(&instance.ServerUUID)
 		}
 	} else {
 		// NOT MaxScale
@@ -513,7 +513,7 @@ func ReadTopologyInstanceBufferable(instanceKey *InstanceKey, bufferWrites bool,
 		instance.IsDetachedMaster = instance.MasterKey.IsDetached()
 		instance.SecondsBehindMaster = m.GetNullInt64(instance.QSP.seconds_behind_master())
 		if instance.SecondsBehindMaster.Valid && instance.SecondsBehindMaster.Int64 < 0 {
-			log.Warningf("Host: %+v, instance.SecondsBehindMaster < 0 [%+v], correcting to 0", instanceKey, instance.SecondsBehindMaster.Int64)
+			_ = log.Warningf("Host: %+v, instance.SecondsBehindMaster < 0 [%+v], correcting to 0", instanceKey, instance.SecondsBehindMaster.Int64)
 			instance.SecondsBehindMaster.Int64 = 0
 		}
 		// And until told otherwise:
@@ -783,7 +783,7 @@ func ReadTopologyInstanceBufferable(instanceKey *InstanceKey, bufferWrites bool,
 			defer waitGroup.Done()
 			if err := db.QueryRow(config.Config.ReplicationLagQuery).Scan(&instance.ReplicationLagSeconds); err == nil {
 				if instance.ReplicationLagSeconds.Valid && instance.ReplicationLagSeconds.Int64 < 0 {
-					log.Warningf("Host: %+v, instance.SlaveLagSeconds < 0 [%+v], correcting to 0", instanceKey, instance.ReplicationLagSeconds.Int64)
+					_ = log.Warningf("Host: %+v, instance.SlaveLagSeconds < 0 [%+v], correcting to 0", instanceKey, instance.ReplicationLagSeconds.Int64)
 					instance.ReplicationLagSeconds.Int64 = 0
 				}
 			} else {
@@ -969,7 +969,7 @@ func ReadTopologyInstanceBufferable(instanceKey *InstanceKey, bufferWrites bool,
 		if config.Config.AutoPseudoGTID {
 			var err error
 			instance.UsingPseudoGTID, err = isInjectedPseudoGTID(instance.ClusterName)
-			log.Errore(err)
+			_ = log.Errore(err)
 		} else if config.Config.DetectPseudoGTIDQuery != "" {
 			waitGroup.Add(1)
 			go func() {
@@ -1261,7 +1261,7 @@ func ReadInstanceClusterAttributes(instance *Instance) (err error) {
 		clusterNameByCoMasterKey := instance.MasterKey.StringCode()
 		if clusterName != clusterNameByInstanceKey && clusterName != clusterNameByCoMasterKey {
 			// Can be caused by a co-master topology failover
-			log.Errorf("ReadInstanceClusterAttributes: in co-master topology %s is not in (%s, %s). Forcing it to become one of them", clusterName, clusterNameByInstanceKey, clusterNameByCoMasterKey)
+			_ = log.Errorf("ReadInstanceClusterAttributes: in co-master topology %s is not in (%s, %s). Forcing it to become one of them", clusterName, clusterNameByInstanceKey, clusterNameByCoMasterKey)
 			clusterName = math.TernaryString(instance.Key.SmallerThan(&instance.MasterKey), clusterNameByInstanceKey, clusterNameByCoMasterKey)
 		}
 		if clusterName == clusterNameByInstanceKey {
@@ -1422,7 +1422,7 @@ func readInstanceRow(m sqlutils.RowMap) *Instance {
 	instance.InstanceAlias = m.GetString("instance_alias")
 	instance.LastDiscoveryLatency = time.Duration(m.GetInt64("last_discovery_latency")) * time.Nanosecond
 
-	instance.Replicas.ReadJson(replicasJSON)
+	_ = instance.Replicas.ReadJson(replicasJSON)
 	instance.applyFlavorName()
 
 	/* Read Group Replication variables below */
@@ -1432,7 +1432,7 @@ func readInstanceRow(m sqlutils.RowMap) *Instance {
 	instance.ReplicationGroupMemberRole = m.GetString("replication_group_member_role")
 	instance.ReplicationGroupPrimaryInstanceKey = InstanceKey{Hostname: m.GetString("replication_group_primary_host"),
 		Port: m.GetInt("replication_group_primary_port")}
-	instance.ReplicationGroupMembers.ReadJson(m.GetString("replication_group_members"))
+	_ = instance.ReplicationGroupMembers.ReadJson(m.GetString("replication_group_members"))
 	//instance.ReplicationGroup = m.GetString("replication_group_")
 
 	// problems
@@ -2976,12 +2976,12 @@ func flushInstanceWriteBuffer() {
 	}
 	err := ExecDBWriteFunc(writeFunc)
 	if err != nil {
-		log.Errorf("flushInstanceWriteBuffer: %v", err)
+		_ = log.Errorf("flushInstanceWriteBuffer: %v", err)
 	}
 
 	writeBufferLatency.Stop("write")
 
-	writeBufferMetrics.Append(&WriteBufferMetric{
+	_ = writeBufferMetrics.Append(&WriteBufferMetric{
 		Timestamp:    time.Now(),
 		WaitLatency:  writeBufferLatency.Elapsed("wait"),
 		WriteLatency: writeBufferLatency.Elapsed("write"),
@@ -3436,7 +3436,7 @@ func PopulateGroupReplicationInformation(instance *Instance, db *sql.DB) error {
 				"%+v: %+v", instance.Key, err)
 		}
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	foundGroupPrimary := false
 	// Loop over the query results and populate GR instance attributes from the row that matches the instance being
 	// probed. In addition, figure out the group primary and also add it as attribute of the instance.

@@ -35,7 +35,7 @@ var syslogWriter *syslog.Writer
 var auditOperationCounter = metrics.NewCounter()
 
 func init() {
-	metrics.Register("audit.write", auditOperationCounter)
+	_ = metrics.Register("audit.write", auditOperationCounter)
 }
 
 // EnableSyslogWriter enables, if possible, writes to syslog. These will execute _in addition_ to normal logging
@@ -66,7 +66,7 @@ func AuditOperation(auditType string, instanceKey *InstanceKey, message string) 
 				return log.Errore(err)
 			}
 
-			defer f.Close()
+			defer func() { _ = f.Close() }()
 			text := fmt.Sprintf("%s\t%s\t%s\t%d\t[%s]\t%s\t\n", time.Now().Format(log.TimeFormat), auditType, instanceKey.Hostname, instanceKey.Port, clusterName, message)
 			if _, err = f.WriteString(text); err != nil {
 				return log.Errore(err)
@@ -97,7 +97,7 @@ func AuditOperation(auditType string, instanceKey *InstanceKey, message string) 
 	if syslogWriter != nil {
 		auditWrittenToFile = true
 		go func() {
-			syslogWriter.Info(logMessage)
+			_ = syslogWriter.Info(logMessage)
 		}()
 	}
 	if !auditWrittenToFile {
@@ -148,7 +148,7 @@ func ReadRecentAudit(instanceKey *InstanceKey, page int) ([]Audit, error) {
 	})
 
 	if err != nil {
-		log.Errore(err)
+		_ = log.Errore(err)
 	}
 	return res, err
 

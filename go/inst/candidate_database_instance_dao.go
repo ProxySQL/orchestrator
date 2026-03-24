@@ -45,7 +45,7 @@ func RegisterCandidateInstance(candidate *CandidateDatabaseInstance) error {
 			`
 	writeFunc := func() error {
 		_, err := db.ExecOrchestrator(query, args...)
-		AuditOperation("register-candidate", candidate.Key(), string(candidate.PromotionRule))
+		_ = AuditOperation("register-candidate", candidate.Key(), string(candidate.PromotionRule))
 		return log.Errore(err)
 	}
 	return ExecDBWriteFunc(writeFunc)

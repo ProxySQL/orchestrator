@@ -37,7 +37,7 @@ func WriteRegisterNode(nodeHealth *NodeHealth) (healthy bool, err error) {
 	}
 
 	nodeHealth.onceHistory.Do(func() {
-		db.ExecOrchestrator(`
+		_, _ = db.ExecOrchestrator(`
 			insert ignore into node_health_history
 				(hostname, token, first_seen_active, extra_info, command, app_version)
 			values
@@ -122,7 +122,7 @@ func ExpireAvailableNodes() {
 		config.HealthPollSeconds*5,
 	)
 	if err != nil {
-		log.Errorf("ExpireAvailableNodes: failed to remove old entries: %+v", err)
+		_ = log.Errorf("ExpireAvailableNodes: failed to remove old entries: %+v", err)
 	}
 }
 
