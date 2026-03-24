@@ -12,7 +12,7 @@ on:
 jobs:
   functional:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
 
     steps:
     - uses: actions/checkout@v4
@@ -23,17 +23,17 @@ jobs:
         go-version: '1.25.7'
         cache: true
 
-    - name: Build orchestrator
+    - name: Build orchestrator (for CLI tests on host)
       run: go build -o bin/orchestrator ./go/cmd/orchestrator
 
-    - name: Start test infrastructure
+    - name: Start test infrastructure (MySQL + ProxySQL + Orchestrator)
       working-directory: tests/functional
       run: |
-        docker compose up -d
-        echo "Waiting for services to be healthy..."
+        docker compose up -d mysql1 mysql2 mysql3 proxysql
+        echo "Waiting for MySQL and ProxySQL to be healthy..."
         timeout 120 bash -c '
           while true; do
-            HEALTHY=$(docker compose ps --format json | python3 -c "
+            HEALTHY=$(docker compose ps --format json 2>/dev/null | python3 -c "
         import json, sys
         healthy = 0
         for line in sys.stdin:
@@ -43,22 +43,30 @@ jobs:
         print(healthy)
         " 2>/dev/null || echo "0")
             if [ "$HEALTHY" -ge 4 ]; then
-              echo "All services healthy"
+              echo "All 4 services healthy"
               exit 0
             fi
             sleep 2
           done
-        ' || { echo "Timeout waiting for services"; docker compose ps; docker compose logs --tail=30; exit 1; }
+        ' || { echo "Timeout"; docker compose ps; docker compose logs --tail=30; exit 1; }
 
     - name: Setup replication
       run: bash tests/functional/setup-replication.sh
 
-    - name: Start orchestrator
+    - name: Start orchestrator in Docker network
+      working-directory: tests/functional
       run: |
-        rm -f /tmp/orchestrator-test.sqlite3
-        bin/orchestrator -config tests/functional/orchestrator-test.conf.json http > /tmp/orchestrator-test.log 2>&1 &
-        echo "$!" > /tmp/orchestrator-test.pid
-        sleep 3
+        docker compose up -d orchestrator
+        echo "Waiting for orchestrator to be ready..."
+        timeout 120 bash -c '
+          while true; do
+            if curl -sf http://localhost:3099/api/clusters > /dev/null 2>&1; then
+              echo "Orchestrator ready"
+              exit 0
+            fi
+            sleep 2
+          done
+        ' || { echo "Orchestrator not ready"; docker compose logs orchestrator --tail=50; exit 1; }
 
     - name: Run smoke tests
       run: bash tests/functional/test-smoke.sh
@@ -69,6 +77,11 @@ jobs:
     - name: Run failover tests
       run: bash tests/functional/test-failover.sh
 
+    - name: Collect orchestrator logs
+      if: always()
+      working-directory: tests/functional
+      run: docker compose logs orchestrator > /tmp/orchestrator-test.log 2>&1 || true
+
     - name: Upload orchestrator logs
       if: always()
       uses: actions/upload-artifact@v4
@@ -76,7 +89,7 @@ jobs:
         name: orchestrator-test-logs
         path: /tmp/orchestrator-test.log
 
-    - name: Collect docker logs on failure
+    - name: Collect all docker logs on failure
       if: failure()
       working-directory: tests/functional
       run: docker compose logs > /tmp/docker-compose-logs.txt 2>&1 || true
@@ -90,6 +103,5 @@ jobs:
 
     - name: Cleanup
       if: always()
-      run: |
-        kill "$(cat /tmp/orchestrator-test.pid 2>/dev/null)" 2>/dev/null || true
-        cd tests/functional && docker compose down -v --remove-orphans 2>/dev/null || true
+      working-directory: tests/functional
+      run: docker compose down -v --remove-orphans 2>/dev/null || true
