@@ -62,17 +62,17 @@ func AuditOperation(auditType string, instanceKey *InstanceKey, message string) 
 		auditWrittenToFile = true
 		go func() {
 			_ = func() error {
-			f, err := os.OpenFile(config.Config.AuditLogFile, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0640)
-			if err != nil {
-				return log.Errore(err)
-			}
+				f, err := os.OpenFile(config.Config.AuditLogFile, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0640)
+				if err != nil {
+					return log.Errore(err)
+				}
 
-			defer func() { _ = f.Close() }()
-			text := fmt.Sprintf("%s\t%s\t%s\t%d\t[%s]\t%s\t\n", time.Now().Format(log.TimeFormat), auditType, instanceKey.Hostname, instanceKey.Port, clusterName, message)
-			if _, err = f.WriteString(text); err != nil {
-				return log.Errore(err)
-			}
-			return nil
+				defer func() { _ = f.Close() }()
+				text := fmt.Sprintf("%s\t%s\t%s\t%d\t[%s]\t%s\t\n", time.Now().Format(log.TimeFormat), auditType, instanceKey.Hostname, instanceKey.Port, clusterName, message)
+				if _, err = f.WriteString(text); err != nil {
+					return log.Errore(err)
+				}
+				return nil
 			}()
 		}()
 	}

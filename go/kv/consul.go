@@ -38,8 +38,8 @@ func getConsulKVCacheKey(dc, key string) string {
 
 // A Consul store based on config's `ConsulAddress`, `ConsulScheme`, and `ConsulKVPrefix`
 type consulStore struct {
-	client                        *consulapi.Client
-	kvCache                       *cache.Cache
+	client              *consulapi.Client
+	kvCache             *cache.Cache
 	distributionReentry int64
 }
 

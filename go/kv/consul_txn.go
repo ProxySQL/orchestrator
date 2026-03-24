@@ -67,8 +67,8 @@ func groupKVPairsByKeyPrefix(kvPairs consulapi.KVPairs) (groups []consulapi.KVPa
 
 // A Consul store based on config's `ConsulAddress`, `ConsulScheme`, and `ConsulKVPrefix`
 type consulTxnStore struct {
-	client                        *consulapi.Client
-	kvCache                       *cache.Cache
+	client              *consulapi.Client
+	kvCache             *cache.Cache
 	distributionReentry int64
 }
 

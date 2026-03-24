@@ -6,8 +6,8 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
-	"os"
 	nethttp "net/http"
+	"os"
 	"strings"
 
 	"github.com/howeyc/gopass"
