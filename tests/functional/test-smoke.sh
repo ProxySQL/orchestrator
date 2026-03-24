@@ -1,0 +1,87 @@
+#!/bin/bash
+# Tier A: Smoke tests — verify basic functionality against real services
+set -euo pipefail
+cd "$(dirname "$0")/../.."
+source tests/functional/lib.sh
+
+echo "=== TIER A: SMOKE TESTS ==="
+
+# Prerequisites
+wait_for_orchestrator || { echo "FATAL: Orchestrator not reachable"; exit 1; }
+discover_topology "mysql1"
+
+echo ""
+echo "--- Discovery ---"
+test_body_contains "Cluster discovered" "$ORC_URL/api/clusters" "mysql1"
+
+INST_COUNT=$(curl -s "$ORC_URL/api/cluster/mysql1:3306" 2>/dev/null | python3 -c "import json,sys; print(len(json.load(sys.stdin)))" 2>/dev/null || echo "0")
+if [ "$INST_COUNT" -ge 2 ]; then
+    pass "Instances discovered: $INST_COUNT"
+else
+    fail "Instances discovered: $INST_COUNT (expected >= 2)"
+fi
+
+echo ""
+echo "--- Web UI ---"
+test_endpoint "Web UI root" "$ORC_URL/" "302"
+test_endpoint "Static CSS" "$ORC_URL/css/orchestrator.css" "200"
+test_endpoint "Static JS" "$ORC_URL/js/orchestrator.js" "200"
+
+echo ""
+echo "--- API v1 ---"
+test_endpoint "GET /api/clusters" "$ORC_URL/api/clusters" "200"
+test_endpoint "GET /api/problems" "$ORC_URL/api/problems" "200"
+test_endpoint "GET /api/audit-recovery" "$ORC_URL/api/audit-recovery" "200"
+test_endpoint "GET /api/maintenance" "$ORC_URL/api/maintenance" "200"
+
+echo ""
+echo "--- API v2 ---"
+test_endpoint "GET /api/v2/clusters" "$ORC_URL/api/v2/clusters" "200"
+test_endpoint "GET /api/v2/status" "$ORC_URL/api/v2/status" "200"
+test_endpoint "GET /api/v2/recoveries" "$ORC_URL/api/v2/recoveries" "200"
+test_endpoint "GET /api/v2/proxysql/servers" "$ORC_URL/api/v2/proxysql/servers" "200"
+test_body_contains "V2 response has status field" "$ORC_URL/api/v2/clusters" '"status"'
+
+V2_404=$(curl -s -o /dev/null -w "%{http_code}" "$ORC_URL/api/v2/instances/nonexistent/9999")
+if [ "$V2_404" = "404" ]; then
+    pass "V2 returns 404 for unknown instance"
+else
+    fail "V2 returns $V2_404 for unknown instance (expected 404)"
+fi
+
+echo ""
+echo "--- Prometheus ---"
+test_endpoint "GET /metrics" "$ORC_URL/metrics" "200"
+test_body_contains "Metric: orchestrator_instances_total" "$ORC_URL/metrics" "orchestrator_instances_total"
+test_body_contains "Metric: orchestrator_clusters_total" "$ORC_URL/metrics" "orchestrator_clusters_total"
+test_body_contains "Metric: orchestrator_discoveries_total" "$ORC_URL/metrics" "orchestrator_discoveries_total"
+
+echo ""
+echo "--- Health Endpoints ---"
+test_endpoint "GET /health/live" "$ORC_URL/health/live" "200"
+test_endpoint "GET /health/ready" "$ORC_URL/health/ready" "200"
+test_endpoint "GET /health/leader" "$ORC_URL/health/leader" "200"
+
+echo ""
+echo "--- ProxySQL ---"
+test_endpoint "GET /api/proxysql/servers" "$ORC_URL/api/proxysql/servers" "200"
+test_body_contains "ProxySQL returns server data" "$ORC_URL/api/proxysql/servers" "mysql1"
+
+# CLI tests (run against the built binary)
+echo ""
+echo "--- ProxySQL CLI ---"
+PSQL_TEST=$(bin/orchestrator -config tests/functional/orchestrator-test.conf.json -c proxysql-test 2>&1 || true)
+if echo "$PSQL_TEST" | grep -q "connection: OK"; then
+    pass "proxysql-test CLI"
+else
+    fail "proxysql-test CLI" "$(echo "$PSQL_TEST" | tail -1)"
+fi
+
+PSQL_SERVERS=$(bin/orchestrator -config tests/functional/orchestrator-test.conf.json -c proxysql-servers 2>&1 || true)
+if echo "$PSQL_SERVERS" | grep -q "mysql1"; then
+    pass "proxysql-servers CLI"
+else
+    fail "proxysql-servers CLI" "$(echo "$PSQL_SERVERS" | tail -1)"
+fi
+
+summary

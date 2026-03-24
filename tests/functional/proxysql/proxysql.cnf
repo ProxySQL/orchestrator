@@ -1,0 +1,34 @@
+datadir="/var/lib/proxysql"
+
+admin_variables=
+{
+    admin_credentials="admin:admin;radmin:radmin"
+    mysql_ifaces="0.0.0.0:6032"
+}
+
+mysql_variables=
+{
+    threads=2
+    max_connections=100
+    default_query_delay=0
+    default_query_timeout=36000000
+    interfaces="0.0.0.0:6033"
+    monitor_username="orchestrator"
+    monitor_password="orch_pass"
+    monitor_galera_healthcheck_interval=2000
+    monitor_connect_interval=2000
+    monitor_ping_interval=2000
+    monitor_read_only_interval=1000
+}
+
+mysql_servers=
+(
+    { hostgroup_id=10, hostname="mysql1", port=3306, comment="writer" },
+    { hostgroup_id=20, hostname="mysql2", port=3306, comment="reader1" },
+    { hostgroup_id=20, hostname="mysql3", port=3306, comment="reader2" }
+)
+
+mysql_users=
+(
+    { username="orchestrator", password="orch_pass", default_hostgroup=10 }
+)

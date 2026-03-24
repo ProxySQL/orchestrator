@@ -1,0 +1,106 @@
+name: Functional Tests
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+  workflow_dispatch:
+
+jobs:
+  functional:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.25.7'
+        cache: true
+
+    - name: Build orchestrator
+      run: go build -o bin/orchestrator ./go/cmd/orchestrator
+
+    - name: Start test infrastructure
+      working-directory: tests/functional
+      run: |
+        docker compose up -d
+        echo "Waiting for services to be healthy..."
+        timeout 120 bash -c '
+          while true; do
+            HEALTHY=$(docker compose ps --format json | python3 -c "
+        import json, sys
+        healthy = 0
+        for line in sys.stdin:
+            svc = json.loads(line)
+            if \"healthy\" in svc.get(\"Status\",\"\").lower():
+                healthy += 1
+        print(healthy)
+        " 2>/dev/null || echo "0")
+            if [ "$HEALTHY" -ge 4 ]; then
+              echo "All services healthy"
+              exit 0
+            fi
+            sleep 2
+          done
+        ' || { echo "Timeout waiting for services"; docker compose ps; docker compose logs --tail=30; exit 1; }
+
+    - name: Verify replication
+      working-directory: tests/functional
+      run: |
+        timeout 30 bash -c '
+          while true; do
+            REPL=$(docker compose exec -T mysql2 mysql -uroot -ptestpass -Nse "SHOW REPLICA STATUS\G" 2>/dev/null | grep "Replica_IO_Running: Yes" || true)
+            if [ -n "$REPL" ]; then
+              echo "Replication running"
+              exit 0
+            fi
+            sleep 1
+          done
+        ' || { echo "Replication not running"; exit 1; }
+
+    - name: Start orchestrator
+      run: |
+        rm -f /tmp/orchestrator-test.sqlite3
+        bin/orchestrator -config tests/functional/orchestrator-test.conf.json http > /tmp/orchestrator-test.log 2>&1 &
+        echo "$!" > /tmp/orchestrator-test.pid
+        sleep 3
+
+    - name: Run smoke tests
+      run: bash tests/functional/test-smoke.sh
+
+    - name: Run regression tests
+      run: bash tests/functional/test-regression.sh
+
+    - name: Run failover tests
+      run: bash tests/functional/test-failover.sh
+
+    - name: Upload orchestrator logs
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: orchestrator-test-logs
+        path: /tmp/orchestrator-test.log
+
+    - name: Collect docker logs on failure
+      if: failure()
+      working-directory: tests/functional
+      run: docker compose logs > /tmp/docker-compose-logs.txt 2>&1 || true
+
+    - name: Upload docker logs on failure
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: docker-compose-logs
+        path: /tmp/docker-compose-logs.txt
+
+    - name: Cleanup
+      if: always()
+      run: |
+        kill "$(cat /tmp/orchestrator-test.pid 2>/dev/null)" 2>/dev/null || true
+        cd tests/functional && docker compose down -v --remove-orphans 2>/dev/null || true

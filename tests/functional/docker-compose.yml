@@ -1,0 +1,80 @@
+version: "3.8"
+
+services:
+  mysql1:
+    image: mysql:8.4
+    hostname: mysql1
+    environment:
+      MYSQL_ROOT_PASSWORD: testpass
+    volumes:
+      - ./mysql/master.cnf:/etc/mysql/conf.d/repl.cnf
+      - ./mysql/init-master.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-ptestpass"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    networks:
+      - orchnet
+
+  mysql2:
+    image: mysql:8.4
+    hostname: mysql2
+    environment:
+      MYSQL_ROOT_PASSWORD: testpass
+    volumes:
+      - ./mysql/replica.cnf:/etc/mysql/conf.d/repl.cnf
+      - ./mysql/init-replica.sql:/docker-entrypoint-initdb.d/init.sql
+    depends_on:
+      mysql1:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-ptestpass"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    networks:
+      - orchnet
+
+  mysql3:
+    image: mysql:8.4
+    hostname: mysql3
+    environment:
+      MYSQL_ROOT_PASSWORD: testpass
+    volumes:
+      - ./mysql/replica.cnf:/etc/mysql/conf.d/repl.cnf
+      - ./mysql/init-replica.sql:/docker-entrypoint-initdb.d/init.sql
+    depends_on:
+      mysql1:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-ptestpass"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    networks:
+      - orchnet
+
+  proxysql:
+    image: proxysql/proxysql:latest
+    hostname: proxysql
+    volumes:
+      - ./proxysql/proxysql.cnf:/etc/proxysql.cnf
+    depends_on:
+      mysql1:
+        condition: service_healthy
+      mysql2:
+        condition: service_healthy
+      mysql3:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-P6032", "-uradmin", "-pradmin"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    networks:
+      - orchnet
+
+networks:
+  orchnet:
+    driver: bridge
