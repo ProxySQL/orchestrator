@@ -35,8 +35,8 @@ type StopReplicationMethod string
 
 const (
 	NoStopReplication     StopReplicationMethod = "NoStopReplication"
-	StopReplicationNormal                       = "StopReplicationNormal"
-	StopReplicationNice                         = "StopReplicationNice"
+	StopReplicationNormal StopReplicationMethod = "StopReplicationNormal"
+	StopReplicationNice   StopReplicationMethod = "StopReplicationNice"
 )
 
 var ReplicationNotRunningError = fmt.Errorf("Replication not running")
@@ -1748,8 +1748,8 @@ func TakeMasterHook(successor *Instance, demoted *Instance) {
 	env = append(env, fmt.Sprintf("ORC_SUCCESSOR_HOST=%s", successorKey))
 	env = append(env, fmt.Sprintf("ORC_FAILED_HOST=%s", demotedKey))
 
-	successorStr := fmt.Sprintf("%s", successorKey)
-	demotedStr := fmt.Sprintf("%s", demotedKey)
+	successorStr := successorKey.String()
+	demotedStr := demotedKey.String()
 
 	processCount := len(config.Config.PostTakeMasterProcesses)
 	for i, command := range config.Config.PostTakeMasterProcesses {

@@ -773,7 +773,7 @@ func (this *HttpAPI) LocateErrantGTID(w http.ResponseWriter, r *http.Request) {
 		Respond(w, &APIResponse{Code: ERROR, Message: err.Error()})
 		return
 	}
-	Respond(w, &APIResponse{Code: OK, Message: fmt.Sprintf("located errant GTID"), Details: errantBinlogs})
+	Respond(w, &APIResponse{Code: OK, Message: "located errant GTID", Details: errantBinlogs})
 }
 
 // ErrantGTIDResetMaster removes errant transactions on a server by way of RESET MASTER
@@ -2903,7 +2903,7 @@ func (this *HttpAPI) Health(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	Respond(w, &APIResponse{Code: OK, Message: fmt.Sprintf("Application node is healthy"), Details: health})
+	Respond(w, &APIResponse{Code: OK, Message: "Application node is healthy", Details: health})
 
 }
 
@@ -2937,7 +2937,7 @@ func (this *HttpAPI) StatusCheck(w http.ResponseWriter, r *http.Request) {
 		renderJSON(w, 500, &APIResponse{Code: ERROR, Message: fmt.Sprintf("Application node is unhealthy %+v", err), Details: health})
 		return
 	}
-	Respond(w, &APIResponse{Code: OK, Message: fmt.Sprintf("Application node is healthy"), Details: health})
+	Respond(w, &APIResponse{Code: OK, Message: "Application node is healthy", Details: health})
 }
 
 // GrabElection forcibly grabs leadership. Use with care!!
@@ -2952,7 +2952,7 @@ func (this *HttpAPI) GrabElection(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	Respond(w, &APIResponse{Code: OK, Message: fmt.Sprintf("Node elected as leader")})
+	Respond(w, &APIResponse{Code: OK, Message: "Node elected as leader"})
 }
 
 // Reelect causes re-elections for an active node
@@ -2967,7 +2967,7 @@ func (this *HttpAPI) Reelect(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	Respond(w, &APIResponse{Code: OK, Message: fmt.Sprintf("Set re-elections")})
+	Respond(w, &APIResponse{Code: OK, Message: "Set re-elections"})
 }
 
 // RaftAddPeer adds a new node to the raft cluster
@@ -3021,7 +3021,7 @@ func (this *HttpAPI) RaftYield(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	orcraft.PublishYield(chi.URLParam(r, "node"))
-	Respond(w, &APIResponse{Code: OK, Message: fmt.Sprintf("Asynchronously yielded")})
+	Respond(w, &APIResponse{Code: OK, Message: "Asynchronously yielded"})
 }
 
 // RaftYieldHint yields to a host whose name contains given hint (e.g. DC)
@@ -3162,7 +3162,7 @@ func (this *HttpAPI) ReloadConfiguration(w http.ResponseWriter, r *http.Request)
 	config.Reload(extraConfigFile)
 	inst.AuditOperation("reload-configuration", nil, "Triggered via API")
 
-	Respond(w, &APIResponse{Code: OK, Message: fmt.Sprintf("Config reloaded"), Details: extraConfigFile})
+	Respond(w, &APIResponse{Code: OK, Message: "Config reloaded", Details: extraConfigFile})
 }
 
 // ReplicationAnalysis retuens list of issues
@@ -3183,7 +3183,7 @@ func (this *HttpAPI) replicationAnalysis(clusterName string, instanceKey *inst.I
 		analysis = filtered
 	}
 
-	Respond(w, &APIResponse{Code: OK, Message: fmt.Sprintf("Analysis"), Details: analysis})
+	Respond(w, &APIResponse{Code: OK, Message: "Analysis", Details: analysis})
 }
 
 // ReplicationAnalysis retuens list of issues
@@ -3397,7 +3397,7 @@ func (this *HttpAPI) AutomatedRecoveryFilters(w http.ResponseWriter, r *http.Req
 	automatedRecoveryMap["RecoverIntermediateMasterClusterFilters"] = config.Config.RecoverIntermediateMasterClusterFilters
 	automatedRecoveryMap["RecoveryIgnoreHostnameFilters"] = config.Config.RecoveryIgnoreHostnameFilters
 
-	Respond(w, &APIResponse{Code: OK, Message: fmt.Sprintf("Automated recovery configuration details"), Details: automatedRecoveryMap})
+	Respond(w, &APIResponse{Code: OK, Message: "Automated recovery configuration details", Details: automatedRecoveryMap})
 }
 
 // AuditFailureDetection provides list of topology_failure_detection entries
@@ -3540,7 +3540,7 @@ func (this *HttpAPI) AcknowledgeClusterRecoveries(w http.ResponseWriter, r *http
 
 	comment := strings.TrimSpace(r.URL.Query().Get("comment"))
 	if comment == "" {
-		Respond(w, &APIResponse{Code: ERROR, Message: fmt.Sprintf("No acknowledge comment given")})
+		Respond(w, &APIResponse{Code: ERROR, Message: "No acknowledge comment given"})
 		return
 	}
 	userId := getUserId(r)
@@ -3559,7 +3559,7 @@ func (this *HttpAPI) AcknowledgeClusterRecoveries(w http.ResponseWriter, r *http
 		return
 	}
 
-	Respond(w, &APIResponse{Code: OK, Message: fmt.Sprintf("Acknowledged cluster recoveries"), Details: clusterName})
+	Respond(w, &APIResponse{Code: OK, Message: "Acknowledged cluster recoveries", Details: clusterName})
 }
 
 // ClusterInfo provides details of a given cluster
@@ -3577,7 +3577,7 @@ func (this *HttpAPI) AcknowledgeInstanceRecoveries(w http.ResponseWriter, r *htt
 
 	comment := strings.TrimSpace(r.URL.Query().Get("comment"))
 	if comment == "" {
-		Respond(w, &APIResponse{Code: ERROR, Message: fmt.Sprintf("No acknowledge comment given")})
+		Respond(w, &APIResponse{Code: ERROR, Message: "No acknowledge comment given"})
 		return
 	}
 	userId := getUserId(r)
@@ -3596,7 +3596,7 @@ func (this *HttpAPI) AcknowledgeInstanceRecoveries(w http.ResponseWriter, r *htt
 		return
 	}
 
-	Respond(w, &APIResponse{Code: OK, Message: fmt.Sprintf("Acknowledged instance recoveries"), Details: instanceKey})
+	Respond(w, &APIResponse{Code: OK, Message: "Acknowledged instance recoveries", Details: instanceKey})
 }
 
 // ClusterInfo provides details of a given cluster
@@ -3623,7 +3623,7 @@ func (this *HttpAPI) AcknowledgeRecovery(w http.ResponseWriter, r *http.Request)
 	}
 	comment := strings.TrimSpace(r.URL.Query().Get("comment"))
 	if comment == "" {
-		Respond(w, &APIResponse{Code: ERROR, Message: fmt.Sprintf("No acknowledge comment given")})
+		Respond(w, &APIResponse{Code: ERROR, Message: "No acknowledge comment given"})
 		return
 	}
 	userId := getUserId(r)
@@ -3648,7 +3648,7 @@ func (this *HttpAPI) AcknowledgeRecovery(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	Respond(w, &APIResponse{Code: OK, Message: fmt.Sprintf("Acknowledged recovery"), Details: idParam})
+	Respond(w, &APIResponse{Code: OK, Message: "Acknowledged recovery", Details: idParam})
 }
 
 // ClusterInfo provides details of a given cluster
@@ -3660,7 +3660,7 @@ func (this *HttpAPI) AcknowledgeAllRecoveries(w http.ResponseWriter, r *http.Req
 
 	comment := strings.TrimSpace(r.URL.Query().Get("comment"))
 	if comment == "" {
-		Respond(w, &APIResponse{Code: ERROR, Message: fmt.Sprintf("No acknowledge comment given")})
+		Respond(w, &APIResponse{Code: ERROR, Message: "No acknowledge comment given"})
 		return
 	}
 	userId := getUserId(r)
@@ -3680,7 +3680,7 @@ func (this *HttpAPI) AcknowledgeAllRecoveries(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	Respond(w, &APIResponse{Code: OK, Message: fmt.Sprintf("Acknowledged all recoveries"), Details: comment})
+	Respond(w, &APIResponse{Code: OK, Message: "Acknowledged all recoveries", Details: comment})
 }
 
 // BlockedRecoveries reads list of currently blocked recoveries, optionally filtered by cluster name

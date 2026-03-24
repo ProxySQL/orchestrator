@@ -660,6 +660,6 @@ func (this *Instance) HumanReadableDescription() string {
 // TabulatedDescription returns a simple tabulated string of various properties
 func (this *Instance) TabulatedDescription(separator string) string {
 	tokens := this.descriptionTokens()
-	description := fmt.Sprintf("%s", strings.Join(tokens, separator))
+	description := strings.Join(tokens, separator)
 	return description
 }

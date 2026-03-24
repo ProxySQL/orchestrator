@@ -216,7 +216,7 @@ func logReadTopologyInstanceError(instanceKey *InstanceKey, hint string, err err
 	} else {
 		msg = fmt.Sprintf("ReadTopologyInstance(%+v) %+v: %+v",
 			*instanceKey,
-			strings.Replace(hint, "%", "%%", -1), // escape %
+			strings.ReplaceAll(hint, "%", "%%"), // escape %
 			err)
 	}
 	return log.Errorf("%s", msg)
@@ -600,23 +600,24 @@ func ReadTopologyInstanceBufferable(instanceKey *InstanceKey, bufferWrites bool,
 				err := sqlutils.QueryRowsMap(db, "show global variables like 'rpl_semi_sync_%'", func(m sqlutils.RowMap) error {
 					variableName := m.GetString("Variable_name")
 					// Learn if semi-sync plugin is loaded and what is its version
-					if variableName == "rpl_semi_sync_master_enabled" {
+					switch variableName {
+					case "rpl_semi_sync_master_enabled":
 						instance.SemiSyncMasterEnabled = (m.GetString("Value") == "ON")
 						semiSyncMasterPluginLoaded = true
 						instance.SemiSyncMasterPluginNewVersion = false
-					} else if variableName == "rpl_semi_sync_source_enabled" {
+					case "rpl_semi_sync_source_enabled":
 						instance.SemiSyncMasterEnabled = (m.GetString("Value") == "ON")
 						semiSyncMasterPluginLoaded = true
 						instance.SemiSyncMasterPluginNewVersion = true
-					} else if variableName == "rpl_semi_sync_slave_enabled" {
+					case "rpl_semi_sync_slave_enabled":
 						instance.SemiSyncReplicaEnabled = (m.GetString("Value") == "ON")
 						semiSyncReplicaPluginLoaded = true
 						instance.SemiSyncReplicaPluginNewVersion = false
-					} else if variableName == "rpl_semi_sync_replica_enabled" {
+					case "rpl_semi_sync_replica_enabled":
 						instance.SemiSyncReplicaEnabled = (m.GetString("Value") == "ON")
 						semiSyncReplicaPluginLoaded = true
 						instance.SemiSyncReplicaPluginNewVersion = true
-					} else {
+					default:
 						// additional info
 						matched, regexperr := regexp.MatchString("^rpl_semi_sync_(master|source)_timeout$", variableName)
 						if regexperr != nil {
@@ -1536,7 +1537,7 @@ func ReadInstance(instanceKey *InstanceKey) (*Instance, bool, error) {
 
 // ReadClusterInstances reads all instances of a given cluster
 func ReadClusterInstances(clusterName string) ([](*Instance), error) {
-	if strings.Index(clusterName, "'") >= 0 {
+	if strings.Contains(clusterName, "'") {
 		return [](*Instance){}, log.Errorf("Invalid cluster name: %s", clusterName)
 	}
 	condition := `cluster_name = ?`
@@ -2671,10 +2672,8 @@ func mkInsertOdkuForInstances(instances []*Instance, instanceWasActuallyFound bo
 		return "", nil, nil
 	}
 
-	insertIgnore := false
-	if !instanceWasActuallyFound {
-		insertIgnore = true
-	}
+	insertIgnore := !instanceWasActuallyFound
+
 	var columns = []string{
 		"hostname",
 		"port",

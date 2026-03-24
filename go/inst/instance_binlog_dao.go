@@ -659,7 +659,7 @@ const anonymousGTIDNextEvent = "SET @@SESSION.GTID_NEXT= 'ANONYMOUS'"
 
 // check if the event is one we want to skip.
 func specialEventToSkip(event *BinlogEvent) bool {
-	if event != nil && strings.Index(event.Info, anonymousGTIDNextEvent) >= 0 {
+	if event != nil && strings.Contains(event.Info, anonymousGTIDNextEvent) {
 		return true
 	}
 	return false
@@ -701,8 +701,8 @@ func GetNextBinlogCoordinatesToMatch(
 	}
 
 	var (
-		beautifyCoordinatesLength    int = 0
-		countMatchedEvents           int = 0
+		beautifyCoordinatesLength    = 0
+		countMatchedEvents           = 0
 		lastConsumedEventCoordinates BinlogCoordinates
 	)
 

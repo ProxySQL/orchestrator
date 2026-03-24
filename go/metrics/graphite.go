@@ -44,10 +44,10 @@ func InitGraphiteMetrics() error {
 	}
 	graphitePathHostname := process.ThisHostname
 	if config.Config.GraphiteConvertHostnameDotsToUnderscores {
-		graphitePathHostname = strings.Replace(graphitePathHostname, ".", "_", -1)
+		graphitePathHostname = strings.ReplaceAll(graphitePathHostname, ".", "_")
 	}
 	graphitePath := config.Config.GraphitePath
-	graphitePath = strings.Replace(graphitePath, "{hostname}", graphitePathHostname, -1)
+	graphitePath = strings.ReplaceAll(graphitePath, "{hostname}", graphitePathHostname)
 
 	log.Debugf("Will log to graphite on %+v, %+v", config.Config.GraphiteAddr, graphitePath)
 

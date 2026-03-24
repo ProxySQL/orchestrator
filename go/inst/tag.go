@@ -45,7 +45,7 @@ func NewTag(tagName string, tagValue string) (*Tag, error) {
 }
 
 func ParseTag(tagString string) (*Tag, error) {
-	tagString = strings.Replace(tagString, "!", "~", -1)
+	tagString = strings.ReplaceAll(tagString, "!", "~")
 	tagString = strings.TrimSpace(tagString)
 
 	if submatch := negateTagEqualsRegexp.FindStringSubmatch(tagString); len(submatch) > 0 {
@@ -80,7 +80,7 @@ func (tag *Tag) String() string {
 
 func (tag *Tag) Display() string {
 	if tag.TagValue == "" {
-		return fmt.Sprintf("%s", tag.TagName)
+		return tag.TagName
 	} else {
 		return fmt.Sprintf("%s=%s", tag.TagName, tag.TagValue)
 	}

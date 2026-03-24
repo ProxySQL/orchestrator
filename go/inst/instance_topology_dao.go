@@ -42,8 +42,8 @@ type OperationGTIDHint string
 
 const (
 	GTIDHintDeny    OperationGTIDHint = "NoGTID"
-	GTIDHintNeutral                   = "GTIDHintNeutral"
-	GTIDHintForce                     = "GTIDHintForce"
+	GTIDHintNeutral OperationGTIDHint = "GTIDHintNeutral"
+	GTIDHintForce   OperationGTIDHint = "GTIDHintForce"
 )
 
 const (
