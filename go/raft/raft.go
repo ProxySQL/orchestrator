@@ -302,7 +302,7 @@ func GetPeers() ([]string, error) {
 	}
 	future := store.raft.GetConfiguration()
 	if err := future.Error(); err != nil {
-		return nil, err
+		return []string{}, err
 	}
 	var peers []string
 	for _, server := range future.Configuration().Servers {

@@ -123,10 +123,20 @@ func (store *Store) Open(peerNodes []string) error {
 		} else {
 			// Multi-node mode: bootstrap with all known peers
 			log.Infof("bootstrapping cluster with peers: %+v", peers)
+			localIncluded := false
 			for _, peer := range peers {
+				if peer == store.raftAdvertise {
+					localIncluded = true
+				}
 				servers = append(servers, raft.Server{
 					ID:      raft.ServerID(peer),
 					Address: raft.ServerAddress(peer),
+				})
+			}
+			if !localIncluded {
+				servers = append(servers, raft.Server{
+					ID:      raft.ServerID(store.raftAdvertise),
+					Address: raft.ServerAddress(store.raftAdvertise),
 				})
 			}
 		}
@@ -150,7 +160,7 @@ func (store *Store) Open(peerNodes []string) error {
 func (store *Store) AddPeer(addr string) error {
 	log.Infof("received join request for remote node %s", addr)
 
-	f := store.raft.AddVoter(raft.ServerID(addr), raft.ServerAddress(addr), 0, 0)
+	f := store.raft.AddVoter(raft.ServerID(addr), raft.ServerAddress(addr), 0, 30*time.Second)
 	if f.Error() != nil {
 		return f.Error()
 	}
@@ -162,7 +172,7 @@ func (store *Store) AddPeer(addr string) error {
 func (store *Store) RemovePeer(addr string) error {
 	log.Infof("received remove request for remote node %s", addr)
 
-	f := store.raft.RemoveServer(raft.ServerID(addr), 0, 0)
+	f := store.raft.RemoveServer(raft.ServerID(addr), 0, 30*time.Second)
 	if f.Error() != nil {
 		return f.Error()
 	}
