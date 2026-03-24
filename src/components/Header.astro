@@ -13,7 +13,7 @@ const navItems = [
 <header class="site-header">
   <div class="container header-inner">
     <a class="logo" href={base}>
-      <img src={`${base}images/orchestrator-logo-wide.png`} alt="Orchestrator" height="36" />
+      <span class="logo-text">orchestrator</span>
     </a>
     <button class="menu-toggle" aria-label="Toggle navigation" aria-expanded="false">
       <span></span>
@@ -55,8 +55,11 @@ const navItems = [
     height: 100%;
   }
 
-  .logo img {
-    display: block;
+  .logo-text {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--color-text-inverse);
+    letter-spacing: -0.02em;
   }
 
   .main-nav ul {
