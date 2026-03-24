@@ -71,7 +71,7 @@ See [Observability documentation](docs/observability.md) and [API v2 documentati
 - Manual and automated failovers with full audit trail
 - Pseudo-GTID and Oracle GTID support
 - Datacenter/physical location awareness
-- Database provider abstraction (MySQL, PostgreSQL foundation)
+- Database provider abstraction for future multi-database support
 - HTTP security/authentication methods
 
 Read the [Orchestrator documentation](https://github.com/proxysql/orchestrator/tree/master/docs)
