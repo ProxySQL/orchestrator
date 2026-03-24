@@ -11,6 +11,7 @@ require (
 	github.com/hashicorp/consul/api v1.33.4
 	github.com/hashicorp/raft v1.7.3
 	github.com/howeyc/gopass v0.0.0-20210920133722-c8aef6fb66ef
+	github.com/lib/pq v1.12.0
 	github.com/mattn/go-sqlite3 v1.14.37
 	github.com/montanaflynn/stats v0.8.2
 	github.com/outbrain/zookeepercli v1.0.12
