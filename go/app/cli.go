@@ -121,11 +121,6 @@ func getClusterName(clusterAlias string, instanceKey *inst.InstanceKey) (cluster
 	return clusterName
 }
 
-func assignThisInstanceKey() *inst.InstanceKey {
-	log.Debugf("Assuming instance is this machine, %+v", thisInstanceKey)
-	return thisInstanceKey
-}
-
 func validateInstanceIsFound(instanceKey *inst.InstanceKey) (instance *inst.Instance) {
 	instance, _, err := inst.ReadInstance(instanceKey)
 	if err != nil {

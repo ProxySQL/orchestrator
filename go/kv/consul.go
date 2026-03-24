@@ -40,8 +40,7 @@ func getConsulKVCacheKey(dc, key string) string {
 type consulStore struct {
 	client                        *consulapi.Client
 	kvCache                       *cache.Cache
-	pairsDistributionSuccessMutex sync.Mutex
-	distributionReentry           int64
+	distributionReentry int64
 }
 
 // NewConsulStore creates a new consul store. It is possible that the client for this store is nil,

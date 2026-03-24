@@ -31,7 +31,6 @@ import (
 )
 
 const maxEmptyBinlogFiles int = 10
-const maxEventInfoDisplayLength int = 200
 
 var instanceBinlogEntryCache *cache.Cache
 

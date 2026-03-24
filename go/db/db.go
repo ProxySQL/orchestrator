@@ -139,10 +139,6 @@ func IsSQLite() bool {
 	return config.Config.IsSQLite()
 }
 
-func isInMemorySQLite() bool {
-	return config.Config.IsSQLite() && strings.Contains(config.Config.SQLite3DataFile, ":memory:")
-}
-
 // matchDSN tries to match the DSN or returns an error
 func matchDSN(dsn string) (string, error) {
 	re := regexp.MustCompile(dsnRegexp)

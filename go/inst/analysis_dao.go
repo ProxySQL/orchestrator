@@ -24,7 +24,7 @@ import (
 	"github.com/proxysql/orchestrator/go/config"
 	"github.com/proxysql/orchestrator/go/db"
 	"github.com/proxysql/orchestrator/go/process"
-	orcraft "github.com/proxysql/orchestrator/go/raft"
+
 	"github.com/proxysql/orchestrator/go/util"
 
 	"github.com/patrickmn/go-cache"
@@ -735,36 +735,6 @@ func GetReplicationAnalysis(clusterName string, hints *ReplicationAnalysisHints)
 	}
 	// TODO: result, err = getConcensusReplicationAnalysis(result)
 	return result, log.Errore(err)
-}
-
-func getConcensusReplicationAnalysis(analysisEntries []ReplicationAnalysis) ([]ReplicationAnalysis, error) {
-	if !orcraft.IsRaftEnabled() {
-		return analysisEntries, nil
-	}
-	if !config.Config.ExpectFailureAnalysisConcensus {
-		return analysisEntries, nil
-	}
-	concensusAnalysisEntries := []ReplicationAnalysis{}
-	peerAnalysisMap, err := ReadPeerAnalysisMap()
-	if err != nil {
-		return analysisEntries, err
-	}
-	quorumSize, err := orcraft.QuorumSize()
-	if err != nil {
-		return analysisEntries, err
-	}
-
-	for _, analysisEntry := range analysisEntries {
-		instanceAnalysis := NewInstanceAnalysis(&analysisEntry.AnalyzedInstanceKey, analysisEntry.Analysis)
-		analysisKey := instanceAnalysis.String()
-
-		peerAnalysisCount := peerAnalysisMap[analysisKey]
-		if 1+peerAnalysisCount >= quorumSize {
-			// this node and enough other nodes in agreement
-			concensusAnalysisEntries = append(concensusAnalysisEntries, analysisEntry)
-		}
-	}
-	return concensusAnalysisEntries, nil
 }
 
 // auditInstanceAnalysisInChangelog will write down an instance's analysis in the database_instance_analysis_changelog table.

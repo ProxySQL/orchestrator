@@ -64,26 +64,6 @@ const (
 	ConsulMaxTransactionOps                      = 64
 )
 
-var deprecatedConfigurationVariables = []string{
-	"DatabaselessMode__experimental",
-	"BufferBinlogEvents",
-	"BinlogFileHistoryDays",
-	"MaintenanceOwner",
-	"ReadLongRunningQueries",
-	"DiscoveryPollSeconds",
-	"ActiveNodeExpireSeconds",
-	"AuditPageSize",
-	"SlaveStartPostWaitMilliseconds",
-	"MySQLTopologyMaxPoolConnections",
-	"MaintenancePurgeDays",
-	"MaintenanceExpireMinutes",
-	"HttpTimeoutSeconds",
-	"AgentAutoDiscover",
-	"PseudoGTIDCoordinatesHistoryHeuristicMinutes",
-	"PseudoGTIDPreferIndependentMultiMatch",
-	"MaxOutdatedKeysToShow",
-}
-
 // Configuration makes for orchestrator configuration input, which can be provided by user via JSON formatted file.
 // Some of the parameteres have reasonable default values, and some (like database credentials) are
 // strictly expected from user.

@@ -73,8 +73,7 @@ func groupKVPairsByKeyPrefix(kvPairs consulapi.KVPairs) (groups []consulapi.KVPa
 type consulTxnStore struct {
 	client                        *consulapi.Client
 	kvCache                       *cache.Cache
-	pairsDistributionSuccessMutex sync.Mutex
-	distributionReentry           int64
+	distributionReentry int64
 }
 
 // NewConsulTxnStore creates a new consul store that uses Consul Transactions to read/write multiple KVPairs.
