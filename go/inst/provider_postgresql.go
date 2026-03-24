@@ -19,6 +19,7 @@ package inst
 import (
 	"database/sql"
 	"fmt"
+	"net/url"
 
 	_ "github.com/lib/pq"
 	"github.com/proxysql/golib/log"
@@ -41,13 +42,15 @@ func (p *PostgreSQLProvider) ProviderName() string {
 
 // openPostgreSQLTopology opens a connection to a PostgreSQL instance using
 // credentials from the orchestrator configuration.
-func openPostgreSQLTopology(hostname string, port int) (*sql.DB, error) {
-	cfg := config.Config
-	connStr := fmt.Sprintf(
-		"host=%s port=%d user=%s password=%s dbname=postgres sslmode=disable connect_timeout=5",
-		hostname, port, cfg.PostgreSQLTopologyUser, cfg.PostgreSQLTopologyPassword,
-	)
-	db, err := sql.Open("postgres", connStr)
+func openPostgreSQLTopology(key InstanceKey) (*sql.DB, error) {
+	u := &url.URL{
+		Scheme:   "postgres",
+		User:     url.UserPassword(config.Config.PostgreSQLTopologyUser, config.Config.PostgreSQLTopologyPassword),
+		Host:     fmt.Sprintf("%s:%d", key.Hostname, key.Port),
+		Path:     "postgres",
+		RawQuery: fmt.Sprintf("sslmode=%s&connect_timeout=5", config.Config.PostgreSQLSSLMode),
+	}
+	db, err := sql.Open("postgres", u.String())
 	if err != nil {
 		return nil, err
 	}
@@ -58,9 +61,9 @@ func openPostgreSQLTopology(hostname string, port int) (*sql.DB, error) {
 
 // GetReplicationStatus retrieves the replication state for a PostgreSQL instance.
 // On a standby it queries pg_stat_wal_receiver; on a primary it queries
-// pg_stat_replication.
+// pg_current_wal_lsn().
 func (p *PostgreSQLProvider) GetReplicationStatus(key InstanceKey) (*ReplicationStatus, error) {
-	db, err := openPostgreSQLTopology(key.Hostname, key.Port)
+	db, err := openPostgreSQLTopology(key)
 	if err != nil {
 		return nil, log.Errore(err)
 	}
@@ -86,12 +89,10 @@ func (p *PostgreSQLProvider) getStandbyReplicationStatus(db *sql.DB) (*Replicati
 
 	err := db.QueryRow(`
 		SELECT
-			w.status,
+			COALESCE(r.status, ''),
 			pg_last_wal_replay_lsn()::text,
-			EXTRACT(EPOCH FROM replay_lag)
-		FROM pg_stat_wal_receiver w
-		LEFT JOIN pg_stat_replication r ON true
-		LIMIT 1
+			COALESCE(EXTRACT(EPOCH FROM now() - pg_last_xact_replay_timestamp()), -1)
+		FROM (SELECT 'streaming' as status FROM pg_stat_wal_receiver LIMIT 1) r
 	`).Scan(&status, &lsn, &lagSeconds)
 
 	if err == sql.ErrNoRows {
@@ -148,7 +149,7 @@ func (p *PostgreSQLProvider) getPrimaryReplicationStatus(db *sql.DB) (*Replicati
 // IsReplicaRunning checks whether the WAL receiver is active on a PostgreSQL
 // standby instance.
 func (p *PostgreSQLProvider) IsReplicaRunning(key InstanceKey) (bool, error) {
-	db, err := openPostgreSQLTopology(key.Hostname, key.Port)
+	db, err := openPostgreSQLTopology(key)
 	if err != nil {
 		return false, log.Errore(err)
 	}
@@ -168,7 +169,7 @@ func (p *PostgreSQLProvider) IsReplicaRunning(key InstanceKey) (bool, error) {
 // SetReadOnly sets or clears the default_transaction_read_only parameter on
 // a PostgreSQL instance and reloads the configuration.
 func (p *PostgreSQLProvider) SetReadOnly(key InstanceKey, readOnly bool) error {
-	db, err := openPostgreSQLTopology(key.Hostname, key.Port)
+	db, err := openPostgreSQLTopology(key)
 	if err != nil {
 		return log.Errore(err)
 	}
@@ -190,7 +191,7 @@ func (p *PostgreSQLProvider) SetReadOnly(key InstanceKey, readOnly bool) error {
 // IsReadOnly checks whether default_transaction_read_only is enabled on a
 // PostgreSQL instance.
 func (p *PostgreSQLProvider) IsReadOnly(key InstanceKey) (bool, error) {
-	db, err := openPostgreSQLTopology(key.Hostname, key.Port)
+	db, err := openPostgreSQLTopology(key)
 	if err != nil {
 		return false, log.Errore(err)
 	}
@@ -209,11 +210,20 @@ func (p *PostgreSQLProvider) IsReadOnly(key InstanceKey) (bool, error) {
 func (p *PostgreSQLProvider) StartReplication(key InstanceKey) error {
 	log.Infof("PostgreSQL streaming replication on %s:%d starts automatically; resuming WAL replay if paused", key.Hostname, key.Port)
 
-	db, err := openPostgreSQLTopology(key.Hostname, key.Port)
+	db, err := openPostgreSQLTopology(key)
 	if err != nil {
 		return log.Errore(err)
 	}
 	defer db.Close()
+
+	var inRecovery bool
+	if err := db.QueryRow("SELECT pg_is_in_recovery()").Scan(&inRecovery); err != nil {
+		return log.Errore(err)
+	}
+	if !inRecovery {
+		log.Infof("StartReplication: %s:%d is a primary, WAL replay resume not applicable", key.Hostname, key.Port)
+		return nil
+	}
 
 	if _, err := db.Exec("SELECT pg_wal_replay_resume()"); err != nil {
 		return log.Errore(err)
@@ -225,11 +235,19 @@ func (p *PostgreSQLProvider) StartReplication(key InstanceKey) error {
 // closest equivalent to stopping replication in MySQL. Note that the WAL
 // receiver (IO thread equivalent) remains connected; only replay is paused.
 func (p *PostgreSQLProvider) StopReplication(key InstanceKey) error {
-	db, err := openPostgreSQLTopology(key.Hostname, key.Port)
+	db, err := openPostgreSQLTopology(key)
 	if err != nil {
 		return log.Errore(err)
 	}
 	defer db.Close()
+
+	var inRecovery bool
+	if err := db.QueryRow("SELECT pg_is_in_recovery()").Scan(&inRecovery); err != nil {
+		return log.Errore(err)
+	}
+	if !inRecovery {
+		return fmt.Errorf("StopReplication: %s:%d is a primary, WAL replay pause not applicable", key.Hostname, key.Port)
+	}
 
 	if _, err := db.Exec("SELECT pg_wal_replay_pause()"); err != nil {
 		return log.Errore(err)
