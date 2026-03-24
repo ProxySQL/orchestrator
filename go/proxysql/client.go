@@ -54,7 +54,7 @@ func (c *Client) Exec(query string, args ...interface{}) error {
 	if err != nil {
 		return err
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	_, err = db.Exec(query, args...)
 	if err != nil {
@@ -71,7 +71,7 @@ func (c *Client) Query(query string, args ...interface{}) (*sql.Rows, *sql.DB, e
 	}
 	rows, err := db.Query(query, args...)
 	if err != nil {
-		db.Close()
+		_ = db.Close()
 		return nil, nil, fmt.Errorf("proxysql: query failed: %v", err)
 	}
 	return rows, db, nil
@@ -83,7 +83,7 @@ func (c *Client) Ping() error {
 	if err != nil {
 		return err
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 	if err := db.Ping(); err != nil {
 		return fmt.Errorf("proxysql: ping failed on %s:%d: %v", c.address, c.port, err)
 	}

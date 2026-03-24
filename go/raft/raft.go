@@ -274,7 +274,7 @@ func AsyncSnapshot() error {
 }
 
 func StepDown() {
-	getRaft().StepDown()
+	_ = getRaft().StepDown()
 }
 
 func Yield() error {

@@ -40,7 +40,7 @@ func InitHook() {
 				config.Config.ProxySQLReaderHostgroup,
 			)
 		} else if config.Config.ProxySQLAdminAddress != "" && config.Config.ProxySQLWriterHostgroup == 0 {
-			log.Warningf("ProxySQL: ProxySQLAdminAddress is set but ProxySQLWriterHostgroup is 0 (unconfigured). ProxySQL hooks will be inactive.")
+			_ = log.Warningf("ProxySQL: ProxySQLAdminAddress is set but ProxySQLWriterHostgroup is 0 (unconfigured). ProxySQL hooks will be inactive.")
 		}
 		defaultHook.Store(hook)
 	})

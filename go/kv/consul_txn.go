@@ -95,7 +95,7 @@ func NewConsulTxnStore() KVStore {
 		// ConsulAclToken defaults to ""
 		consulConfig.Token = config.Config.ConsulAclToken
 		if client, err := consulapi.NewClient(consulConfig); err != nil {
-			log.Errore(err)
+			_ = log.Errore(err)
 		} else {
 			store.client = client
 		}
@@ -108,12 +108,12 @@ func NewConsulTxnStore() KVStore {
 func (this *consulTxnStore) doWriteTxn(txnOps consulapi.TxnOps, queryOptions *consulapi.QueryOptions) (err error) {
 	ok, resp, _, err := this.client.Txn().Txn(txnOps, queryOptions)
 	if err != nil {
-		log.Errorf("consulTxnStore.doWriteTxn(): %v", err)
+		_ = log.Errorf("consulTxnStore.doWriteTxn(): %v", err)
 		return err
 	} else if !ok {
 		for _, terr := range resp.Errors {
 			txnOp := txnOps[terr.OpIndex]
-			log.Errorf("consulTxnStore.doWriteTxn(): transaction error %q for KV %s on %s", terr.What, txnOp.KV.Verb, txnOp.KV.Key)
+			_ = log.Errorf("consulTxnStore.doWriteTxn(): transaction error %q for KV %s on %s", terr.What, txnOp.KV.Verb, txnOp.KV.Key)
 			err = fmt.Errorf("%v", terr.What)
 		}
 	}

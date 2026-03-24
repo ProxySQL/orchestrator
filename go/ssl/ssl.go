@@ -86,7 +86,7 @@ func Verify(r *nethttp.Request, validOUs []string) error {
 			}
 		}
 	}
-	log.Error("No valid OUs found")
+	_ = log.Error("No valid OUs found")
 	return errors.New("Invalid OU")
 }
 
@@ -148,7 +148,7 @@ func ReadPEMData(pemFile string, pemPass []byte) ([]byte, error) {
 	// junk on the end, warn about it.
 	pemBlock, rest := pem.Decode(pemData)
 	if len(rest) > 0 {
-		log.Warning("Didn't parse all of", pemFile)
+		_ = log.Warning("Didn't parse all of", pemFile)
 	}
 
 	if x509.IsEncryptedPEMBlock(pemBlock) {

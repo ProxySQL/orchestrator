@@ -50,9 +50,9 @@ var readInstanceTLSCacheCounter = metrics.NewCounter()
 var writeInstanceTLSCacheCounter = metrics.NewCounter()
 
 func init() {
-	metrics.Register("instance_tls.read", readInstanceTLSCounter)
-	metrics.Register("instance_tls.write", writeInstanceTLSCounter)
-	metrics.Register("instance_tls.read_cache", readInstanceTLSCacheCounter)
+	_ = metrics.Register("instance_tls.read", readInstanceTLSCounter)
+	_ = metrics.Register("instance_tls.write", writeInstanceTLSCounter)
+	_ = metrics.Register("instance_tls.read_cache", readInstanceTLSCacheCounter)
 	metrics.Register("instance_tls.write_cache", writeInstanceTLSCacheCounter)
 }
 
@@ -94,7 +94,7 @@ func (logger SqlUtilsLogger) ValidateQuery(query string) {
 
 	lquery := strings.ToLower(query)
 	if strings.Contains(lquery, "master") || strings.Contains(lquery, "slave") {
-		log.Error("QUERY CONTAINS MASTER / SLAVE: ")
+		_ = log.Error("QUERY CONTAINS MASTER / SLAVE: ")
 		// panic("Query contains master/slave: " + query)
 	}
 }
@@ -125,7 +125,7 @@ func requiresTLS(host string, port int, mysql_uri string) bool {
 					required=values(required)
 				`
 	if _, err := ExecOrchestrator(query, host, port, required); err != nil {
-		log.Errore(err)
+		_ = log.Errore(err)
 	}
 	writeInstanceTLSCounter.Inc(1)
 

@@ -88,7 +88,7 @@ func (f *fsm) Snapshot() (raft.FSMSnapshot, error) {
 
 // Restore restores freno state
 func (f *fsm) Restore(rc io.ReadCloser) error {
-	defer rc.Close()
+	defer func() { _ = rc.Close() }()
 
 	return f.snapshotCreatorApplier.Restore(rc)
 }

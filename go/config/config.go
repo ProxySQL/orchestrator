@@ -480,7 +480,7 @@ func (this *Configuration) postReadAdjustments() error {
 		}{}
 		err := gcfg.ReadFileInto(&mySQLConfig, this.MySQLOrchestratorCredentialsConfigFile)
 		if err != nil {
-			log.Fatalf("Failed to parse gcfg data from file: %+v", err)
+			_ = log.Fatalf("Failed to parse gcfg data from file: %+v", err)
 		} else {
 			log.Debugf("Parsed orchestrator credentials from %s", this.MySQLOrchestratorCredentialsConfigFile)
 			this.MySQLOrchestratorUser = mySQLConfig.Client.User
@@ -504,7 +504,7 @@ func (this *Configuration) postReadAdjustments() error {
 		}{}
 		err := gcfg.ReadFileInto(&mySQLConfig, this.MySQLTopologyCredentialsConfigFile)
 		if err != nil {
-			log.Fatalf("Failed to parse gcfg data from file: %+v", err)
+			_ = log.Fatalf("Failed to parse gcfg data from file: %+v", err)
 		} else {
 			log.Debugf("Parsed topology credentials from %s", this.MySQLTopologyCredentialsConfigFile)
 			this.MySQLTopologyUser = mySQLConfig.Client.User
@@ -666,10 +666,10 @@ func read(fileName string) (*Configuration, error) {
 	if err == nil {
 		log.Infof("Read config: %s", fileName)
 	} else {
-		log.Fatal("Cannot read config file:", fileName, err)
+		_ = log.Fatal("Cannot read config file:", fileName, err)
 	}
 	if err := Config.postReadAdjustments(); err != nil {
-		log.Fatale(err)
+		_ = log.Fatale(err)
 	}
 	return Config, err
 }
@@ -688,7 +688,7 @@ func Read(fileNames ...string) *Configuration {
 func ForceRead(fileName string) *Configuration {
 	_, err := read(fileName)
 	if err != nil {
-		log.Fatal("Cannot read config file:", fileName, err)
+		_ = log.Fatal("Cannot read config file:", fileName, err)
 	}
 	readFileNames = []string{fileName}
 	return Config

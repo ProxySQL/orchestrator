@@ -39,7 +39,7 @@ func CommandRun(commandText string, env []string, arguments ...string) error {
 	log.Infof("CommandRun(%v,%+v)", commandText, arguments)
 
 	cmd, shellScript, err := generateShellScript(commandText, env, arguments...)
-	defer os.Remove(shellScript)
+	defer func() { _ = os.Remove(shellScript) }()
 	if err != nil {
 		return log.Errore(err)
 	}
@@ -53,7 +53,7 @@ func CommandRun(commandText string, env []string, arguments ...string) error {
 		// Did the command fail because of an unsuccessful exit code
 		if exitError, ok := err.(*exec.ExitError); ok {
 			waitStatus = exitError.Sys().(syscall.WaitStatus)
-			log.Errorf("CommandRun: failed. exit status %d", waitStatus.ExitStatus())
+			_ = log.Errorf("CommandRun: failed. exit status %d", waitStatus.ExitStatus())
 		}
 
 		return log.Errore(fmt.Errorf("(%s) %s", err.Error(), cmdOutput))
@@ -79,7 +79,7 @@ func generateShellScript(commandText string, env []string, arguments ...string) 
 		return nil, "", log.Errorf("generateShellScript() failed to create TempFile: %v", err.Error())
 	}
 	// write commandText to temporary file
-	ioutil.WriteFile(tmpFile.Name(), commandBytes, 0640)
+	_ = ioutil.WriteFile(tmpFile.Name(), commandBytes, 0640)
 	shellArguments := append([]string{}, tmpFile.Name())
 	shellArguments = append(shellArguments, arguments...)
 

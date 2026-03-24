@@ -88,7 +88,7 @@ func buildPreFailoverSQL(action, host string, port, writerHostgroup int) (string
 	case "none":
 		return "", nil
 	default:
-		log.Warningf("proxysql: unknown preFailoverAction '%s', defaulting to 'offline_soft'", action)
+		_ = log.Warningf("proxysql: unknown preFailoverAction '%s', defaulting to 'offline_soft'", action)
 		return "UPDATE mysql_servers SET status='OFFLINE_SOFT' WHERE hostname=? AND port=? AND hostgroup_id=?", args
 	}
 }

@@ -46,11 +46,11 @@ func buildConsulTestServer(t *testing.T, testOps []consulTestServerOp) *httptest
 			}
 			if r.URL.String() == "/v1/catalog/datacenters" {
 				w.WriteHeader(testOp.ResponseCode)
-				json.NewEncoder(w).Encode(testOp.Response)
+				_ = json.NewEncoder(w).Encode(testOp.Response)
 				return
 			} else if strings.HasPrefix(r.URL.String(), "/v1/kv") && testOp.Response != nil {
 				w.WriteHeader(testOp.ResponseCode)
-				json.NewEncoder(w).Encode(testOp.Response)
+				_ = json.NewEncoder(w).Encode(testOp.Response)
 				return
 			} else if strings.HasPrefix(r.URL.String(), "/v1/txn") {
 				var txnOps consulapi.TxnOps
@@ -62,13 +62,13 @@ func buildConsulTestServer(t *testing.T, testOps []consulTestServerOp) *httptest
 				// https://github.com/hashicorp/consul/blob/87f6617eecd23a64add1e79eb3cd8dc3da9e649e/agent/txn_endpoint.go#L121-L129
 				if len(txnOps) > 64 {
 					w.WriteHeader(http.StatusRequestEntityTooLarge)
-					fmt.Fprintf(w, "Transaction contains too many operations (%d > 64)", len(txnOps))
+					_, _ = fmt.Fprintf(w, "Transaction contains too many operations (%d > 64)", len(txnOps))
 					return
 				}
 				testOpRequest := sortTxnKVOps(testOp.Request.(consulapi.TxnOps))
 				if testOp.Response != nil && reflect.DeepEqual(testOpRequest, sortTxnKVOps(txnOps)) {
 					w.WriteHeader(testOp.ResponseCode)
-					json.NewEncoder(w).Encode(testOp.Response)
+					_ = json.NewEncoder(w).Encode(testOp.Response)
 					return
 				}
 			}

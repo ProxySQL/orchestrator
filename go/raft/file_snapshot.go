@@ -252,7 +252,7 @@ func (f *FileSnapshotStore) readMeta(name string) (*fileSnapshotMeta, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer fh.Close()
+	defer func() { _ = fh.Close() }()
 
 	// Buffer the file IO
 	buffered := bufio.NewReader(fh)
@@ -290,7 +290,7 @@ func (f *FileSnapshotStore) Open(id string) (*raft.SnapshotMeta, io.ReadCloser, 
 	_, err = io.Copy(stateHash, fh)
 	if err != nil {
 		_ = log.Errorf("snapshot: Failed to read state file: %v", err)
-		fh.Close()
+		_ = fh.Close()
 		return nil, nil, err
 	}
 
@@ -299,14 +299,14 @@ func (f *FileSnapshotStore) Open(id string) (*raft.SnapshotMeta, io.ReadCloser, 
 	if bytes.Compare(meta.CRC, computed) != 0 {
 		_ = log.Errorf("snapshot: CRC checksum failed (stored: %v computed: %v)",
 			meta.CRC, computed)
-		fh.Close()
+		_ = fh.Close()
 		return nil, nil, fmt.Errorf("CRC mismatch")
 	}
 
 	// Seek to the start
 	if _, err := fh.Seek(0, 0); err != nil {
 		_ = log.Errorf("snapshot: State file seek failed: %v", err)
-		fh.Close()
+		_ = fh.Close()
 		return nil, nil, err
 	}
 
@@ -463,7 +463,7 @@ func (s *FileSnapshotSink) writeMeta() error {
 
 	// Buffer the file IO
 	buffered := bufio.NewWriter(fh)
-	defer buffered.Flush()
+	defer func() { _ = buffered.Flush() }()
 
 	// Write out as JSON
 	enc := json.NewEncoder(buffered)

@@ -107,12 +107,12 @@ func (relStore *RelationalStore) Set(key []byte, val []byte) error {
 	}
 	_, err = stmt.Exec(key)
 	if err != nil {
-		tx.Rollback()
+		_ = tx.Rollback()
 		return err
 	}
 	stmt, err = tx.Prepare(`insert into raft_store (store_key, store_value) values (?, ?)`)
 	if err != nil {
-		tx.Rollback()
+		_ = tx.Rollback()
 		return err
 	}
 	_, err = stmt.Exec(key, val)
