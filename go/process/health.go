@@ -75,7 +75,7 @@ type HealthStatus struct {
 	Hostname           string
 	Token              string
 	IsActiveNode       bool
-	ActiveNode         NodeHealth
+	ActiveNode         *NodeHealth
 	Error              error
 	AvailableNodes     [](*NodeHealth)
 	RaftLeader         string
@@ -111,7 +111,7 @@ func HealthTest() (health *HealthStatus, err error) {
 		return healthStatus.(*HealthStatus), nil
 	}
 
-	health = &HealthStatus{Healthy: false, Hostname: ThisHostname, Token: util.ProcessToken.Hash}
+	health = &HealthStatus{Healthy: false, Hostname: ThisHostname, Token: util.ProcessToken.Hash, ActiveNode: &NodeHealth{}}
 	defer lastHealthCheckCache.Set(cacheKey, health, cache.DefaultExpiration)
 
 	if healthy, err := RegisterNode(ThisNodeHealth); err != nil {

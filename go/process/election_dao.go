@@ -129,7 +129,8 @@ func Reelect() error {
 }
 
 // ElectedNode returns the details of the elected node, as well as answering the question "is this process the elected one"?
-func ElectedNode() (node NodeHealth, isElected bool, err error) {
+func ElectedNode() (node *NodeHealth, isElected bool, err error) {
+	node = &NodeHealth{}
 	query := `
 		select
 			hostname,

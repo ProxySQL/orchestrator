@@ -1892,7 +1892,7 @@ func executeCheckAndRecoverFunction(analysisEntry inst.ReplicationAnalysis, cand
 	if b, err := json.Marshal(topologyRecovery); err == nil {
 		log.Infof("Topology recovery: %+v", string(b))
 	} else {
-		log.Infof("Topology recovery: %+v", *topologyRecovery)
+		log.Infof("Topology recovery: %+v", topologyRecovery)
 	}
 	if !skipProcesses {
 		if topologyRecovery.SuccessorKey == nil {
