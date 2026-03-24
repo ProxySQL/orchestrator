@@ -101,10 +101,7 @@ func NewFileSnapshotStoreWithLogger(base string, retain int) (*FileSnapshotStore
 // NewFileSnapshotStore creates a new FileSnapshotStore based
 // on a base directory. The `retain` parameter controls how many
 // snapshots are retained. Must be at least 1.
-func NewFileSnapshotStore(base string, retain int, logOutput io.Writer) (*FileSnapshotStore, error) {
-	if logOutput == nil {
-		logOutput = os.Stderr
-	}
+func NewFileSnapshotStore(base string, retain int, _ io.Writer) (*FileSnapshotStore, error) {
 	return NewFileSnapshotStoreWithLogger(base, retain)
 }
 

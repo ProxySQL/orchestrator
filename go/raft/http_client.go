@@ -101,6 +101,9 @@ func HttpGetLeader(path string) (response []byte, err error) {
 	url := fmt.Sprintf("%s/%s", leaderAPI, path)
 
 	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
 	switch strings.ToLower(config.Config.AuthenticationMethod) {
 	case "basic", "multi":
 		req.SetBasicAuth(config.Config.HTTPAuthUser, config.Config.HTTPAuthPassword)

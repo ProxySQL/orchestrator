@@ -135,7 +135,7 @@ func HealthTest() (health *HealthStatus, err error) {
 			return health, log.Errore(err)
 		}
 	}
-	health.AvailableNodes, err = ReadAvailableNodes(true)
+	health.AvailableNodes, _ = ReadAvailableNodes(true)
 
 	return health, nil
 }

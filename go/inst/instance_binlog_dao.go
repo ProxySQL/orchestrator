@@ -520,7 +520,7 @@ func SearchEntryInInstanceBinlogs(instance *Instance, entryText string, monotoni
 			}
 		}
 		var resultCoordinates BinlogCoordinates
-		var found bool = false
+		var found bool
 		resultCoordinates, found, err = SearchEntryInBinlog(pseudoGTIDRegexp, &instance.Key, currentBinlog.LogFile, entryText, monotonicPseudoGTIDEntries, minBinlogCoordinates)
 		if err != nil {
 			break

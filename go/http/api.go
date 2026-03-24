@@ -3193,9 +3193,8 @@ func (this *HttpAPI) ReplicationAnalysis(w http.ResponseWriter, r *http.Request)
 
 // ReplicationAnalysis retuens list of issues
 func (this *HttpAPI) ReplicationAnalysisForCluster(w http.ResponseWriter, r *http.Request) {
-	clusterName := chi.URLParam(r, "clusterName")
-
 	var err error
+	clusterName := ""
 	if clusterName, err = inst.DeduceClusterName(chi.URLParam(r, "clusterName")); err != nil {
 		Respond(w, &APIResponse{Code: ERROR, Message: fmt.Sprintf("Cannot get analysis: %+v", err)})
 		return
