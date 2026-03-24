@@ -4,6 +4,12 @@ Orchestrator API v2 provides a cleaner, more consistent REST API with structured
 
 All v2 endpoints are mounted under `/api/v2` (respecting the configured `URLPrefix`).
 
+## OpenAPI Specification
+
+A machine-readable OpenAPI 3.0 specification for the v2 API is available at
+[`docs/api/openapi.yaml`](api/openapi.yaml). You can use it with tools such as
+Swagger UI, Redoc, or any OpenAPI-compatible client generator.
+
 ## Response Format
 
 All v2 endpoints return a consistent JSON envelope:

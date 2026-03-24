@@ -1,0 +1,648 @@
+openapi: "3.0.3"
+
+info:
+  title: Orchestrator API v2
+  version: "2.0.0"
+  description: |
+    REST API v2 for Orchestrator, a MySQL high availability and replication
+    management tool. All endpoints return a consistent JSON envelope with
+    `status`, `data`, `error`, and `message` fields.
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0
+
+servers:
+  - url: /api/v2
+    description: Default (relative to orchestrator base URL, respects URLPrefix)
+
+paths:
+  /clusters:
+    get:
+      operationId: getClusters
+      summary: List all clusters
+      description: Returns a list of all known clusters with metadata.
+      tags:
+        - Clusters
+      responses:
+        "200":
+          description: Successful response with cluster list.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/V2APIResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/ClusterInfo"
+              example:
+                status: ok
+                data:
+                  - ClusterName: "db-master-1:3306"
+                    ClusterAlias: "production"
+                    ClusterDomain: "db.example.com"
+                    CountInstances: 3
+                    HeuristicLag: 0
+                    HasAutomatedMasterRecovery: true
+                    HasAutomatedIntermediateMasterRecovery: true
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /clusters/{name}:
+    get:
+      operationId: getClusterInfo
+      summary: Get cluster details
+      description: |
+        Returns detailed information about a specific cluster. The `name`
+        parameter can be a cluster name, alias, or instance key hint.
+      tags:
+        - Clusters
+      parameters:
+        - $ref: "#/components/parameters/ClusterName"
+      responses:
+        "200":
+          description: Successful response with cluster info.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/V2APIResponse"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/ClusterInfo"
+              example:
+                status: ok
+                data:
+                  ClusterName: "db-master-1:3306"
+                  ClusterAlias: "production"
+                  ClusterDomain: "db.example.com"
+                  CountInstances: 3
+                  HeuristicLag: 0
+                  HasAutomatedMasterRecovery: true
+                  HasAutomatedIntermediateMasterRecovery: true
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /clusters/{name}/instances:
+    get:
+      operationId: getClusterInstances
+      summary: List instances in a cluster
+      description: Returns all instances belonging to a given cluster.
+      tags:
+        - Clusters
+      parameters:
+        - $ref: "#/components/parameters/ClusterName"
+      responses:
+        "200":
+          description: Successful response with instance list.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/V2APIResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Instance"
+              example:
+                status: ok
+                data:
+                  - Key:
+                      Hostname: "db-master-1"
+                      Port: 3306
+                    InstanceAlias: ""
+                    Uptime: 86400
+                    ServerID: 1
+                    ServerUUID: "3e11fa47-71ca-11e1-9e33-c80aa9429562"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /clusters/{name}/topology:
+    get:
+      operationId: getClusterTopology
+      summary: Get cluster topology
+      description: Returns the ASCII topology representation for a cluster.
+      tags:
+        - Clusters
+      parameters:
+        - $ref: "#/components/parameters/ClusterName"
+      responses:
+        "200":
+          description: Successful response with topology.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/V2APIResponse"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/TopologyOutput"
+              example:
+                status: ok
+                data:
+                  clusterName: "db-master-1:3306"
+                  topology: "db-master-1:3306 [OK,5.7.44,rw,ROW,>>,GTID]\n+ db-replica-1:3306 [OK,5.7.44,ro,ROW,>>,GTID]"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /instances/{host}/{port}:
+    get:
+      operationId: getInstance
+      summary: Get instance details
+      description: Returns detailed information about a specific MySQL instance.
+      tags:
+        - Instances
+      parameters:
+        - name: host
+          in: path
+          required: true
+          description: Hostname of the MySQL instance.
+          schema:
+            type: string
+          example: "db-master-1"
+        - name: port
+          in: path
+          required: true
+          description: Port of the MySQL instance.
+          schema:
+            type: integer
+          example: 3306
+      responses:
+        "200":
+          description: Successful response with instance details.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/V2APIResponse"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/Instance"
+              example:
+                status: ok
+                data:
+                  Key:
+                    Hostname: "db-master-1"
+                    Port: 3306
+                  InstanceAlias: ""
+                  Uptime: 86400
+                  ServerID: 1
+                  ServerUUID: "3e11fa47-71ca-11e1-9e33-c80aa9429562"
+        "400":
+          description: Invalid instance key.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/V2APIResponse"
+              example:
+                status: error
+                error:
+                  code: INVALID_INSTANCE
+                  message: "Invalid instance key: invalid port"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /recoveries:
+    get:
+      operationId: getRecoveries
+      summary: List recent recoveries
+      description: Returns recent recovery entries, optionally filtered by cluster.
+      tags:
+        - Recoveries
+      parameters:
+        - name: cluster
+          in: query
+          required: false
+          description: Filter by cluster name.
+          schema:
+            type: string
+        - name: alias
+          in: query
+          required: false
+          description: Filter by cluster alias.
+          schema:
+            type: string
+        - name: page
+          in: query
+          required: false
+          description: Page number for pagination (default 0).
+          schema:
+            type: integer
+            default: 0
+      responses:
+        "200":
+          description: Successful response with recovery list.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/V2APIResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/TopologyRecovery"
+              example:
+                status: ok
+                data:
+                  - Id: 42
+                    UID: "a1b2c3d4"
+                    IsActive: false
+                    IsSuccessful: true
+                    RecoveryStartTimestamp: "2025-01-15 10:30:00"
+                    RecoveryEndTimestamp: "2025-01-15 10:30:45"
+                    ProcessingNodeHostname: "orchestrator-1"
+                    Acknowledged: true
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /recoveries/active:
+    get:
+      operationId: getActiveRecoveries
+      summary: List active recoveries
+      description: Returns currently active (in-progress) recoveries.
+      tags:
+        - Recoveries
+      responses:
+        "200":
+          description: Successful response with active recovery list.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/V2APIResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/TopologyRecovery"
+              example:
+                status: ok
+                data: []
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /status:
+    get:
+      operationId: getStatus
+      summary: Get orchestrator health status
+      description: Returns the health status of the orchestrator node.
+      tags:
+        - Status
+      responses:
+        "200":
+          description: Node is healthy.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/V2APIResponse"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/HealthStatus"
+              example:
+                status: ok
+                data:
+                  Healthy: true
+                  Hostname: "orchestrator-1"
+                  Token: "abc123"
+                  IsActiveNode: true
+                  ActiveNode:
+                    Hostname: "orchestrator-1"
+                  RaftLeader: "orchestrator-1"
+                  IsRaftLeader: true
+                  RaftLeaderURI: "http://orchestrator-1:3000"
+                  RaftAdvertise: "orchestrator-1"
+                  RaftHealthyMembers:
+                    - "orchestrator-1"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /proxysql/servers:
+    get:
+      operationId: getProxySQLServers
+      summary: List ProxySQL servers
+      description: Returns all servers from ProxySQL's `runtime_mysql_servers` table.
+      tags:
+        - ProxySQL
+      responses:
+        "200":
+          description: Successful response with server list.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/V2APIResponse"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/ProxySQLServerEntry"
+              example:
+                status: ok
+                data:
+                  - hostgroup_id: 10
+                    hostname: "db-master-1"
+                    port: 3306
+                    status: "ONLINE"
+                    weight: 1000
+                    max_connections: 100
+                    comment: ""
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+        "503":
+          description: ProxySQL is not configured.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/V2APIResponse"
+              example:
+                status: error
+                error:
+                  code: PROXYSQL_NOT_CONFIGURED
+                  message: "ProxySQL is not configured"
+
+components:
+  parameters:
+    ClusterName:
+      name: name
+      in: path
+      required: true
+      description: Cluster name, alias, or instance key hint.
+      schema:
+        type: string
+      example: "production"
+
+  responses:
+    NotFound:
+      description: Resource not found.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/V2APIResponse"
+          example:
+            status: error
+            error:
+              code: NOT_FOUND
+              message: "Cluster not found: no matching cluster"
+
+    InternalServerError:
+      description: Internal server error.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/V2APIResponse"
+          example:
+            status: error
+            error:
+              code: INTERNAL_ERROR
+              message: "An unexpected error occurred"
+
+  schemas:
+    V2APIResponse:
+      type: object
+      description: Standard response envelope for all v2 API endpoints.
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum:
+            - ok
+            - error
+          description: Indicates whether the request succeeded or failed.
+        data:
+          description: Response payload. Present on success, absent on error.
+        error:
+          $ref: "#/components/schemas/V2APIError"
+        message:
+          type: string
+          description: Optional human-readable message.
+
+    V2APIError:
+      type: object
+      description: Structured error detail.
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          description: Machine-readable error code (e.g. NOT_FOUND, CLUSTER_LIST_ERROR).
+          example: NOT_FOUND
+        message:
+          type: string
+          description: Human-readable error description.
+          example: "Cluster not found: unknown alias"
+
+    ClusterInfo:
+      type: object
+      description: Metadata about a MySQL replication cluster.
+      properties:
+        ClusterName:
+          type: string
+          description: Canonical cluster name (usually master host:port).
+          example: "db-master-1:3306"
+        ClusterAlias:
+          type: string
+          description: Human-friendly alias.
+          example: "production"
+        ClusterDomain:
+          type: string
+          description: CNAME, VIP, or A-record for the cluster master.
+          example: "db.example.com"
+        CountInstances:
+          type: integer
+          description: Number of instances in the cluster.
+          example: 3
+        HeuristicLag:
+          type: integer
+          format: int64
+          description: Estimated replication lag in seconds.
+          example: 0
+        HasAutomatedMasterRecovery:
+          type: boolean
+          description: Whether automated master recovery is enabled.
+          example: true
+        HasAutomatedIntermediateMasterRecovery:
+          type: boolean
+          description: Whether automated intermediate master recovery is enabled.
+          example: true
+
+    Instance:
+      type: object
+      description: |
+        A MySQL instance with replication status, version info, and topology
+        metadata. This is a large object; only key fields are listed here.
+      properties:
+        Key:
+          $ref: "#/components/schemas/InstanceKey"
+        InstanceAlias:
+          type: string
+          example: ""
+        Uptime:
+          type: integer
+          description: Instance uptime in seconds.
+          example: 86400
+        ServerID:
+          type: integer
+          example: 1
+        ServerUUID:
+          type: string
+          example: "3e11fa47-71ca-11e1-9e33-c80aa9429562"
+
+    InstanceKey:
+      type: object
+      description: Unique identifier for a MySQL instance.
+      properties:
+        Hostname:
+          type: string
+          example: "db-master-1"
+        Port:
+          type: integer
+          example: 3306
+
+    TopologyOutput:
+      type: object
+      description: ASCII topology representation for a cluster.
+      properties:
+        clusterName:
+          type: string
+          description: Cluster name.
+          example: "db-master-1:3306"
+        topology:
+          type: string
+          description: Multi-line ASCII art showing the replication tree.
+          example: "db-master-1:3306 [OK,5.7.44,rw,ROW,>>,GTID]\n+ db-replica-1:3306"
+
+    TopologyRecovery:
+      type: object
+      description: A recovery event recorded by orchestrator.
+      properties:
+        Id:
+          type: integer
+          format: int64
+          example: 42
+        UID:
+          type: string
+          example: "a1b2c3d4"
+        SuccessorKey:
+          $ref: "#/components/schemas/InstanceKey"
+        SuccessorAlias:
+          type: string
+        IsActive:
+          type: boolean
+          example: false
+        IsSuccessful:
+          type: boolean
+          example: true
+        AllErrors:
+          type: array
+          items:
+            type: string
+        RecoveryStartTimestamp:
+          type: string
+          description: Timestamp when recovery started.
+          example: "2025-01-15 10:30:00"
+        RecoveryEndTimestamp:
+          type: string
+          description: Timestamp when recovery ended.
+          example: "2025-01-15 10:30:45"
+        ProcessingNodeHostname:
+          type: string
+          example: "orchestrator-1"
+        ProcessingNodeToken:
+          type: string
+        Acknowledged:
+          type: boolean
+          example: true
+        AcknowledgedAt:
+          type: string
+        AcknowledgedBy:
+          type: string
+
+    HealthStatus:
+      type: object
+      description: Health and status information for the orchestrator node.
+      properties:
+        Healthy:
+          type: boolean
+          example: true
+        Hostname:
+          type: string
+          example: "orchestrator-1"
+        Token:
+          type: string
+          example: "abc123"
+        IsActiveNode:
+          type: boolean
+          example: true
+        ActiveNode:
+          type: object
+          properties:
+            Hostname:
+              type: string
+              example: "orchestrator-1"
+        RaftLeader:
+          type: string
+          example: "orchestrator-1"
+        IsRaftLeader:
+          type: boolean
+          example: true
+        RaftLeaderURI:
+          type: string
+          example: "http://orchestrator-1:3000"
+        RaftAdvertise:
+          type: string
+          example: "orchestrator-1"
+        RaftHealthyMembers:
+          type: array
+          items:
+            type: string
+          example:
+            - "orchestrator-1"
+
+    ProxySQLServerEntry:
+      type: object
+      description: A server entry from ProxySQL's runtime_mysql_servers table.
+      properties:
+        hostgroup_id:
+          type: integer
+          example: 10
+        hostname:
+          type: string
+          example: "db-master-1"
+        port:
+          type: integer
+          example: 3306
+        status:
+          type: string
+          example: "ONLINE"
+        weight:
+          type: integer
+          example: 1000
+        max_connections:
+          type: integer
+          example: 100
+        comment:
+          type: string
+          example: ""
