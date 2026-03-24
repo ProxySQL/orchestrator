@@ -1,7 +1,6 @@
 #!/bin/bash
 
-export GOPATH="$PWD/.gopath"
-cd .gopath/src/github.com/openark/orchestrator
+cd "$(dirname "$0")/.."
 
 setup_mysql() {
   if [ ! -f "/dbdeployer/dbdeployer" ] ; then
@@ -22,14 +21,14 @@ setup_mysql() {
   pushd ~/opt/mysql
   version=(*)
   popd
- 
+
   echo tar_file: $tar_file
   echo version: $version
 
   /dbdeployer/dbdeployer deploy single $version --sandbox-home $PWD/sandboxes --sandbox-directory orc-sandbox --port=3306
 
   mkdir -p bin
-  ln -s /go/src/github.com/openark/orchestrator/sandboxes/orc-sandbox/use bin/mysql
+  ln -s $PWD/sandboxes/orc-sandbox/use bin/mysql
   chmod +x bin/mysql
   PATH=bin:$PATH
 }
@@ -47,4 +46,3 @@ else
   echo "Automatic tests start skipped"
   /bin/bash
 fi
-

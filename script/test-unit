@@ -1,7 +1,6 @@
 #!/bin/bash
 
-export GOPATH="$PWD/.gopath"
-cd .gopath/src/github.com/openark/orchestrator
+cd "$(dirname "$0")/.."
 
 unit_tests() {
   echo "# Running unit tests"
