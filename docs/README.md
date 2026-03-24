@@ -15,6 +15,7 @@
 - [Executing via command line](executing-via-command-line.md)
 - [Using the web interface](using-the-web-interface.md)
 - [Using the web API](using-the-web-api.md): achieving automation via HTTP GET requests
+- [API v2](api-v2.md): versioned REST API with structured JSON responses
 - [Using orchestrator-client](orchestrator-client.md): a no binary/config needed script that wraps API calls
 - [Scripting samples](script-samples.md)
 
@@ -28,8 +29,10 @@
 - [Failure detection](failure-detection.md): how `orchestrator` detects failure, types of failures it can handle
 - [Topology recovery](topology-recovery.md): recovery process, promotion and hooks.
 - [Key-Value stores](kv.md): master discovery for your apps
+- [ProxySQL hooks](proxysql-hooks.md): built-in ProxySQL failover integration
 
 #### Operation
+- [Observability](observability.md): Prometheus metrics and Kubernetes health endpoints
 - [Status Checks](status-checks.md)
 - [Tags](tags.md)
 
@@ -39,6 +42,7 @@
 - [System test environment](ci-env.md)
 - [Docker](docker.md)
 - [Contributions](contributions.md)
+- [Database providers](database-providers.md): database abstraction layer for multi-database support
 
 #### Various
 - [Security](security.md)
