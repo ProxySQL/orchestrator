@@ -43,6 +43,7 @@
 - [Docker](docker.md)
 - [Contributions](contributions.md)
 - [Database providers](database-providers.md): database abstraction layer for multi-database support
+- [Raft evaluation](raft-evaluation.md): upstream migration assessment
 
 #### Various
 - [Security](security.md)
