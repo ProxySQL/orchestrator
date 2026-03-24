@@ -44,7 +44,9 @@ func writePoolInstances(pool string, instanceKeys [](*InstanceKey)) error {
 				return log.Errore(err)
 			}
 		}
-		_ = tx.Commit()
+		if err := tx.Commit(); err != nil {
+			return log.Errore(err)
+		}
 
 		return nil
 	}

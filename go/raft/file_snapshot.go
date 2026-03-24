@@ -5,12 +5,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/proxysql/golib/log"
 	"hash"
 	"hash/crc64"
 	"io"
-
-
 	"os"
 	"path/filepath"
 	"sort"
@@ -18,6 +15,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/raft"
+	"github.com/proxysql/golib/log"
 )
 
 const (

@@ -129,7 +129,7 @@ func setupMessagePrefix() {
 		return
 	}
 	if act != "FQDN" && act != "hostname" && act != "custom" {
-		_ = log.Warning("PrependMessagesWithOrcIdentity option has unsupported value '%+v'")
+		_ = log.Warningf("PrependMessagesWithOrcIdentity option has unsupported value '%+v'", act)
 		return
 	}
 
@@ -3160,7 +3160,7 @@ func (this *HttpAPI) ReloadConfiguration(w http.ResponseWriter, r *http.Request)
 	}
 	extraConfigFile := r.URL.Query().Get("config")
 	config.Reload(extraConfigFile)
-_ = inst.AuditOperation("reload-configuration", nil, "Triggered via API")
+	_ = inst.AuditOperation("reload-configuration", nil, "Triggered via API")
 
 	Respond(w, &APIResponse{Code: OK, Message: "Config reloaded", Details: extraConfigFile})
 }

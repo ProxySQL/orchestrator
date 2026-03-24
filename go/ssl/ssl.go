@@ -146,6 +146,9 @@ func ReadPEMData(pemFile string, pemPass []byte) ([]byte, error) {
 	// We should really just get the pem.Block back here, if there's other
 	// junk on the end, warn about it.
 	pemBlock, rest := pem.Decode(pemData)
+	if pemBlock == nil {
+		return nil, fmt.Errorf("failed to decode PEM data from %s", pemFile)
+	}
 	if len(rest) > 0 {
 		_ = log.Warning("Didn't parse all of", pemFile)
 	}
@@ -187,6 +190,9 @@ func IsEncryptedPEM(pemFile string) bool {
 		return false
 	}
 	pemBlock, _ := pem.Decode(pemData)
+	if pemBlock == nil {
+		return false
+	}
 	if len(pemBlock.Bytes) == 0 {
 		return false
 	}
