@@ -202,10 +202,10 @@ var countPendingRecoveriesGauge = metrics.NewGauge()
 func init() {
 	_ = metrics.Register("recover.dead_master.start", recoverDeadMasterCounter)
 	_ = metrics.Register("recover.dead_master.success", recoverDeadMasterSuccessCounter)
-	metrics.Register("recover.dead_master.fail", recoverDeadMasterFailureCounter)
-	metrics.Register("recover.dead_intermediate_master.start", recoverDeadIntermediateMasterCounter)
-	metrics.Register("recover.dead_intermediate_master.success", recoverDeadIntermediateMasterSuccessCounter)
-	metrics.Register("recover.dead_intermediate_master.fail", recoverDeadIntermediateMasterFailureCounter)
+	_ = metrics.Register("recover.dead_master.fail", recoverDeadMasterFailureCounter)
+	_ = metrics.Register("recover.dead_intermediate_master.start", recoverDeadIntermediateMasterCounter)
+	_ = metrics.Register("recover.dead_intermediate_master.success", recoverDeadIntermediateMasterSuccessCounter)
+	_ = metrics.Register("recover.dead_intermediate_master.fail", recoverDeadIntermediateMasterFailureCounter)
 	metrics.Register("recover.dead_co_master.start", recoverDeadCoMasterCounter)
 	metrics.Register("recover.dead_co_master.success", recoverDeadCoMasterSuccessCounter)
 	metrics.Register("recover.dead_co_master.fail", recoverDeadCoMasterFailureCounter)
@@ -365,7 +365,7 @@ func executeProcess(command string, env []string, topologyRecovery *TopologyReco
 		info = fmt.Sprintf("Completed %s in %v", fullDescription, time.Since(start))
 	} else {
 		info = fmt.Sprintf("Execution of %s failed in %v with error: %v", fullDescription, time.Since(start), err)
-		log.Errorf("%s", info)
+		_ = log.Errorf("%s", info)
 	}
 	AuditTopologyRecovery(topologyRecovery, info)
 	return err
@@ -527,7 +527,7 @@ func recoverDeadMaster(topologyRecovery *TopologyRecovery, candidateInstanceKey 
 		}
 	}
 	if err := proxysql.GetHook().PreFailover(failedInstanceKey.Hostname, failedInstanceKey.Port); err != nil {
-		log.Errorf("ProxySQL pre-failover failed (non-blocking): %v", err)
+		_ = log.Errorf("ProxySQL pre-failover failed (non-blocking): %v", err)
 		AuditTopologyRecovery(topologyRecovery, fmt.Sprintf("ProxySQL pre-failover failed: %v", err))
 	}
 
@@ -1437,9 +1437,9 @@ func checkAndRecoverDeadCoMaster(analysisEntry inst.ReplicationAnalysis, candida
 	promotedReplica, lostReplicas, err := RecoverDeadCoMaster(topologyRecovery, skipProcesses)
 	resolveRecovery(topologyRecovery, promotedReplica)
 	if promotedReplica == nil {
-		inst.AuditOperation("recover-dead-co-master", failedInstanceKey, "Failure: no replica promoted.")
+		_ = inst.AuditOperation("recover-dead-co-master", failedInstanceKey, "Failure: no replica promoted.")
 	} else {
-		inst.AuditOperation("recover-dead-co-master", failedInstanceKey, fmt.Sprintf("promoted: %+v", promotedReplica.Key))
+		_ = inst.AuditOperation("recover-dead-co-master", failedInstanceKey, fmt.Sprintf("promoted: %+v", promotedReplica.Key))
 	}
 	topologyRecovery.LostReplicas.AddInstances(lostReplicas)
 	if promotedReplica != nil {
@@ -1478,7 +1478,7 @@ func checkAndRecoverNonWriteableMaster(analysisEntry inst.ReplicationAnalysis, c
 		return false, nil, err
 	}
 
-	inst.AuditOperation("recover-non-writeable-master", &analysisEntry.AnalyzedInstanceKey, "problem found; will recover")
+	_ = inst.AuditOperation("recover-non-writeable-master", &analysisEntry.AnalyzedInstanceKey, "problem found; will recover")
 	if !skipProcesses {
 		if err := executeProcesses(config.Config.PreFailoverProcesses, "PreFailoverProcesses", topologyRecovery, true); err != nil {
 			return false, topologyRecovery, topologyRecovery.AddError(err)
@@ -1615,7 +1615,7 @@ func emergentlyReadTopologyInstance(instanceKey *inst.InstanceKey, analysisCode 
 		return nil, nil
 	}
 	instance, err = inst.ReadTopologyInstance(instanceKey)
-	inst.AuditOperation("emergently-read-topology-instance", instanceKey, string(analysisCode))
+	_ = inst.AuditOperation("emergently-read-topology-instance", instanceKey, string(analysisCode))
 	return instance, err
 }
 
@@ -1655,7 +1655,7 @@ func emergentlyRestartReplicationOnTopologyInstance(instanceKey *inst.InstanceKe
 		}
 
 		_ = inst.RestartReplicationQuick(instance, instanceKey)
-		inst.AuditOperation("emergently-restart-replication-topology-instance", instanceKey, string(analysisCode))
+		_ = inst.AuditOperation("emergently-restart-replication-topology-instance", instanceKey, string(analysisCode))
 	})
 }
 
@@ -1991,10 +1991,10 @@ func ForceExecuteRecovery(analysisEntry inst.ReplicationAnalysis, candidateInsta
 func ForceMasterFailover(clusterName string) (topologyRecovery *TopologyRecovery, err error) {
 	clusterMasters, err := inst.ReadClusterMaster(clusterName)
 	if err != nil {
-		return nil, fmt.Errorf("Cannot deduce cluster master for %+v", clusterName)
+		return nil, fmt.Errorf("cannot deduce cluster master for %+v", clusterName)
 	}
 	if len(clusterMasters) != 1 {
-		return nil, fmt.Errorf("Cannot deduce cluster master for %+v", clusterName)
+		return nil, fmt.Errorf("cannot deduce cluster master for %+v", clusterName)
 	}
 	clusterMaster := clusterMasters[0]
 
@@ -2138,7 +2138,7 @@ func GracefulMasterTakeover(clusterName string, designatedKey *inst.InstanceKey,
 		return nil, nil, fmt.Errorf("Sanity check failure. It seems like the designated instance %+v does not replicate from the master %+v (designated instance's master key is %+v). This error is strange. Panicking", designatedInstance.Key, clusterMaster.Key, designatedInstance.MasterKey)
 	}
 	if !designatedInstance.HasReasonableMaintenanceReplicationLag() {
-		return nil, nil, fmt.Errorf("Desginated instance %+v seems to be lagging too much for this operation. Aborting.", designatedInstance.Key)
+		return nil, nil, fmt.Errorf("designated instance %+v seems to be lagging too much for this operation", designatedInstance.Key)
 	}
 
 	if len(clusterMasterDirectReplicas) > 1 {
@@ -2211,7 +2211,7 @@ func GracefulMasterTakeover(clusterName string, designatedKey *inst.InstanceKey,
 		_, _ = inst.SetReadOnly(&clusterMaster.Key, false)
 		return nil, nil, fmt.Errorf("GracefulMasterTakeover: Recovery attempted yet no replica promoted; err=%+v", err)
 	}
-	var gtidHint inst.OperationGTIDHint = inst.GTIDHintNeutral
+	var gtidHint = inst.GTIDHintNeutral
 	if topologyRecovery.RecoveryType == MasterRecoveryGTID {
 		gtidHint = inst.GTIDHintForce
 	}

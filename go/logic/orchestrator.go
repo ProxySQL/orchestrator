@@ -378,7 +378,7 @@ func onHealthTick() {
 			_ = orcraft.Yield()
 		}
 		if process.SinceLastGoodHealthCheck() > fatalAfterUnhealthyDuration {
-			_ = orcraft.FatalRaftError(fmt.Errorf("Node is unable to register health. Please check database connnectivity and/or time synchronisation."))
+			_ = orcraft.FatalRaftError(fmt.Errorf("node is unable to register health, please check database connectivity and/or time synchronization"))
 		}
 	}
 	if !orcraft.IsRaftEnabled() {

@@ -2617,7 +2617,7 @@ func ReadOutdatedInstanceKeys() ([]InstanceKey, error) {
 	})
 
 	if err != nil {
-		log.Errore(err)
+		_ = log.Errore(err)
 	}
 	return res, err
 
@@ -2754,7 +2754,7 @@ func mkInsertOdkuForInstances(instances []*Instance, instanceWasActuallyFound bo
 		"replication_group_primary_port",
 	}
 
-	var values = make([]string, len(columns), len(columns))
+	var values = make([]string, len(columns))
 	for i := range columns {
 		values[i] = "?"
 	}
@@ -2881,7 +2881,7 @@ func writeManyInstances(instances []*Instance, instanceWasActuallyFound bool, up
 	}
 	if _, err := db.ExecOrchestrator(sql, args...); err != nil {
 		if strings.Contains(err.Error(), tooManyPlaceholders) {
-			return fmt.Errorf("writeManyInstances(?,%v,%v): error: %+v, len(instances): %v, len(args): %v.  Reduce InstanceWriteBufferSize to avoid len(args) being > 64k, a limit in the MySQL source code.",
+			return fmt.Errorf("writeManyInstances(?,%v,%v): error: %+v, len(instances): %v, len(args): %v.  reduce InstanceWriteBufferSize to avoid len(args) being > 64k, a limit in the MySQL source code",
 				instanceWasActuallyFound,
 				updateLastSeen,
 				err.Error(),

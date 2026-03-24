@@ -32,7 +32,7 @@ func raftReverseProxyMiddleware(next http.Handler) http.Handler {
 		}
 		u, err := url.Parse(orcraft.LeaderURI.Get())
 		if err != nil {
-			log.Errore(err)
+			_ = log.Errore(err)
 			next.ServeHTTP(w, r)
 			return
 		}
@@ -40,7 +40,7 @@ func raftReverseProxyMiddleware(next http.Handler) http.Handler {
 		proxy := httputil.NewSingleHostReverseProxy(u)
 		proxy.Transport, err = orcraft.GetRaftHttpTransport()
 		if err != nil {
-			log.Errore(err)
+			_ = log.Errore(err)
 			next.ServeHTTP(w, r)
 			return
 		}

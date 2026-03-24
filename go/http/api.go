@@ -3160,7 +3160,7 @@ func (this *HttpAPI) ReloadConfiguration(w http.ResponseWriter, r *http.Request)
 	}
 	extraConfigFile := r.URL.Query().Get("config")
 	config.Reload(extraConfigFile)
-	inst.AuditOperation("reload-configuration", nil, "Triggered via API")
+_ = inst.AuditOperation("reload-configuration", nil, "Triggered via API")
 
 	Respond(w, &APIResponse{Code: OK, Message: "Config reloaded", Details: extraConfigFile})
 }

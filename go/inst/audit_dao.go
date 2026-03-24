@@ -60,7 +60,8 @@ func AuditOperation(auditType string, instanceKey *InstanceKey, message string) 
 	auditWrittenToFile := false
 	if config.Config.AuditLogFile != "" {
 		auditWrittenToFile = true
-		go func() error {
+		go func() {
+			_ = func() error {
 			f, err := os.OpenFile(config.Config.AuditLogFile, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0640)
 			if err != nil {
 				return log.Errore(err)
@@ -72,6 +73,7 @@ func AuditOperation(auditType string, instanceKey *InstanceKey, message string) 
 				return log.Errore(err)
 			}
 			return nil
+			}()
 		}()
 	}
 	if config.Config.AuditToBackendDB {

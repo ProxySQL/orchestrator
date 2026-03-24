@@ -140,7 +140,7 @@ func DiscoverAgentInstance(hostname string, port int) error {
 		return err
 	}
 	if instance == nil {
-		log.Errorf("Failed to read topology for %v", instanceKey)
+		_ = log.Errorf("Failed to read topology for %v", instanceKey)
 		return err
 	}
 	log.Infof("Discovered Agent Instance: %v", instance.Key)
@@ -702,7 +702,7 @@ func executeSeed(seedId int64, targetHostname string, sourceHostname string) err
 	if err != nil {
 		return updateSeedStateEntry(seedStateId, err)
 	}
-	sourceAgent, err = GetAgent(sourceHostname)
+	sourceAgent, _ = GetAgent(sourceHostname)
 	_, _ = submitSeedStateEntry(seedId, fmt.Sprintf("MySQL data volume on source host %s is %d bytes", sourceHostname, sourceAgent.MountPoint.MySQLDiskUsage), "")
 
 	seedStateId, _ = submitSeedStateEntry(seedId, fmt.Sprintf("Erasing MySQL data on %s", targetHostname), "")
@@ -795,10 +795,10 @@ func executeSeed(seedId int64, targetHostname string, sourceHostname string) err
 		return updateSeedStateEntry(seedStateId, err)
 	}
 
-	seedStateId, _ = submitSeedStateEntry(seedId, fmt.Sprintf("Submitting MySQL instance for discovery: %s", targetHostname), "")
+	_, _ = submitSeedStateEntry(seedId, fmt.Sprintf("Submitting MySQL instance for discovery: %s", targetHostname), "")
 	SeededAgents <- &targetAgent
 
-	seedStateId, _ = submitSeedStateEntry(seedId, "Done", "")
+	_, _ = submitSeedStateEntry(seedId, "Done", "")
 
 	return nil
 }

@@ -270,10 +270,7 @@ func (this *Instance) IsReplicationGroupSecondary() bool {
 
 // IsBinlogServer checks whether this is any type of a binlog server (currently only maxscale)
 func (this *Instance) IsBinlogServer() bool {
-	if this.isMaxScale() {
-		return true
-	}
-	return false
+	return this.isMaxScale()
 }
 
 // IsOracleMySQL checks whether this is an Oracle MySQL distribution

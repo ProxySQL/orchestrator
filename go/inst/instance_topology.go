@@ -555,7 +555,7 @@ func MoveBelow(instanceKey, siblingKey *InstanceKey) (*Instance, error) {
 		goto Cleanup
 	}
 	if instance.ExecBinlogCoordinates.SmallerThan(&sibling.ExecBinlogCoordinates) {
-		instance, err = StartReplicationUntilMasterCoordinates(instanceKey, &sibling.ExecBinlogCoordinates)
+		_, err = StartReplicationUntilMasterCoordinates(instanceKey, &sibling.ExecBinlogCoordinates)
 		if err != nil {
 			goto Cleanup
 		}
@@ -567,7 +567,7 @@ func MoveBelow(instanceKey, siblingKey *InstanceKey) (*Instance, error) {
 	}
 	// At this point both siblings have executed exact same statements and are identical
 
-	instance, err = ChangeMasterTo(instanceKey, &sibling.Key, &sibling.SelfBinlogCoordinates, false, GTIDHintDeny)
+	_, err = ChangeMasterTo(instanceKey, &sibling.Key, &sibling.SelfBinlogCoordinates, false, GTIDHintDeny)
 	if err != nil {
 		goto Cleanup
 	}
@@ -648,7 +648,7 @@ func moveInstanceBelowViaGTID(instance, otherInstance *Instance) (*Instance, err
 		defer EndMaintenance(maintenanceToken)
 	}
 
-	instance, err = StopReplication(instanceKey)
+	_, err = StopReplication(instanceKey)
 	if err != nil {
 		goto Cleanup
 	}
@@ -770,7 +770,7 @@ func MoveReplicasGTID(masterKey *InstanceKey, belowKey *InstanceKey, pattern str
 	replicas = filterInstancesByPattern(replicas, pattern)
 	movedReplicas, unmovedReplicas, errs, err = moveReplicasViaGTID(replicas, belowInstance, nil)
 	if err != nil {
-		log.Errore(err)
+		_ = log.Errore(err)
 	}
 
 	if len(unmovedReplicas) > 0 {
@@ -844,7 +844,7 @@ func Repoint(instanceKey *InstanceKey, masterKey *InstanceKey, gtidHint Operatio
 	if instance.ExecBinlogCoordinates.IsEmpty() {
 		instance.ExecBinlogCoordinates.LogFile = "orchestrator-unknown-log-file"
 	}
-	instance, err = ChangeMasterTo(instanceKey, masterKey, &instance.ExecBinlogCoordinates, !masterIsAccessible, gtidHint)
+	_, err = ChangeMasterTo(instanceKey, masterKey, &instance.ExecBinlogCoordinates, !masterIsAccessible, gtidHint)
 	if err != nil {
 		goto Cleanup
 	}
@@ -996,7 +996,7 @@ func MakeCoMaster(instanceKey *InstanceKey) (*Instance, error) {
 	}
 	log.Infof("Will make %+v co-master of %+v", instanceKey, master.Key)
 
-	var gitHint OperationGTIDHint = GTIDHintNeutral
+	var gitHint = GTIDHintNeutral
 	if maintenanceToken, merr := BeginMaintenance(instanceKey, GetMaintenanceOwner(), fmt.Sprintf("make co-master of %+v", master.Key)); merr != nil {
 		err = fmt.Errorf("Cannot begin maintenance on %+v: %v", *instanceKey, merr)
 		goto Cleanup
@@ -1080,7 +1080,7 @@ func ResetReplicationOperation(instanceKey *InstanceKey) (*Instance, error) {
 	}
 
 	if instance.IsReplica() {
-		instance, err = StopReplication(instanceKey)
+		_, err = StopReplication(instanceKey)
 		if err != nil {
 			goto Cleanup
 		}
@@ -1369,7 +1369,7 @@ func ErrantGTIDResetMaster(instanceKey *InstanceKey) (instance *Instance, err er
 		goto Cleanup
 	}
 	if !masterStatusFound {
-		err = fmt.Errorf("gtid-errant-reset-master: cannot get master status on %+v, after which intended to set gtid_purged to: %s.", instance.Key, gtidSubtract)
+		err = fmt.Errorf("gtid-errant-reset-master: cannot get master status on %+v, after which intended to set gtid_purged to: %s", instance.Key, gtidSubtract)
 		goto Cleanup
 	}
 	if executedGtidSet != "" {
@@ -1393,7 +1393,7 @@ func ErrantGTIDResetMaster(instanceKey *InstanceKey) (instance *Instance, err er
 Cleanup:
 	var startReplicationErr error
 	instance, startReplicationErr = StartReplication(instanceKey)
-	log.Errore(startReplicationErr)
+	_ = log.Errore(startReplicationErr)
 
 	if err != nil {
 		return instance, log.Errore(err)
@@ -1787,7 +1787,7 @@ func TakeMaster(instanceKey *InstanceKey, allowTakingCoMaster bool) (*Instance, 
 		return instance, err
 	}
 	if masterInstance.IsCoMaster && !allowTakingCoMaster {
-		return instance, fmt.Errorf("%+v is co-master. Cannot take it.", masterInstance.Key)
+		return instance, fmt.Errorf("%+v is co-master, cannot take it", masterInstance.Key)
 	}
 	log.Debugf("TakeMaster: will attempt making %+v take its master %+v, now resolved as %+v", *instanceKey, instance.MasterKey, masterInstance.Key)
 
@@ -2250,7 +2250,7 @@ func chooseCandidateReplica(replicas [](*Instance)) (candidateReplica *Instance,
 			// lost due to inability to replicate
 			cannotReplicateReplicas = append(cannotReplicateReplicas, replica)
 			if err != nil {
-				log.Errorf("chooseCandidateReplica(): error checking CanReplicateFrom(). replica: %v; error: %v", replica.Key, err)
+				_ = log.Errorf("chooseCandidateReplica(): error checking CanReplicateFrom(). replica: %v; error: %v", replica.Key, err)
 			}
 		} else if replica.ExecBinlogCoordinates.SmallerThan(&candidateReplica.ExecBinlogCoordinates) {
 			laterReplicas = append(laterReplicas, replica)

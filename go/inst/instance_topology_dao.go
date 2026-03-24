@@ -171,7 +171,7 @@ func GetReplicationRestartPreserveStatements(instanceKey *InstanceKey, injectedS
 // FlushBinaryLogs attempts a 'FLUSH BINARY LOGS' statement on the given instance.
 func FlushBinaryLogs(instanceKey *InstanceKey, count int) (*Instance, error) {
 	if *config.RuntimeCLIFlags.Noop {
-		return nil, fmt.Errorf("noop: aborting flush-binary-logs operation on %+v; signalling error but nothing went wrong.", *instanceKey)
+		return nil, fmt.Errorf("noop: aborting flush-binary-logs operation on %+v; signalling error but nothing went wrong", *instanceKey)
 	}
 
 	for i := 0; i < count; i++ {

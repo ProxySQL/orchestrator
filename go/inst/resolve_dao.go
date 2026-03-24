@@ -31,11 +31,11 @@ var readUnresolvedHostnameCounter = metrics.NewCounter()
 var readAllResolvedHostnamesCounter = metrics.NewCounter()
 
 func init() {
-	metrics.Register("resolve.write_resolved", writeResolvedHostnameCounter)
-	metrics.Register("resolve.write_unresolved", writeUnresolvedHostnameCounter)
-	metrics.Register("resolve.read_resolved", readResolvedHostnameCounter)
-	metrics.Register("resolve.read_unresolved", readUnresolvedHostnameCounter)
-	metrics.Register("resolve.read_resolved_all", readAllResolvedHostnamesCounter)
+	_ = metrics.Register("resolve.write_resolved", writeResolvedHostnameCounter)
+	_ = metrics.Register("resolve.write_unresolved", writeUnresolvedHostnameCounter)
+	_ = metrics.Register("resolve.read_resolved", readResolvedHostnameCounter)
+	_ = metrics.Register("resolve.read_unresolved", readUnresolvedHostnameCounter)
+	_ = metrics.Register("resolve.read_resolved_all", readAllResolvedHostnamesCounter)
 }
 
 // WriteResolvedHostname stores a hostname and the resolved hostname to backend database

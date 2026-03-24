@@ -160,7 +160,7 @@ func Setup(applier CommandApplier, snapshotCreatorApplier SnapshotCreatorApplier
 		}
 	}()
 
-	setupHttpClient()
+	_ = setupHttpClient()
 
 	atomic.StoreInt64(&raftSetupComplete, 1)
 	return nil
@@ -268,7 +268,7 @@ func Snapshot() error {
 func AsyncSnapshot() error {
 	asyncDuration := (time.Duration(rand.Int63()) % asyncSnapshotTimeframe)
 	go time.AfterFunc(asyncDuration, func() {
-		Snapshot()
+		_ = Snapshot()
 	})
 	return nil
 }

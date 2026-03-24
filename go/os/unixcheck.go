@@ -55,7 +55,7 @@ func UserInGroups(authUser string, powerAuthGroups []string) bool {
 	for _, gid := range gids {
 		group, err := user.LookupGroupId(gid)
 		if err != nil {
-			log.Errorf("Failed to lookup group id for gid %s: %v", gid, err) // yes gids are strings!
+			_ = log.Errorf("Failed to lookup group id for gid %s: %v", gid, err) // yes gids are strings!
 			return false
 		}
 

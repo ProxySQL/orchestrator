@@ -106,7 +106,7 @@ func EndDowntime(instanceKey *InstanceKey) (wasDowntimed bool, err error) {
 
 	if affected, _ := res.RowsAffected(); affected > 0 {
 		wasDowntimed = true
-		AuditOperation("end-downtime", instanceKey, "")
+		_ = AuditOperation("end-downtime", instanceKey, "")
 	}
 	return wasDowntimed, err
 }
@@ -197,7 +197,7 @@ func ExpireDowntime() error {
 			return log.Errore(err)
 		}
 		if rowsAffected, _ := res.RowsAffected(); rowsAffected > 0 {
-			AuditOperation("expire-downtime", nil, fmt.Sprintf("Expired %d entries", rowsAffected))
+			_ = AuditOperation("expire-downtime", nil, fmt.Sprintf("Expired %d entries", rowsAffected))
 		}
 	}
 

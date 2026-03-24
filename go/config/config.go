@@ -553,7 +553,7 @@ func (this *Configuration) postReadAdjustments() error {
 		}
 	}
 	if this.FailMasterPromotionIfSQLThreadNotUpToDate && this.DelayMasterPromotionIfSQLThreadNotUpToDate {
-		return fmt.Errorf("Cannot have both FailMasterPromotionIfSQLThreadNotUpToDate and DelayMasterPromotionIfSQLThreadNotUpToDate enabled")
+		return fmt.Errorf("cannot have both FailMasterPromotionIfSQLThreadNotUpToDate and DelayMasterPromotionIfSQLThreadNotUpToDate enabled")
 	}
 	if this.FailMasterPromotionOnLagMinutes > 0 && this.ReplicationLagQuery == "" {
 		return fmt.Errorf("nonzero FailMasterPromotionOnLagMinutes requires ReplicationLagQuery to be set")
@@ -603,10 +603,10 @@ func (this *Configuration) postReadAdjustments() error {
 	if this.HTTPAdvertise != "" {
 		u, err := url.Parse(this.HTTPAdvertise)
 		if err != nil {
-			return fmt.Errorf("Failed parsing HTTPAdvertise %s: %s", this.HTTPAdvertise, err.Error())
+			return fmt.Errorf("failed parsing HTTPAdvertise %s: %s", this.HTTPAdvertise, err.Error())
 		}
 		if u.Scheme == "" {
-			return fmt.Errorf("If specified, HTTPAdvertise must include scheme (http:// or https://)")
+			return fmt.Errorf("if specified, HTTPAdvertise must include scheme (http:// or https://)")
 		}
 		if u.Hostname() == "" {
 			return fmt.Errorf("If specified, HTTPAdvertise must include host name")
@@ -675,7 +675,7 @@ func read(fileName string) (*Configuration, error) {
 // A file can override configuration provided in previous file.
 func Read(fileNames ...string) *Configuration {
 	for _, fileName := range fileNames {
-		read(fileName)
+		_, _ = read(fileName)
 	}
 	readFileNames = fileNames
 	return Config
@@ -694,10 +694,10 @@ func ForceRead(fileName string) *Configuration {
 // Reload re-reads configuration from last used files
 func Reload(extraFileNames ...string) *Configuration {
 	for _, fileName := range readFileNames {
-		read(fileName)
+		_, _ = read(fileName)
 	}
 	for _, fileName := range extraFileNames {
-		read(fileName)
+		_, _ = read(fileName)
 	}
 	return Config
 }

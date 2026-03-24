@@ -89,7 +89,7 @@ func setupHttpClient() error {
 func HttpGetLeader(path string) (response []byte, err error) {
 	leaderURI := LeaderURI.Get()
 	if leaderURI == "" {
-		return nil, fmt.Errorf("Raft leader URI unknown")
+		return nil, fmt.Errorf("raft leader URI unknown")
 	}
 	leaderAPI := leaderURI
 	if config.Config.URLPrefix != "" {

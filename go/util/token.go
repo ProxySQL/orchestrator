@@ -50,11 +50,11 @@ type Token struct {
 	Hash string
 }
 
-func (this *Token) Short() string {
-	if len(this.Hash) <= shortTokenLength {
-		return this.Hash
+func (t *Token) Short() string {
+	if len(t.Hash) <= shortTokenLength {
+		return t.Hash
 	}
-	return this.Hash[0:shortTokenLength]
+	return t.Hash[0:shortTokenLength]
 }
 
 var ProcessToken *Token = NewToken()

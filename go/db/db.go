@@ -212,7 +212,7 @@ func OpenOrchestrator() (db *sql.DB, err error) {
 	}
 	if err == nil && !fromCache {
 		if !config.Config.SkipOrchestratorDatabaseUpdate {
-			initOrchestratorDB(db)
+			_ = initOrchestratorDB(db)
 		}
 		// A low value here will trigger reconnects which could
 		// make the number of backend connections hit the tcp
@@ -294,7 +294,7 @@ func deployStatements(db *sql.DB, queries []string) error {
 	// My bad.
 	originalSqlMode := ""
 	if config.Config.IsMySQL() {
-		err = tx.QueryRow(`select @@session.sql_mode`).Scan(&originalSqlMode)
+		_ = tx.QueryRow(`select @@session.sql_mode`).Scan(&originalSqlMode)
 		if _, err := tx.Exec(`set @@session.sql_mode=REPLACE(@@session.sql_mode, 'NO_ZERO_DATE', '')`); err != nil {
 			_ = log.Fatale(err)
 		}
@@ -319,7 +319,7 @@ func deployStatements(db *sql.DB, queries []string) error {
 				!strings.Contains(err.Error(), "check that column/key exists") &&
 				!strings.Contains(err.Error(), "already exists") &&
 				!strings.Contains(err.Error(), "Duplicate key name") {
-				log.Errorf("Error initiating orchestrator: %+v; query=%+v", err, query)
+				_ = log.Errorf("Error initiating orchestrator: %+v; query=%+v", err, query)
 			}
 		}
 	}
