@@ -1,7 +1,8 @@
-![](https://github.com/proxysql/orchestrator/workflows/CI/badge.svg)
-![](https://github.com/proxysql/orchestrator/workflows/upgrade/badge.svg)
-![](https://github.com/proxysql/orchestrator/workflows/system%20tests/badge.svg)
-[![downloads](https://img.shields.io/github/downloads/proxysql/orchestrator/total.svg)](https://github.com/proxysql/orchestrator/releases) [![release](https://img.shields.io/github/release/proxysql/orchestrator.svg)](https://github.com/proxysql/orchestrator/releases)
+[![CI](https://github.com/proxysql/orchestrator/workflows/CI/badge.svg)](https://github.com/proxysql/orchestrator/actions/workflows/main.yml)
+[![Functional Tests](https://github.com/proxysql/orchestrator/workflows/Functional%20Tests/badge.svg)](https://github.com/proxysql/orchestrator/actions/workflows/functional.yml)
+[![release](https://img.shields.io/github/release/proxysql/orchestrator.svg)](https://github.com/proxysql/orchestrator/releases)
+[![downloads](https://img.shields.io/github/downloads/proxysql/orchestrator/total.svg)](https://github.com/proxysql/orchestrator/releases)
+[![license](https://img.shields.io/github/license/proxysql/orchestrator.svg)](https://github.com/proxysql/orchestrator/blob/master/LICENSE)
 
 > **Maintained by [ProxySQL LLC](https://proxysql.com).** Orchestrator is actively maintained and open to contributions. We believe in orchestrator's potential as the go-to MySQL HA tool, especially when paired with ProxySQL. Bug reports, feature requests, and pull requests are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) to get started.
 
