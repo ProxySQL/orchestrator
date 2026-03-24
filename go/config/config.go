@@ -96,6 +96,8 @@ type Configuration struct {
 	AgentsServerPort                           string // port orchestrator agents talk back to
 	MySQLTopologyUser                          string
 	MySQLTopologyPassword                      string
+	PostgreSQLTopologyUser                     string // Username for connecting to PostgreSQL topology instances
+	PostgreSQLTopologyPassword                 string // Password for connecting to PostgreSQL topology instances
 	MySQLTopologyCredentialsConfigFile         string // my.cnf style configuration file from where to pick credentials. Expecting `user`, `password` under `[client]` section
 	MySQLTopologySSLPrivateKeyFile             string // Private key file used to authenticate with a Topology mysql instance with TLS
 	MySQLTopologySSLCertFile                   string // Certificate PEM file used to authenticate with a Topology mysql instance with TLS
