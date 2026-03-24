@@ -28,6 +28,7 @@ import (
 	"github.com/proxysql/orchestrator/go/http"
 	"github.com/proxysql/orchestrator/go/inst"
 	"github.com/proxysql/orchestrator/go/logic"
+	ometrics "github.com/proxysql/orchestrator/go/metrics"
 	"github.com/proxysql/orchestrator/go/process"
 	"github.com/proxysql/orchestrator/go/ssl"
 
@@ -47,6 +48,7 @@ var discoveryMetrics *collection.Collection
 // Http starts serving
 func Http(continuousDiscovery bool) {
 	promptForSSLPasswords()
+	ometrics.InitPrometheus()
 	process.ContinuousRegistration(process.OrchestratorExecutionHttpMode, "")
 
 	martini.Env = martini.Prod
