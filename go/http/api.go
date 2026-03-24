@@ -490,7 +490,7 @@ func (this *HttpAPI) BeginDowntime(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var durationSeconds int = 0
+	var durationSeconds = 0
 	if chi.URLParam(r, "duration") != "" {
 		durationSeconds, err = util.SimpleTimeToSeconds(chi.URLParam(r, "duration"))
 		if durationSeconds < 0 {
@@ -575,7 +575,7 @@ func (this *HttpAPI) MoveUpReplicas(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	replicas, newMaster, err, errs := inst.MoveUpReplicas(&instanceKey, r.URL.Query().Get("pattern"))
+	replicas, newMaster, errs, err := inst.MoveUpReplicas(&instanceKey, r.URL.Query().Get("pattern"))
 	if err != nil {
 		Respond(w, &APIResponse{Code: ERROR, Message: err.Error()})
 		return
@@ -623,7 +623,7 @@ func (this *HttpAPI) RepointReplicas(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	replicas, err, _ := inst.RepointReplicas(&instanceKey, r.URL.Query().Get("pattern"))
+	replicas, _, err := inst.RepointReplicas(&instanceKey, r.URL.Query().Get("pattern"))
 	if err != nil {
 		Respond(w, &APIResponse{Code: ERROR, Message: err.Error()})
 		return
@@ -887,7 +887,7 @@ func (this *HttpAPI) MoveReplicasGTID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	movedReplicas, _, err, errs := inst.MoveReplicasGTID(&instanceKey, &belowKey, r.URL.Query().Get("pattern"))
+	movedReplicas, _, errs, err := inst.MoveReplicasGTID(&instanceKey, &belowKey, r.URL.Query().Get("pattern"))
 	if err != nil {
 		Respond(w, &APIResponse{Code: ERROR, Message: err.Error()})
 		return
@@ -982,7 +982,7 @@ func (this *HttpAPI) RelocateReplicas(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	replicas, _, err, errs := inst.RelocateReplicas(&instanceKey, &belowKey, r.URL.Query().Get("pattern"))
+	replicas, _, errs, err := inst.RelocateReplicas(&instanceKey, &belowKey, r.URL.Query().Get("pattern"))
 	if err != nil {
 		Respond(w, &APIResponse{Code: ERROR, Message: err.Error()})
 		return
@@ -1116,7 +1116,7 @@ func (this *HttpAPI) MultiMatchReplicas(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	replicas, newMaster, err, errs := inst.MultiMatchReplicas(&instanceKey, &belowKey, r.URL.Query().Get("pattern"))
+	replicas, newMaster, errs, err := inst.MultiMatchReplicas(&instanceKey, &belowKey, r.URL.Query().Get("pattern"))
 	if err != nil {
 		Respond(w, &APIResponse{Code: ERROR, Message: err.Error()})
 		return
@@ -1137,7 +1137,7 @@ func (this *HttpAPI) MatchUpReplicas(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	replicas, newMaster, err, errs := inst.MatchUpReplicas(&instanceKey, r.URL.Query().Get("pattern"))
+	replicas, newMaster, errs, err := inst.MatchUpReplicas(&instanceKey, r.URL.Query().Get("pattern"))
 	if err != nil {
 		Respond(w, &APIResponse{Code: ERROR, Message: err.Error()})
 		return

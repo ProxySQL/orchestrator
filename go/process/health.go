@@ -89,7 +89,7 @@ type OrchestratorExecutionMode string
 
 const (
 	OrchestratorExecutionCliMode  OrchestratorExecutionMode = "CLIMode"
-	OrchestratorExecutionHttpMode                           = "HttpMode"
+	OrchestratorExecutionHttpMode OrchestratorExecutionMode = "HttpMode"
 )
 
 var continuousRegistrationOnce sync.Once

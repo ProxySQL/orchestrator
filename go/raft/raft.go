@@ -46,7 +46,7 @@ const (
 	raftTimeout            = 10 * time.Second
 )
 
-var RaftNotRunning error = fmt.Errorf("raft is not configured/running")
+var ErrRaftNotRunning error = fmt.Errorf("raft is not configured/running")
 var store *Store
 var raftSetupComplete int64
 var ThisHostname string
@@ -279,7 +279,7 @@ func StepDown() {
 
 func Yield() error {
 	if !IsRaftEnabled() {
-		return RaftNotRunning
+		return ErrRaftNotRunning
 	}
 	return getRaft().Yield()
 }
@@ -294,14 +294,14 @@ func GetRaftAdvertise() string {
 
 func GetPeers() ([]string, error) {
 	if !IsRaftEnabled() {
-		return []string{}, RaftNotRunning
+		return []string{}, ErrRaftNotRunning
 	}
 	return store.peerStore.Peers()
 }
 
 func IsPeer(peer string) (bool, error) {
 	if !IsRaftEnabled() {
-		return false, RaftNotRunning
+		return false, ErrRaftNotRunning
 	}
 	return (store.raftBind == peer), nil
 }
@@ -309,7 +309,7 @@ func IsPeer(peer string) (bool, error) {
 // PublishCommand will distribute a command across the group
 func PublishCommand(op string, value interface{}) (response interface{}, err error) {
 	if !IsRaftEnabled() {
-		return nil, RaftNotRunning
+		return nil, ErrRaftNotRunning
 	}
 	b, err := json.Marshal(value)
 	if err != nil {

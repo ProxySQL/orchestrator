@@ -48,7 +48,7 @@ var discoveryMetrics *collection.Collection
 func Http(continuousDiscovery bool) {
 	promptForSSLPasswords()
 	ometrics.InitPrometheus()
-	process.ContinuousRegistration(process.OrchestratorExecutionHttpMode, "")
+	process.ContinuousRegistration(string(process.OrchestratorExecutionHttpMode), "")
 
 	if config.Config.ServeAgentsHttp {
 		go agentsHttp()

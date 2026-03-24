@@ -578,9 +578,6 @@ func (this *Configuration) postReadAdjustments() error {
 	if this.IsSQLite() && this.SQLite3DataFile == "" {
 		return fmt.Errorf("SQLite3DataFile must be set when BackendDB is sqlite3")
 	}
-	if this.IsSQLite() {
-		//		this.HostnameResolveMethod = "none"
-	}
 	if this.RaftEnabled && this.RaftDataDir == "" {
 		return fmt.Errorf("RaftDataDir must be defined since raft is enabled (RaftEnabled)")
 	}

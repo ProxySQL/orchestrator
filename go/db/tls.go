@@ -63,7 +63,7 @@ type SqlUtilsLogger struct {
 
 func (logger SqlUtilsLogger) OnError(caller_context string, query string, err error) error {
 	query = strings.Join(strings.Fields(query), " ") // trim whitespaces
-	query = strings.Replace(query, "%", "%%", -1)    // escape %
+	query = strings.ReplaceAll(query, "%", "%%")       // escape %
 
 	msg := fmt.Sprintf("%+v(%+v) %+v: %+v",
 		caller_context,

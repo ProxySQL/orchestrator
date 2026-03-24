@@ -3,7 +3,7 @@ package kv
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -34,7 +34,7 @@ func sortTxnKVOps(txnOps []*consulapi.TxnOp) []*consulapi.TxnOp {
 
 func buildConsulTestServer(t *testing.T, testOps []consulTestServerOp) *httptest.Server {
 	handlerFunc := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		requestBytes, _ := ioutil.ReadAll(r.Body)
+		requestBytes, _ := io.ReadAll(r.Body)
 		requestBody := strings.TrimSpace(string(requestBytes))
 
 		for _, testOp := range testOps {

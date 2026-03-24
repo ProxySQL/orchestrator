@@ -46,11 +46,7 @@ func groupKVPairsByKeyPrefix(kvPairs consulapi.KVPairs) (groups []consulapi.KVPa
 				prefix = path[0]
 			}
 		}
-		if _, found := groupsMap[prefix]; found {
-			groupsMap[prefix] = append(groupsMap[prefix], pair)
-		} else {
-			groupsMap[prefix] = consulapi.KVPairs{pair}
-		}
+		groupsMap[prefix] = append(groupsMap[prefix], pair)
 	}
 
 	pairsBuf := consulapi.KVPairs{}

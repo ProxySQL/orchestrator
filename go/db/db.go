@@ -302,11 +302,7 @@ func deployStatements(db *sql.DB, queries []string) error {
 			_ = log.Fatale(err)
 		}
 	}
-	for i, query := range queries {
-		if i == 0 {
-			//log.Debugf("sql_mode is: %+v", originalSqlMode)
-		}
-
+	for _, query := range queries {
 		query, err := translateStatement(query)
 		if err != nil {
 			return log.Fatalf("Cannot initiate orchestrator: %+v; query=%+v", err, query)

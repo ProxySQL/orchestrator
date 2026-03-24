@@ -719,7 +719,7 @@ func executeSeed(seedId int64, targetHostname string, sourceHostname string) err
 
 	if sourceAgent.MountPoint.MySQLDiskUsage > targetAgent.MySQLDatadirDiskFree {
 		Unmount(sourceHostname)
-		return updateSeedStateEntry(seedStateId, fmt.Errorf("Not enough disk space on target host %s. Required: %d, available: %d. Bailing out.", targetHostname, sourceAgent.MountPoint.MySQLDiskUsage, targetAgent.MySQLDatadirDiskFree))
+		return updateSeedStateEntry(seedStateId, fmt.Errorf("not enough disk space on target host %s, required: %d, available: %d, bailing out", targetHostname, sourceAgent.MountPoint.MySQLDiskUsage, targetAgent.MySQLDatadirDiskFree))
 	}
 
 	// ...
@@ -762,7 +762,7 @@ func executeSeed(seedId int64, targetHostname string, sourceHostname string) err
 			AbortSeedCommand(sourceHostname, seedId)
 			AbortSeedCommand(targetHostname, seedId)
 			Unmount(sourceHostname)
-			return updateSeedStateEntry(seedStateId, errors.New("10 iterations have passed without progress. Bailing out."))
+			return updateSeedStateEntry(seedStateId, errors.New("10 iterations have passed without progress, bailing out"))
 		}
 
 		var copyPct int64 = 0

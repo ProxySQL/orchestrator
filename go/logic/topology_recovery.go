@@ -48,9 +48,9 @@ type RecoveryType string
 
 const (
 	MasterRecovery                 RecoveryType = "MasterRecovery"
-	CoMasterRecovery                            = "CoMasterRecovery"
-	IntermediateMasterRecovery                  = "IntermediateMasterRecovery"
-	ReplicationGroupMemberRecovery              = "ReplicationGroupMemberRecovery"
+	CoMasterRecovery               RecoveryType = "CoMasterRecovery"
+	IntermediateMasterRecovery     RecoveryType = "IntermediateMasterRecovery"
+	ReplicationGroupMemberRecovery RecoveryType = "ReplicationGroupMemberRecovery"
 )
 
 type RecoveryAcknowledgement struct {
@@ -163,9 +163,9 @@ type MasterRecoveryType string
 
 const (
 	NotMasterRecovery          MasterRecoveryType = "NotMasterRecovery"
-	MasterRecoveryGTID                            = "MasterRecoveryGTID"
-	MasterRecoveryPseudoGTID                      = "MasterRecoveryPseudoGTID"
-	MasterRecoveryBinlogServer                    = "MasterRecoveryBinlogServer"
+	MasterRecoveryGTID         MasterRecoveryType = "MasterRecoveryGTID"
+	MasterRecoveryPseudoGTID   MasterRecoveryType = "MasterRecoveryPseudoGTID"
+	MasterRecoveryBinlogServer MasterRecoveryType = "MasterRecoveryBinlogServer"
 )
 
 var emergencyReadTopologyInstanceMap *cache.Cache
@@ -823,7 +823,7 @@ func replacePromotedReplicaWithCandidate(topologyRecovery *TopologyRecovery, dea
 		relocateReplicasFunc := func() error {
 			log.Debugf("replace-promoted-replica-with-candidate: relocating replicas of %+v below %+v", promotedReplica.Key, candidateInstance.Key)
 
-			relocatedReplicas, _, err, _ := inst.RelocateReplicas(&promotedReplica.Key, &candidateInstance.Key, "")
+			relocatedReplicas, _, _, err := inst.RelocateReplicas(&promotedReplica.Key, &candidateInstance.Key, "")
 			log.Debugf("replace-promoted-replica-with-candidate: + relocated %+v replicas of %+v below %+v", len(relocatedReplicas), promotedReplica.Key, candidateInstance.Key)
 			AuditTopologyRecovery(topologyRecovery, fmt.Sprintf("relocated %+v replicas of %+v below %+v", len(relocatedReplicas), promotedReplica.Key, candidateInstance.Key))
 			return log.Errore(err)
@@ -1155,7 +1155,7 @@ func RecoverDeadIntermediateMaster(topologyRecovery *TopologyRecovery, skipProce
 		}
 		// We have a candidate
 		AuditTopologyRecovery(topologyRecovery, fmt.Sprintf("- RecoverDeadIntermediateMaster: will attempt a candidate intermediate master: %+v", candidateSiblingOfIntermediateMaster.Key))
-		relocatedReplicas, candidateSibling, err, errs := inst.RelocateReplicas(failedInstanceKey, &candidateSiblingOfIntermediateMaster.Key, "")
+		relocatedReplicas, candidateSibling, errs, err := inst.RelocateReplicas(failedInstanceKey, &candidateSiblingOfIntermediateMaster.Key, "")
 		topologyRecovery.AddErrors(errs)
 		topologyRecovery.ParticipatingInstanceKeys.AddKey(candidateSiblingOfIntermediateMaster.Key)
 
@@ -1210,7 +1210,7 @@ func RecoverDeadIntermediateMaster(topologyRecovery *TopologyRecovery, skipProce
 		// So, match up all that's left, plan D
 		AuditTopologyRecovery(topologyRecovery, fmt.Sprintf("- RecoverDeadIntermediateMaster: will next attempt to relocate up from %+v", *failedInstanceKey))
 
-		relocatedReplicas, masterInstance, err, errs := inst.RelocateReplicas(failedInstanceKey, &analysisEntry.AnalyzedInstanceMasterKey, "")
+		relocatedReplicas, masterInstance, errs, err := inst.RelocateReplicas(failedInstanceKey, &analysisEntry.AnalyzedInstanceMasterKey, "")
 		topologyRecovery.AddErrors(errs)
 		topologyRecovery.ParticipatingInstanceKeys.AddKey(analysisEntry.AnalyzedInstanceMasterKey)
 
@@ -1258,7 +1258,7 @@ func RecoverDeadReplicationGroupMemberWithReplicas(topologyRecovery *TopologyRec
 	AuditTopologyRecovery(topologyRecovery, "Finding a candidate group member to relocate replicas to")
 	candidateGroupMemberInstanceKey := &groupMembers[rand.Intn(len(failedGroupMember.ReplicationGroupMembers.GetInstanceKeys()))]
 	AuditTopologyRecovery(topologyRecovery, fmt.Sprintf("Found group member %+v", candidateGroupMemberInstanceKey))
-	relocatedReplicas, successorInstance, err, errs := inst.RelocateReplicas(failedGroupMemberInstanceKey, candidateGroupMemberInstanceKey, "")
+	relocatedReplicas, successorInstance, errs, err := inst.RelocateReplicas(failedGroupMemberInstanceKey, candidateGroupMemberInstanceKey, "")
 	topologyRecovery.AddErrors(errs)
 	if len(relocatedReplicas) != len(failedGroupMember.Replicas.GetInstanceKeys()) {
 		AuditTopologyRecovery(topologyRecovery, fmt.Sprintf("- RecoverDeadReplicationGroupMemberWithReplicas: failed to move all replicas to candidate group member (%+v)", candidateGroupMemberInstanceKey))
@@ -2031,7 +2031,7 @@ func ForceMasterTakeover(clusterName string, destination *inst.Instance) (topolo
 	clusterMaster := clusterMasters[0]
 
 	if !destination.MasterKey.Equals(&clusterMaster.Key) {
-		return nil, fmt.Errorf("You may only promote a direct child of the master %+v. The master of %+v is %+v.", clusterMaster.Key, destination.Key, destination.MasterKey)
+		return nil, fmt.Errorf("you may only promote a direct child of the master %+v; the master of %+v is %+v", clusterMaster.Key, destination.Key, destination.MasterKey)
 	}
 	log.Infof("Will demote %+v and promote %+v instead", clusterMaster.Key, destination.Key)
 
@@ -2143,7 +2143,7 @@ func GracefulMasterTakeover(clusterName string, designatedKey *inst.InstanceKey,
 
 	if len(clusterMasterDirectReplicas) > 1 {
 		log.Infof("GracefulMasterTakeover: Will let %+v take over its siblings", designatedInstance.Key)
-		relocatedReplicas, _, err, _ := inst.RelocateReplicas(&clusterMaster.Key, &designatedInstance.Key, "")
+		relocatedReplicas, _, _, err := inst.RelocateReplicas(&clusterMaster.Key, &designatedInstance.Key, "")
 		if len(relocatedReplicas) != len(clusterMasterDirectReplicas)-1 {
 			// We are unable to make designated instance master of all its siblings
 			relocatedReplicasKeyMap := inst.NewInstanceKeyMap()

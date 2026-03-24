@@ -6,7 +6,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"os"
 	nethttp "net/http"
 	"strings"
 
@@ -34,7 +34,6 @@ func NewTLSConfig(caFile string, verifyCert bool) (*tls.Config, error) {
 	c.MinVersion = tls.VersionTLS12
 	// "If CipherSuites is nil, a default list of secure cipher suites is used"
 	c.CipherSuites = nil
-	c.PreferServerCipherSuites = true
 
 	if verifyCert {
 		log.Info("verifyCert requested, client certificates will be verified")
@@ -53,13 +52,13 @@ func NewTLSConfig(caFile string, verifyCert bool) (*tls.Config, error) {
 func ReadCAFile(caFile string) (*x509.CertPool, error) {
 	var caCertPool *x509.CertPool
 	if caFile != "" {
-		data, err := ioutil.ReadFile(caFile)
+		data, err := os.ReadFile(caFile)
 		if err != nil {
 			return nil, err
 		}
 		caCertPool = x509.NewCertPool()
 		if !caCertPool.AppendCertsFromPEM(data) {
-			return nil, errors.New("No certificates parsed")
+			return nil, errors.New("no certificates parsed")
 		}
 		log.Info("Read in CA file:", caFile)
 	}
@@ -73,7 +72,7 @@ func Verify(r *nethttp.Request, validOUs []string) error {
 		return nil
 	}
 	if r.TLS == nil {
-		return errors.New("No TLS")
+		return errors.New("no TLS")
 	}
 	for _, chain := range r.TLS.VerifiedChains {
 		s := chain[0].Subject.OrganizationalUnit
@@ -87,7 +86,7 @@ func Verify(r *nethttp.Request, validOUs []string) error {
 		}
 	}
 	_ = log.Error("No valid OUs found")
-	return errors.New("Invalid OU")
+	return errors.New("invalid OU")
 }
 
 // VerifyOUsMiddleware returns an http.Handler middleware that verifies client
@@ -139,7 +138,7 @@ func AppendKeyPairWithPassword(tlsConfig *tls.Config, certFile string, keyFile s
 
 // Read a PEM file and ask for a password to decrypt it if needed
 func ReadPEMData(pemFile string, pemPass []byte) ([]byte, error) {
-	pemData, err := ioutil.ReadFile(pemFile)
+	pemData, err := os.ReadFile(pemFile)
 	if err != nil {
 		return pemData, err
 	}
@@ -151,9 +150,9 @@ func ReadPEMData(pemFile string, pemPass []byte) ([]byte, error) {
 		_ = log.Warning("Didn't parse all of", pemFile)
 	}
 
-	if x509.IsEncryptedPEMBlock(pemBlock) {
+	if x509.IsEncryptedPEMBlock(pemBlock) { //nolint:staticcheck // SA1019 no replacement available
 		// Decrypt and get the ASN.1 DER bytes here
-		pemData, err = x509.DecryptPEMBlock(pemBlock, pemPass)
+		pemData, err = x509.DecryptPEMBlock(pemBlock, pemPass) //nolint:staticcheck // SA1019 no replacement available
 		if err != nil {
 			return pemData, err
 		} else {
@@ -183,7 +182,7 @@ func GetPEMPassword(pemFile string) []byte {
 
 // Determine if PEM file is encrypted
 func IsEncryptedPEM(pemFile string) bool {
-	pemData, err := ioutil.ReadFile(pemFile)
+	pemData, err := os.ReadFile(pemFile)
 	if err != nil {
 		return false
 	}
@@ -191,7 +190,7 @@ func IsEncryptedPEM(pemFile string) bool {
 	if len(pemBlock.Bytes) == 0 {
 		return false
 	}
-	return x509.IsEncryptedPEMBlock(pemBlock)
+	return x509.IsEncryptedPEMBlock(pemBlock) //nolint:staticcheck // SA1019 no replacement available
 }
 
 // ListenAndServeTLS acts identically to http.ListenAndServeTLS, except that it

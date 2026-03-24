@@ -280,10 +280,6 @@ func (c *Collection) Append(m Metric) error {
 	}
 	c.Lock()
 	defer c.Unlock()
-	// we don't want to add nil metrics
-	if c == nil {
-		return errors.New("Collection.Append: c == nil")
-	}
 	c.collection = append(c.collection, m)
 
 	return nil

@@ -9,7 +9,8 @@ import (
 	"hash"
 	"hash/crc64"
 	"io"
-	"io/ioutil"
+
+
 	"os"
 	"path/filepath"
 	"sort"
@@ -206,7 +207,7 @@ func (f *FileSnapshotStore) List() ([]*raft.SnapshotMeta, error) {
 // getSnapshots returns all the known snapshots.
 func (f *FileSnapshotStore) getSnapshots() ([]*fileSnapshotMeta, error) {
 	// Get the eligible snapshots
-	snapshots, err := ioutil.ReadDir(f.path)
+	snapshots, err := os.ReadDir(f.path)
 	if err != nil {
 		_ = log.Errorf("snapshot: Failed to scan snapshot dir: %v", err)
 		return nil, err
@@ -296,7 +297,7 @@ func (f *FileSnapshotStore) Open(id string) (*raft.SnapshotMeta, io.ReadCloser, 
 
 	// Verify the hash
 	computed := stateHash.Sum(nil)
-	if bytes.Compare(meta.CRC, computed) != 0 {
+	if !bytes.Equal(meta.CRC, computed) {
 		_ = log.Errorf("snapshot: CRC checksum failed (stored: %v computed: %v)",
 			meta.CRC, computed)
 		_ = fh.Close()
