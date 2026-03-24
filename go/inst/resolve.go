@@ -25,9 +25,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/patrickmn/go-cache"
 	"github.com/proxysql/golib/log"
 	"github.com/proxysql/orchestrator/go/config"
-	"github.com/patrickmn/go-cache"
 )
 
 type HostnameResolve struct {

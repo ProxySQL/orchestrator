@@ -24,9 +24,9 @@ import (
 	"github.com/proxysql/orchestrator/go/config"
 	"github.com/proxysql/orchestrator/go/util"
 
+	"github.com/patrickmn/go-cache"
 	"github.com/proxysql/golib/log"
 	"github.com/proxysql/orchestrator/go/raft"
-	"github.com/patrickmn/go-cache"
 )
 
 var lastHealthCheckUnixNano int64

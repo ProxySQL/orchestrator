@@ -27,9 +27,9 @@ import (
 	orcraft "github.com/proxysql/orchestrator/go/raft"
 	"github.com/proxysql/orchestrator/go/util"
 
+	"github.com/patrickmn/go-cache"
 	"github.com/proxysql/golib/log"
 	"github.com/proxysql/golib/sqlutils"
-	"github.com/patrickmn/go-cache"
 	"github.com/rcrowley/go-metrics"
 )
 

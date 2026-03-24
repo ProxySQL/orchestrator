@@ -22,12 +22,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/patrickmn/go-cache"
 	"github.com/proxysql/golib/log"
 	"github.com/proxysql/golib/math"
 	"github.com/proxysql/golib/sqlutils"
 	"github.com/proxysql/orchestrator/go/config"
 	"github.com/proxysql/orchestrator/go/db"
-	"github.com/patrickmn/go-cache"
 )
 
 const maxEmptyBinlogFiles int = 10

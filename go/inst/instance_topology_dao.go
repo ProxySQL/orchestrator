@@ -24,12 +24,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/patrickmn/go-cache"
 	"github.com/proxysql/golib/log"
 	"github.com/proxysql/golib/sqlutils"
 	"github.com/proxysql/orchestrator/go/config"
 	"github.com/proxysql/orchestrator/go/db"
 	"github.com/proxysql/orchestrator/go/util"
-	"github.com/patrickmn/go-cache"
 )
 
 // Max concurrency for bulk topology operations

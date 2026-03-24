@@ -24,9 +24,9 @@ import (
 	"time"
 
 	"github.com/go-sql-driver/mysql"
+	"github.com/patrickmn/go-cache"
 	"github.com/proxysql/golib/log"
 	"github.com/proxysql/golib/sqlutils"
-	"github.com/patrickmn/go-cache"
 	"github.com/rcrowley/go-metrics"
 
 	"github.com/proxysql/orchestrator/go/config"

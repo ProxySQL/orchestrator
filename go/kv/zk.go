@@ -22,8 +22,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/proxysql/orchestrator/go/config"
 	"github.com/outbrain/zookeepercli/go/zk"
+	"github.com/proxysql/orchestrator/go/config"
 	zkconstants "github.com/samuel/go-zookeeper/zk"
 )
 
