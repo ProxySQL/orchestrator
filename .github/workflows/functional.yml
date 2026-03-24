@@ -50,19 +50,8 @@ jobs:
           done
         ' || { echo "Timeout waiting for services"; docker compose ps; docker compose logs --tail=30; exit 1; }
 
-    - name: Verify replication
-      working-directory: tests/functional
-      run: |
-        timeout 30 bash -c '
-          while true; do
-            REPL=$(docker compose exec -T mysql2 mysql -uroot -ptestpass -Nse "SHOW REPLICA STATUS\G" 2>/dev/null | grep "Replica_IO_Running: Yes" || true)
-            if [ -n "$REPL" ]; then
-              echo "Replication running"
-              exit 0
-            fi
-            sleep 1
-          done
-        ' || { echo "Replication not running"; exit 1; }
+    - name: Setup replication
+      run: bash tests/functional/setup-replication.sh
 
     - name: Start orchestrator
       run: |

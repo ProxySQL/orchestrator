@@ -42,7 +42,7 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: testpass
     volumes:
-      - ./mysql/replica.cnf:/etc/mysql/conf.d/repl.cnf
+      - ./mysql/replica2.cnf:/etc/mysql/conf.d/repl.cnf
       - ./mysql/init-replica.sql:/docker-entrypoint-initdb.d/init.sql
     depends_on:
       mysql1:

@@ -1,14 +1,8 @@
--- Orchestrator user (replicated from master, but define here for safety)
+-- Orchestrator user
 CREATE USER IF NOT EXISTS 'orchestrator'@'%' IDENTIFIED BY 'orch_pass';
 GRANT ALL PRIVILEGES ON *.* TO 'orchestrator'@'%' WITH GRANT OPTION;
+-- Replication user (needed if this replica gets promoted)
+CREATE USER IF NOT EXISTS 'repl'@'%' IDENTIFIED BY 'repl_pass';
+GRANT REPLICATION SLAVE ON *.* TO 'repl'@'%';
 FLUSH PRIVILEGES;
-
--- Configure replication to master
-CHANGE REPLICATION SOURCE TO
-  SOURCE_HOST='mysql1',
-  SOURCE_PORT=3306,
-  SOURCE_USER='repl',
-  SOURCE_PASSWORD='repl_pass',
-  SOURCE_AUTO_POSITION=1;
-
-START REPLICA;
+-- NOTE: Replication is configured by setup-replication.sh after all containers are up
