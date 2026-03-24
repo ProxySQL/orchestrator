@@ -17,34 +17,13 @@
 package attributes
 
 import (
-	"errors"
 	"fmt"
-	"io/ioutil"
-	"net/http"
 	"strings"
 
 	"github.com/proxysql/golib/log"
 	"github.com/proxysql/golib/sqlutils"
 	"github.com/proxysql/orchestrator/go/db"
 )
-
-func readResponse(res *http.Response, err error) ([]byte, error) {
-	if err != nil {
-		return nil, err
-	}
-
-	defer res.Body.Close()
-	body, err := ioutil.ReadAll(res.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	if res.Status == "500" {
-		return body, errors.New("Response Status 500")
-	}
-
-	return body, nil
-}
 
 // SetHostAttributes
 func SetHostAttributes(hostname string, attributeName string, attributeValue string) error {
@@ -96,7 +75,7 @@ func getHostAttributesByClause(whereClause string, args []interface{}) ([]HostAt
 	})
 
 	if err != nil {
-		log.Errore(err)
+		_ = log.Errore(err)
 	}
 	return res, err
 }

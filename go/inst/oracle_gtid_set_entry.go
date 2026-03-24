@@ -78,7 +78,7 @@ func ParseOracleGtidSetEntry(gtidRangeString string) (*OracleGtidSetEntry, error
 	uuid := gtid_str[0]
 
 	// Split the non-UUID parts into multiple blocks
-	s := strings.SplitN(gtid_str[1], ":", -1)
+	s := strings.Split(gtid_str[1], ":")
 
 	var default_iv string      // Default interval
 	var tag_ivs []tagInterval  // Full tagged interval

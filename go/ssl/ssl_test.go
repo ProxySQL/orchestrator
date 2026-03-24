@@ -5,7 +5,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-	"io/ioutil"
+	"os"
 	nethttp "net/http"
 	"reflect"
 	"strings"
@@ -33,7 +33,7 @@ func TestHasString(t *testing.T) {
 // TODO: Build a fake CA and make sure it loads up
 func TestNewTLSConfig(t *testing.T) {
 	fakeCA := writeFakeFile(pemCertificate)
-	defer syscall.Unlink(fakeCA)
+	defer func() { _ = syscall.Unlink(fakeCA) }()
 
 	conf, err := ssl.NewTLSConfig(fakeCA, true)
 	if err != nil {
@@ -118,11 +118,11 @@ func TestVerify(t *testing.T) {
 
 func TestReadPEMData(t *testing.T) {
 	pemCertFile := writeFakeFile(pemCertificate)
-	defer syscall.Unlink(pemCertFile)
+	defer func() { _ = syscall.Unlink(pemCertFile) }()
 	pemPKFile := writeFakeFile(pemPrivateKey)
-	defer syscall.Unlink(pemPKFile)
+	defer func() { _ = syscall.Unlink(pemPKFile) }()
 	pemPKWPFile := writeFakeFile(pemPrivateKeyWithPass)
-	defer syscall.Unlink(pemPKWPFile)
+	defer func() { _ = syscall.Unlink(pemPKWPFile) }()
 	_, err := ssl.ReadPEMData(pemCertFile, []byte{})
 	if err != nil {
 		t.Errorf("Failed to decode certificate: %s", err)
@@ -146,9 +146,9 @@ func TestAppendKeyPair(t *testing.T) {
 		t.Fatal(err)
 	}
 	pemCertFile := writeFakeFile(pemCertificate)
-	defer syscall.Unlink(pemCertFile)
+	defer func() { _ = syscall.Unlink(pemCertFile) }()
 	pemPKFile := writeFakeFile(pemPrivateKey)
-	defer syscall.Unlink(pemPKFile)
+	defer func() { _ = syscall.Unlink(pemPKFile) }()
 
 	if err := ssl.AppendKeyPair(c, pemCertFile, pemPKFile); err != nil {
 		t.Errorf("Failed to append certificate and key to tls config: %s", err)
@@ -161,9 +161,9 @@ func TestAppendKeyPairWithPassword(t *testing.T) {
 		t.Fatal(err)
 	}
 	pemCertFile := writeFakeFile(pemCertificate)
-	defer syscall.Unlink(pemCertFile)
+	defer func() { _ = syscall.Unlink(pemCertFile) }()
 	pemPKFile := writeFakeFile(pemPrivateKeyWithPass)
-	defer syscall.Unlink(pemPKFile)
+	defer func() { _ = syscall.Unlink(pemPKFile) }()
 
 	if err := ssl.AppendKeyPairWithPassword(c, pemCertFile, pemPKFile, []byte("testing")); err != nil {
 		t.Errorf("Failed to append certificate and key to tls config: %s", err)
@@ -172,9 +172,9 @@ func TestAppendKeyPairWithPassword(t *testing.T) {
 
 func TestIsEncryptedPEM(t *testing.T) {
 	pemPKFile := writeFakeFile(pemPrivateKey)
-	defer syscall.Unlink(pemPKFile)
+	defer func() { _ = syscall.Unlink(pemPKFile) }()
 	pemPKWPFile := writeFakeFile(pemPrivateKeyWithPass)
-	defer syscall.Unlink(pemPKWPFile)
+	defer func() { _ = syscall.Unlink(pemPKWPFile) }()
 	if ssl.IsEncryptedPEM(pemPKFile) {
 		t.Errorf("Incorrectly identified unencrypted PEM as encrypted")
 	}
@@ -184,11 +184,11 @@ func TestIsEncryptedPEM(t *testing.T) {
 }
 
 func writeFakeFile(content string) string {
-	f, err := ioutil.TempFile("", "ssl_test")
+	f, err := os.CreateTemp("", "ssl_test")
 	if err != nil {
 		return ""
 	}
-	ioutil.WriteFile(f.Name(), []byte(content), 0644)
+	_ = os.WriteFile(f.Name(), []byte(content), 0644)
 	return f.Name()
 }
 

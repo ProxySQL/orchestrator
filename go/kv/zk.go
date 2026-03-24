@@ -18,9 +18,7 @@ package kv
 
 import (
 	"fmt"
-	"math/rand"
 	"strings"
-	"time"
 
 	"github.com/outbrain/zookeepercli/go/zk"
 	"github.com/proxysql/orchestrator/go/config"
@@ -42,8 +40,6 @@ func NewZkStore() KVStore {
 	store := &zkStore{}
 
 	if config.Config.ZkAddress != "" {
-		rand.Seed(time.Now().UnixNano())
-
 		serversArray := strings.Split(config.Config.ZkAddress, ",")
 		zook := zk.NewZooKeeper()
 		zook.SetServers(serversArray)
@@ -52,41 +48,41 @@ func NewZkStore() KVStore {
 	return store
 }
 
-func (this *zkStore) PutKeyValue(key string, value string) (err error) {
-	if this.zook == nil {
+func (s *zkStore) PutKeyValue(key string, value string) (err error) {
+	if s.zook == nil {
 		return nil
 	}
 
-	if _, err = this.zook.Set(normalizeKey(key), []byte(value)); err == zkconstants.ErrNoNode {
+	if _, err = s.zook.Set(normalizeKey(key), []byte(value)); err == zkconstants.ErrNoNode {
 		aclstr := ""
-		_, err = this.zook.Create(normalizeKey(key), []byte(value), aclstr, true)
+		_, err = s.zook.Create(normalizeKey(key), []byte(value), aclstr, true)
 	}
 	return err
 }
 
-func (this *zkStore) GetKeyValue(key string) (value string, found bool, err error) {
-	if this.zook == nil {
+func (s *zkStore) GetKeyValue(key string) (value string, found bool, err error) {
+	if s.zook == nil {
 		return value, false, nil
 	}
-	result, err := this.zook.Get(normalizeKey(key))
+	result, err := s.zook.Get(normalizeKey(key))
 	if err != nil {
 		return value, false, err
 	}
 	return string(result), true, nil
 }
 
-func (this *zkStore) PutKVPairs(kvPairs []*KVPair) (err error) {
-	if this.zook == nil {
+func (s *zkStore) PutKVPairs(kvPairs []*KVPair) (err error) {
+	if s.zook == nil {
 		return nil
 	}
 	for _, pair := range kvPairs {
-		if err := this.PutKeyValue(pair.Key, pair.Value); err != nil {
+		if err := s.PutKeyValue(pair.Key, pair.Value); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (this *zkStore) DistributePairs(kvPairs [](*KVPair)) (err error) {
+func (s *zkStore) DistributePairs(kvPairs [](*KVPair)) (err error) {
 	return nil
 }

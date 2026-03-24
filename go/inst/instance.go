@@ -270,10 +270,7 @@ func (this *Instance) IsReplicationGroupSecondary() bool {
 
 // IsBinlogServer checks whether this is any type of a binlog server (currently only maxscale)
 func (this *Instance) IsBinlogServer() bool {
-	if this.isMaxScale() {
-		return true
-	}
-	return false
+	return this.isMaxScale()
 }
 
 // IsOracleMySQL checks whether this is an Oracle MySQL distribution
@@ -499,7 +496,7 @@ func (this *Instance) CanReplicateFromEx(other *Instance, logContext string) (bo
 	canReplicate, err := this.CanReplicateFrom(other)
 
 	if config.Config.LowerReplicaVersionAllowed && canReplicate && err != nil {
-		log.Warningf("%v: %v Details: %v", logContext, logPrefix, err)
+		_ = log.Warningf("%v: %v Details: %v", logContext, logPrefix, err)
 		err = nil
 	}
 	return canReplicate, err
@@ -660,6 +657,6 @@ func (this *Instance) HumanReadableDescription() string {
 // TabulatedDescription returns a simple tabulated string of various properties
 func (this *Instance) TabulatedDescription(separator string) string {
 	tokens := this.descriptionTokens()
-	description := fmt.Sprintf("%s", strings.Join(tokens, separator))
+	description := strings.Join(tokens, separator)
 	return description
 }

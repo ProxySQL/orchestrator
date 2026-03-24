@@ -129,7 +129,7 @@ func setupMessagePrefix() {
 		return
 	}
 	if act != "FQDN" && act != "hostname" && act != "custom" {
-		log.Warning("PrependMessagesWithOrcIdentity option has unsupported value '%+v'")
+		_ = log.Warningf("PrependMessagesWithOrcIdentity option has unsupported value '%+v'", act)
 		return
 	}
 
@@ -139,7 +139,7 @@ func setupMessagePrefix() {
 
 	if act == "FQDN" {
 		if hostname, err = fqdn.FqdnHostname(); err != nil {
-			log.Warning("Failed to get Orchestrator's FQDN. Falling back to hostname.")
+			_ = log.Warning("Failed to get Orchestrator's FQDN. Falling back to hostname.")
 			hostname = ""
 			fallbackActive = true
 		}
@@ -147,7 +147,7 @@ func setupMessagePrefix() {
 	if fallbackActive || act == "hostname" {
 		fallbackActive = false
 		if hostname, err = os.Hostname(); err != nil {
-			log.Warning("Failed to get Orchestrator's FQDN. Falling back to custom prefix (if provided).")
+			_ = log.Warning("Failed to get Orchestrator's FQDN. Falling back to custom prefix (if provided).")
 			hostname = ""
 			fallbackActive = true
 		}
@@ -158,7 +158,7 @@ func setupMessagePrefix() {
 	if hostname != "" {
 		messagePrefix = fmt.Sprintf("Orchestrator %+v says: ", hostname)
 	} else {
-		log.Warning("Prepending messages with Orchestrator identity was requested, but identity cannot be determined. Skipping prefix.")
+		_ = log.Warning("Prepending messages with Orchestrator identity was requested, but identity cannot be determined. Skipping prefix.")
 	}
 }
 
@@ -287,7 +287,7 @@ func (this *HttpAPI) Discover(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if orcraft.IsRaftEnabled() {
-		orcraft.PublishCommand("discover", instanceKey)
+		_, _ = orcraft.PublishCommand("discover", instanceKey)
 	} else {
 		logic.DiscoverInstance(instanceKey)
 	}
@@ -358,9 +358,9 @@ func (this *HttpAPI) ForgetCluster(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if orcraft.IsRaftEnabled() {
-		orcraft.PublishCommand("forget-cluster", clusterName)
+		_, _ = orcraft.PublishCommand("forget-cluster", clusterName)
 	} else {
-		inst.ForgetCluster(clusterName)
+		_ = inst.ForgetCluster(clusterName)
 	}
 	Respond(w, &APIResponse{Code: OK, Message: fmt.Sprintf("Cluster forgotten: %+v", clusterName)})
 }
@@ -375,7 +375,7 @@ func (this *HttpAPI) Resolve(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if conn, err := net.Dial("tcp", instanceKey.DisplayString()); err == nil {
-		conn.Close()
+		_ = conn.Close()
 	} else {
 		Respond(w, &APIResponse{Code: ERROR, Message: err.Error()})
 		return
@@ -490,7 +490,7 @@ func (this *HttpAPI) BeginDowntime(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var durationSeconds int = 0
+	var durationSeconds = 0
 	if chi.URLParam(r, "duration") != "" {
 		durationSeconds, err = util.SimpleTimeToSeconds(chi.URLParam(r, "duration"))
 		if durationSeconds < 0 {
@@ -575,7 +575,7 @@ func (this *HttpAPI) MoveUpReplicas(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	replicas, newMaster, err, errs := inst.MoveUpReplicas(&instanceKey, r.URL.Query().Get("pattern"))
+	replicas, newMaster, errs, err := inst.MoveUpReplicas(&instanceKey, r.URL.Query().Get("pattern"))
 	if err != nil {
 		Respond(w, &APIResponse{Code: ERROR, Message: err.Error()})
 		return
@@ -623,7 +623,7 @@ func (this *HttpAPI) RepointReplicas(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	replicas, err, _ := inst.RepointReplicas(&instanceKey, r.URL.Query().Get("pattern"))
+	replicas, _, err := inst.RepointReplicas(&instanceKey, r.URL.Query().Get("pattern"))
 	if err != nil {
 		Respond(w, &APIResponse{Code: ERROR, Message: err.Error()})
 		return
@@ -773,7 +773,7 @@ func (this *HttpAPI) LocateErrantGTID(w http.ResponseWriter, r *http.Request) {
 		Respond(w, &APIResponse{Code: ERROR, Message: err.Error()})
 		return
 	}
-	Respond(w, &APIResponse{Code: OK, Message: fmt.Sprintf("located errant GTID"), Details: errantBinlogs})
+	Respond(w, &APIResponse{Code: OK, Message: "located errant GTID", Details: errantBinlogs})
 }
 
 // ErrantGTIDResetMaster removes errant transactions on a server by way of RESET MASTER
@@ -887,7 +887,7 @@ func (this *HttpAPI) MoveReplicasGTID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	movedReplicas, _, err, errs := inst.MoveReplicasGTID(&instanceKey, &belowKey, r.URL.Query().Get("pattern"))
+	movedReplicas, _, errs, err := inst.MoveReplicasGTID(&instanceKey, &belowKey, r.URL.Query().Get("pattern"))
 	if err != nil {
 		Respond(w, &APIResponse{Code: ERROR, Message: err.Error()})
 		return
@@ -982,7 +982,7 @@ func (this *HttpAPI) RelocateReplicas(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	replicas, _, err, errs := inst.RelocateReplicas(&instanceKey, &belowKey, r.URL.Query().Get("pattern"))
+	replicas, _, errs, err := inst.RelocateReplicas(&instanceKey, &belowKey, r.URL.Query().Get("pattern"))
 	if err != nil {
 		Respond(w, &APIResponse{Code: ERROR, Message: err.Error()})
 		return
@@ -1116,7 +1116,7 @@ func (this *HttpAPI) MultiMatchReplicas(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	replicas, newMaster, err, errs := inst.MultiMatchReplicas(&instanceKey, &belowKey, r.URL.Query().Get("pattern"))
+	replicas, newMaster, errs, err := inst.MultiMatchReplicas(&instanceKey, &belowKey, r.URL.Query().Get("pattern"))
 	if err != nil {
 		Respond(w, &APIResponse{Code: ERROR, Message: err.Error()})
 		return
@@ -1137,7 +1137,7 @@ func (this *HttpAPI) MatchUpReplicas(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	replicas, newMaster, err, errs := inst.MatchUpReplicas(&instanceKey, r.URL.Query().Get("pattern"))
+	replicas, newMaster, errs, err := inst.MatchUpReplicas(&instanceKey, r.URL.Query().Get("pattern"))
 	if err != nil {
 		Respond(w, &APIResponse{Code: ERROR, Message: err.Error()})
 		return
@@ -2903,7 +2903,7 @@ func (this *HttpAPI) Health(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	Respond(w, &APIResponse{Code: OK, Message: fmt.Sprintf("Application node is healthy"), Details: health})
+	Respond(w, &APIResponse{Code: OK, Message: "Application node is healthy", Details: health})
 
 }
 
@@ -2937,7 +2937,7 @@ func (this *HttpAPI) StatusCheck(w http.ResponseWriter, r *http.Request) {
 		renderJSON(w, 500, &APIResponse{Code: ERROR, Message: fmt.Sprintf("Application node is unhealthy %+v", err), Details: health})
 		return
 	}
-	Respond(w, &APIResponse{Code: OK, Message: fmt.Sprintf("Application node is healthy"), Details: health})
+	Respond(w, &APIResponse{Code: OK, Message: "Application node is healthy", Details: health})
 }
 
 // GrabElection forcibly grabs leadership. Use with care!!
@@ -2952,7 +2952,7 @@ func (this *HttpAPI) GrabElection(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	Respond(w, &APIResponse{Code: OK, Message: fmt.Sprintf("Node elected as leader")})
+	Respond(w, &APIResponse{Code: OK, Message: "Node elected as leader"})
 }
 
 // Reelect causes re-elections for an active node
@@ -2967,7 +2967,7 @@ func (this *HttpAPI) Reelect(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	Respond(w, &APIResponse{Code: OK, Message: fmt.Sprintf("Set re-elections")})
+	Respond(w, &APIResponse{Code: OK, Message: "Set re-elections"})
 }
 
 // RaftAddPeer adds a new node to the raft cluster
@@ -3020,8 +3020,8 @@ func (this *HttpAPI) RaftYield(w http.ResponseWriter, r *http.Request) {
 		Respond(w, &APIResponse{Code: ERROR, Message: "raft-yield: not running with raft setup"})
 		return
 	}
-	orcraft.PublishYield(chi.URLParam(r, "node"))
-	Respond(w, &APIResponse{Code: OK, Message: fmt.Sprintf("Asynchronously yielded")})
+	_, _ = orcraft.PublishYield(chi.URLParam(r, "node"))
+	Respond(w, &APIResponse{Code: OK, Message: "Asynchronously yielded"})
 }
 
 // RaftYieldHint yields to a host whose name contains given hint (e.g. DC)
@@ -3035,7 +3035,7 @@ func (this *HttpAPI) RaftYieldHint(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	hint := chi.URLParam(r, "hint")
-	orcraft.PublishYieldHostnameHint(hint)
+	_, _ = orcraft.PublishYieldHostnameHint(hint)
 	Respond(w, &APIResponse{Code: OK, Message: fmt.Sprintf("Asynchronously yielded by hint %s", hint), Details: hint})
 }
 
@@ -3160,9 +3160,9 @@ func (this *HttpAPI) ReloadConfiguration(w http.ResponseWriter, r *http.Request)
 	}
 	extraConfigFile := r.URL.Query().Get("config")
 	config.Reload(extraConfigFile)
-	inst.AuditOperation("reload-configuration", nil, "Triggered via API")
+	_ = inst.AuditOperation("reload-configuration", nil, "Triggered via API")
 
-	Respond(w, &APIResponse{Code: OK, Message: fmt.Sprintf("Config reloaded"), Details: extraConfigFile})
+	Respond(w, &APIResponse{Code: OK, Message: "Config reloaded", Details: extraConfigFile})
 }
 
 // ReplicationAnalysis retuens list of issues
@@ -3183,7 +3183,7 @@ func (this *HttpAPI) replicationAnalysis(clusterName string, instanceKey *inst.I
 		analysis = filtered
 	}
 
-	Respond(w, &APIResponse{Code: OK, Message: fmt.Sprintf("Analysis"), Details: analysis})
+	Respond(w, &APIResponse{Code: OK, Message: "Analysis", Details: analysis})
 }
 
 // ReplicationAnalysis retuens list of issues
@@ -3193,9 +3193,8 @@ func (this *HttpAPI) ReplicationAnalysis(w http.ResponseWriter, r *http.Request)
 
 // ReplicationAnalysis retuens list of issues
 func (this *HttpAPI) ReplicationAnalysisForCluster(w http.ResponseWriter, r *http.Request) {
-	clusterName := chi.URLParam(r, "clusterName")
-
 	var err error
+	clusterName := ""
 	if clusterName, err = inst.DeduceClusterName(chi.URLParam(r, "clusterName")); err != nil {
 		Respond(w, &APIResponse{Code: ERROR, Message: fmt.Sprintf("Cannot get analysis: %+v", err)})
 		return
@@ -3398,7 +3397,7 @@ func (this *HttpAPI) AutomatedRecoveryFilters(w http.ResponseWriter, r *http.Req
 	automatedRecoveryMap["RecoverIntermediateMasterClusterFilters"] = config.Config.RecoverIntermediateMasterClusterFilters
 	automatedRecoveryMap["RecoveryIgnoreHostnameFilters"] = config.Config.RecoveryIgnoreHostnameFilters
 
-	Respond(w, &APIResponse{Code: OK, Message: fmt.Sprintf("Automated recovery configuration details"), Details: automatedRecoveryMap})
+	Respond(w, &APIResponse{Code: OK, Message: "Automated recovery configuration details", Details: automatedRecoveryMap})
 }
 
 // AuditFailureDetection provides list of topology_failure_detection entries
@@ -3541,7 +3540,7 @@ func (this *HttpAPI) AcknowledgeClusterRecoveries(w http.ResponseWriter, r *http
 
 	comment := strings.TrimSpace(r.URL.Query().Get("comment"))
 	if comment == "" {
-		Respond(w, &APIResponse{Code: ERROR, Message: fmt.Sprintf("No acknowledge comment given")})
+		Respond(w, &APIResponse{Code: ERROR, Message: "No acknowledge comment given"})
 		return
 	}
 	userId := getUserId(r)
@@ -3560,7 +3559,7 @@ func (this *HttpAPI) AcknowledgeClusterRecoveries(w http.ResponseWriter, r *http
 		return
 	}
 
-	Respond(w, &APIResponse{Code: OK, Message: fmt.Sprintf("Acknowledged cluster recoveries"), Details: clusterName})
+	Respond(w, &APIResponse{Code: OK, Message: "Acknowledged cluster recoveries", Details: clusterName})
 }
 
 // ClusterInfo provides details of a given cluster
@@ -3578,7 +3577,7 @@ func (this *HttpAPI) AcknowledgeInstanceRecoveries(w http.ResponseWriter, r *htt
 
 	comment := strings.TrimSpace(r.URL.Query().Get("comment"))
 	if comment == "" {
-		Respond(w, &APIResponse{Code: ERROR, Message: fmt.Sprintf("No acknowledge comment given")})
+		Respond(w, &APIResponse{Code: ERROR, Message: "No acknowledge comment given"})
 		return
 	}
 	userId := getUserId(r)
@@ -3597,7 +3596,7 @@ func (this *HttpAPI) AcknowledgeInstanceRecoveries(w http.ResponseWriter, r *htt
 		return
 	}
 
-	Respond(w, &APIResponse{Code: OK, Message: fmt.Sprintf("Acknowledged instance recoveries"), Details: instanceKey})
+	Respond(w, &APIResponse{Code: OK, Message: "Acknowledged instance recoveries", Details: instanceKey})
 }
 
 // ClusterInfo provides details of a given cluster
@@ -3624,7 +3623,7 @@ func (this *HttpAPI) AcknowledgeRecovery(w http.ResponseWriter, r *http.Request)
 	}
 	comment := strings.TrimSpace(r.URL.Query().Get("comment"))
 	if comment == "" {
-		Respond(w, &APIResponse{Code: ERROR, Message: fmt.Sprintf("No acknowledge comment given")})
+		Respond(w, &APIResponse{Code: ERROR, Message: "No acknowledge comment given"})
 		return
 	}
 	userId := getUserId(r)
@@ -3649,7 +3648,7 @@ func (this *HttpAPI) AcknowledgeRecovery(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	Respond(w, &APIResponse{Code: OK, Message: fmt.Sprintf("Acknowledged recovery"), Details: idParam})
+	Respond(w, &APIResponse{Code: OK, Message: "Acknowledged recovery", Details: idParam})
 }
 
 // ClusterInfo provides details of a given cluster
@@ -3661,7 +3660,7 @@ func (this *HttpAPI) AcknowledgeAllRecoveries(w http.ResponseWriter, r *http.Req
 
 	comment := strings.TrimSpace(r.URL.Query().Get("comment"))
 	if comment == "" {
-		Respond(w, &APIResponse{Code: ERROR, Message: fmt.Sprintf("No acknowledge comment given")})
+		Respond(w, &APIResponse{Code: ERROR, Message: "No acknowledge comment given"})
 		return
 	}
 	userId := getUserId(r)
@@ -3681,7 +3680,7 @@ func (this *HttpAPI) AcknowledgeAllRecoveries(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	Respond(w, &APIResponse{Code: OK, Message: fmt.Sprintf("Acknowledged all recoveries"), Details: comment})
+	Respond(w, &APIResponse{Code: OK, Message: "Acknowledged all recoveries", Details: comment})
 }
 
 // BlockedRecoveries reads list of currently blocked recoveries, optionally filtered by cluster name

@@ -42,8 +42,8 @@ type OperationGTIDHint string
 
 const (
 	GTIDHintDeny    OperationGTIDHint = "NoGTID"
-	GTIDHintNeutral                   = "GTIDHintNeutral"
-	GTIDHintForce                     = "GTIDHintForce"
+	GTIDHintNeutral OperationGTIDHint = "GTIDHintNeutral"
+	GTIDHintForce   OperationGTIDHint = "GTIDHintForce"
 )
 
 const (
@@ -171,7 +171,7 @@ func GetReplicationRestartPreserveStatements(instanceKey *InstanceKey, injectedS
 // FlushBinaryLogs attempts a 'FLUSH BINARY LOGS' statement on the given instance.
 func FlushBinaryLogs(instanceKey *InstanceKey, count int) (*Instance, error) {
 	if *config.RuntimeCLIFlags.Noop {
-		return nil, fmt.Errorf("noop: aborting flush-binary-logs operation on %+v; signalling error but nothing went wrong.", *instanceKey)
+		return nil, fmt.Errorf("noop: aborting flush-binary-logs operation on %+v; signalling error but nothing went wrong", *instanceKey)
 	}
 
 	for i := 0; i < count; i++ {
@@ -598,7 +598,7 @@ func MaybeDisableSemiSyncMaster(replicaInstance *Instance) (*Instance, error) {
 		log.Infof("semi-sync: %s: setting rpl_semi_sync_master_enabled: %t", &replicaInstance.Key, false)
 		replicaInstance, err := SetSemiSyncMaster(&replicaInstance.Key, false)
 		if err != nil {
-			log.Warningf("semi-sync: %s: cannot disable rpl_semi_sync_master_enabled; that's not that bad though", &replicaInstance.Key)
+			_ = log.Warningf("semi-sync: %s: cannot disable rpl_semi_sync_master_enabled; that's not that bad though", &replicaInstance.Key)
 		}
 		return replicaInstance, err
 	}
@@ -1163,7 +1163,7 @@ func injectEmptyGTIDTransaction(instanceKey *InstanceKey, gtidEntry *OracleGtidS
 	if err != nil {
 		return err
 	}
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 
 	if _, err := conn.ExecContext(ctx, fmt.Sprintf(`SET GTID_NEXT="%s"`, gtidEntry.String())); err != nil {
 		return err
@@ -1480,7 +1480,7 @@ func CheckAndInjectPseudoGTIDOnWriter(instance *Instance) (injected bool, err er
 	}
 	if !canInject {
 		if util.ClearToLog("CheckAndInjectPseudoGTIDOnWriter", instance.Key.StringCode()) {
-			log.Warningf("AutoPseudoGTID enabled, but orchestrator has no privileges on %+v to inject pseudo-gtid", instance.Key)
+			_ = log.Warningf("AutoPseudoGTID enabled, but orchestrator has no privileges on %+v to inject pseudo-gtid", instance.Key)
 		}
 
 		return injected, nil

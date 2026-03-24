@@ -27,6 +27,6 @@ func init() {
 	var err error
 	ThisHostname, err = os.Hostname()
 	if err != nil {
-		log.Fatalf("Cannot resolve self hostname; required. Aborting. %+v", err)
+		_ = log.Fatalf("Cannot resolve self hostname; required. Aborting. %+v", err)
 	}
 }

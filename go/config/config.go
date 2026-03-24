@@ -64,26 +64,6 @@ const (
 	ConsulMaxTransactionOps                      = 64
 )
 
-var deprecatedConfigurationVariables = []string{
-	"DatabaselessMode__experimental",
-	"BufferBinlogEvents",
-	"BinlogFileHistoryDays",
-	"MaintenanceOwner",
-	"ReadLongRunningQueries",
-	"DiscoveryPollSeconds",
-	"ActiveNodeExpireSeconds",
-	"AuditPageSize",
-	"SlaveStartPostWaitMilliseconds",
-	"MySQLTopologyMaxPoolConnections",
-	"MaintenancePurgeDays",
-	"MaintenanceExpireMinutes",
-	"HttpTimeoutSeconds",
-	"AgentAutoDiscover",
-	"PseudoGTIDCoordinatesHistoryHeuristicMinutes",
-	"PseudoGTIDPreferIndependentMultiMatch",
-	"MaxOutdatedKeysToShow",
-}
-
 // Configuration makes for orchestrator configuration input, which can be provided by user via JSON formatted file.
 // Some of the parameteres have reasonable default values, and some (like database credentials) are
 // strictly expected from user.
@@ -504,7 +484,7 @@ func (this *Configuration) postReadAdjustments() error {
 		}{}
 		err := gcfg.ReadFileInto(&mySQLConfig, this.MySQLOrchestratorCredentialsConfigFile)
 		if err != nil {
-			log.Fatalf("Failed to parse gcfg data from file: %+v", err)
+			_ = log.Fatalf("Failed to parse gcfg data from file: %+v", err)
 		} else {
 			log.Debugf("Parsed orchestrator credentials from %s", this.MySQLOrchestratorCredentialsConfigFile)
 			this.MySQLOrchestratorUser = mySQLConfig.Client.User
@@ -528,7 +508,7 @@ func (this *Configuration) postReadAdjustments() error {
 		}{}
 		err := gcfg.ReadFileInto(&mySQLConfig, this.MySQLTopologyCredentialsConfigFile)
 		if err != nil {
-			log.Fatalf("Failed to parse gcfg data from file: %+v", err)
+			_ = log.Fatalf("Failed to parse gcfg data from file: %+v", err)
 		} else {
 			log.Debugf("Parsed topology credentials from %s", this.MySQLTopologyCredentialsConfigFile)
 			this.MySQLTopologyUser = mySQLConfig.Client.User
@@ -577,7 +557,7 @@ func (this *Configuration) postReadAdjustments() error {
 		}
 	}
 	if this.FailMasterPromotionIfSQLThreadNotUpToDate && this.DelayMasterPromotionIfSQLThreadNotUpToDate {
-		return fmt.Errorf("Cannot have both FailMasterPromotionIfSQLThreadNotUpToDate and DelayMasterPromotionIfSQLThreadNotUpToDate enabled")
+		return fmt.Errorf("cannot have both FailMasterPromotionIfSQLThreadNotUpToDate and DelayMasterPromotionIfSQLThreadNotUpToDate enabled")
 	}
 	if this.FailMasterPromotionOnLagMinutes > 0 && this.ReplicationLagQuery == "" {
 		return fmt.Errorf("nonzero FailMasterPromotionOnLagMinutes requires ReplicationLagQuery to be set")
@@ -601,9 +581,6 @@ func (this *Configuration) postReadAdjustments() error {
 
 	if this.IsSQLite() && this.SQLite3DataFile == "" {
 		return fmt.Errorf("SQLite3DataFile must be set when BackendDB is sqlite3")
-	}
-	if this.IsSQLite() {
-		//		this.HostnameResolveMethod = "none"
 	}
 	if this.RaftEnabled && this.RaftDataDir == "" {
 		return fmt.Errorf("RaftDataDir must be defined since raft is enabled (RaftEnabled)")
@@ -630,10 +607,10 @@ func (this *Configuration) postReadAdjustments() error {
 	if this.HTTPAdvertise != "" {
 		u, err := url.Parse(this.HTTPAdvertise)
 		if err != nil {
-			return fmt.Errorf("Failed parsing HTTPAdvertise %s: %s", this.HTTPAdvertise, err.Error())
+			return fmt.Errorf("failed parsing HTTPAdvertise %s: %s", this.HTTPAdvertise, err.Error())
 		}
 		if u.Scheme == "" {
-			return fmt.Errorf("If specified, HTTPAdvertise must include scheme (http:// or https://)")
+			return fmt.Errorf("if specified, HTTPAdvertise must include scheme (http:// or https://)")
 		}
 		if u.Hostname() == "" {
 			return fmt.Errorf("If specified, HTTPAdvertise must include host name")
@@ -690,10 +667,10 @@ func read(fileName string) (*Configuration, error) {
 	if err == nil {
 		log.Infof("Read config: %s", fileName)
 	} else {
-		log.Fatal("Cannot read config file:", fileName, err)
+		_ = log.Fatal("Cannot read config file:", fileName, err)
 	}
 	if err := Config.postReadAdjustments(); err != nil {
-		log.Fatale(err)
+		_ = log.Fatale(err)
 	}
 	return Config, err
 }
@@ -702,7 +679,7 @@ func read(fileName string) (*Configuration, error) {
 // A file can override configuration provided in previous file.
 func Read(fileNames ...string) *Configuration {
 	for _, fileName := range fileNames {
-		read(fileName)
+		_, _ = read(fileName)
 	}
 	readFileNames = fileNames
 	return Config
@@ -712,7 +689,7 @@ func Read(fileNames ...string) *Configuration {
 func ForceRead(fileName string) *Configuration {
 	_, err := read(fileName)
 	if err != nil {
-		log.Fatal("Cannot read config file:", fileName, err)
+		_ = log.Fatal("Cannot read config file:", fileName, err)
 	}
 	readFileNames = []string{fileName}
 	return Config
@@ -721,10 +698,10 @@ func ForceRead(fileName string) *Configuration {
 // Reload re-reads configuration from last used files
 func Reload(extraFileNames ...string) *Configuration {
 	for _, fileName := range readFileNames {
-		read(fileName)
+		_, _ = read(fileName)
 	}
 	for _, fileName := range extraFileNames {
-		read(fileName)
+		_, _ = read(fileName)
 	}
 	return Config
 }

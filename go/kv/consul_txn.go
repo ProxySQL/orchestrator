@@ -46,11 +46,7 @@ func groupKVPairsByKeyPrefix(kvPairs consulapi.KVPairs) (groups []consulapi.KVPa
 				prefix = path[0]
 			}
 		}
-		if _, found := groupsMap[prefix]; found {
-			groupsMap[prefix] = append(groupsMap[prefix], pair)
-		} else {
-			groupsMap[prefix] = consulapi.KVPairs{pair}
-		}
+		groupsMap[prefix] = append(groupsMap[prefix], pair)
 	}
 
 	pairsBuf := consulapi.KVPairs{}
@@ -73,8 +69,7 @@ func groupKVPairsByKeyPrefix(kvPairs consulapi.KVPairs) (groups []consulapi.KVPa
 type consulTxnStore struct {
 	client                        *consulapi.Client
 	kvCache                       *cache.Cache
-	pairsDistributionSuccessMutex sync.Mutex
-	distributionReentry           int64
+	distributionReentry int64
 }
 
 // NewConsulTxnStore creates a new consul store that uses Consul Transactions to read/write multiple KVPairs.
@@ -96,7 +91,7 @@ func NewConsulTxnStore() KVStore {
 		// ConsulAclToken defaults to ""
 		consulConfig.Token = config.Config.ConsulAclToken
 		if client, err := consulapi.NewClient(consulConfig); err != nil {
-			log.Errore(err)
+			_ = log.Errore(err)
 		} else {
 			store.client = client
 		}
@@ -109,12 +104,12 @@ func NewConsulTxnStore() KVStore {
 func (this *consulTxnStore) doWriteTxn(txnOps consulapi.TxnOps, queryOptions *consulapi.QueryOptions) (err error) {
 	ok, resp, _, err := this.client.Txn().Txn(txnOps, queryOptions)
 	if err != nil {
-		log.Errorf("consulTxnStore.doWriteTxn(): %v", err)
+		_ = log.Errorf("consulTxnStore.doWriteTxn(): %v", err)
 		return err
 	} else if !ok {
 		for _, terr := range resp.Errors {
 			txnOp := txnOps[terr.OpIndex]
-			log.Errorf("consulTxnStore.doWriteTxn(): transaction error %q for KV %s on %s", terr.What, txnOp.KV.Verb, txnOp.KV.Key)
+			_ = log.Errorf("consulTxnStore.doWriteTxn(): transaction error %q for KV %s on %s", terr.What, txnOp.KV.Verb, txnOp.KV.Key)
 			err = fmt.Errorf("%v", terr.What)
 		}
 	}
@@ -166,7 +161,7 @@ func (this *consulTxnStore) updateDatacenterKVPairs(wg *sync.WaitGroup, dc strin
 	if len(getTxnOps) > 0 {
 		_, getTxnResp, _, terr = this.client.Txn().Txn(getTxnOps, queryOptions)
 		if terr != nil {
-			log.Errorf("consulTxnStore.DistributePairs(): %v", terr)
+			_ = log.Errorf("consulTxnStore.DistributePairs(): %v", terr)
 		}
 		resp.getTxns++
 	}
@@ -199,7 +194,7 @@ func (this *consulTxnStore) updateDatacenterKVPairs(wg *sync.WaitGroup, dc strin
 	// update key-value pairs in a single Consul Transaction
 	if len(setTxnOps) > 0 {
 		if resp.err = this.doWriteTxn(setTxnOps, queryOptions); resp.err != nil {
-			log.Errorf("consulTxnStore.DistributePairs(): failed %v, error %v", kcCacheKeys, resp.err)
+			_ = log.Errorf("consulTxnStore.DistributePairs(): failed %v, error %v", kcCacheKeys, resp.err)
 			resp.failed = len(setTxnOps)
 		} else {
 			for _, txnOp := range setTxnOps {

@@ -31,7 +31,7 @@ func renderJSON(w http.ResponseWriter, status int, data interface{}) {
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	w.WriteHeader(status)
 	if err := json.NewEncoder(w).Encode(data); err != nil {
-		log.Errore(err)
+		_ = log.Errore(err)
 	}
 }
 
@@ -71,14 +71,14 @@ func getTemplate(name string) (*template.Template, error) {
 func renderHTML(w http.ResponseWriter, status int, name string, data interface{}) {
 	t, err := getTemplate(name)
 	if err != nil {
-		log.Errorf("Error parsing template %s: %+v", name, err)
+		_ = log.Errorf("Error parsing template %s: %+v", name, err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 	w.Header().Set("Content-Type", "text/html; charset=UTF-8")
 	w.WriteHeader(status)
 	if err := t.Execute(w, data); err != nil {
-		log.Errorf("Error executing template %s: %+v", name, err)
+		_ = log.Errorf("Error executing template %s: %+v", name, err)
 	}
 }
 

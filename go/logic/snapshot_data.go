@@ -115,7 +115,7 @@ func NewSnapshotDataCreatorApplier() *SnapshotDataCreatorApplier {
 	return generator
 }
 
-func (this *SnapshotDataCreatorApplier) GetData() (data []byte, err error) {
+func (s *SnapshotDataCreatorApplier) GetData() (data []byte, err error) {
 	snapshotData := CreateSnapshotData()
 	b, err := json.Marshal(snapshotData)
 	if err != nil {
@@ -132,7 +132,7 @@ func (this *SnapshotDataCreatorApplier) GetData() (data []byte, err error) {
 	return buf.Bytes(), nil
 }
 
-func (this *SnapshotDataCreatorApplier) Restore(rc io.ReadCloser) error {
+func (s *SnapshotDataCreatorApplier) Restore(rc io.ReadCloser) error {
 	snapshotData := NewSnapshotData()
 	zr, err := gzip.NewReader(rc)
 	if err != nil {
@@ -156,7 +156,7 @@ func (this *SnapshotDataCreatorApplier) Restore(rc io.ReadCloser) error {
 		existingKeys, _ := inst.ReadAllInstanceKeys()
 		for _, existingKey := range existingKeys {
 			if !snapshotInstanceKeyMap.HasKey(existingKey) {
-				inst.ForgetInstance(&existingKey)
+				_ = inst.ForgetInstance(&existingKey)
 				discardedKeys++
 			}
 		}
@@ -174,7 +174,7 @@ func (this *SnapshotDataCreatorApplier) Restore(rc io.ReadCloser) error {
 				if err := inst.WriteInstance(minimalInstance.ToInstance(), false, nil); err == nil {
 					discoveredKeys++
 				} else {
-					log.Errore(err)
+					_ = log.Errore(err)
 				}
 			}
 		}

@@ -24,7 +24,7 @@ import (
 	"github.com/proxysql/orchestrator/go/config"
 	"github.com/proxysql/orchestrator/go/db"
 	"github.com/proxysql/orchestrator/go/process"
-	orcraft "github.com/proxysql/orchestrator/go/raft"
+
 	"github.com/proxysql/orchestrator/go/util"
 
 	"github.com/patrickmn/go-cache"
@@ -39,8 +39,8 @@ var analysisChangeWriteCounter = metrics.NewCounter()
 var recentInstantAnalysis *cache.Cache
 
 func init() {
-	metrics.Register("analysis.change.write.attempt", analysisChangeWriteAttemptCounter)
-	metrics.Register("analysis.change.write", analysisChangeWriteCounter)
+	_ = metrics.Register("analysis.change.write.attempt", analysisChangeWriteAttemptCounter)
+	_ = metrics.Register("analysis.change.write", analysisChangeWriteCounter)
 
 	go initializeAnalysisDaoPostConfiguration()
 }
@@ -464,7 +464,7 @@ func GetReplicationAnalysis(clusterName string, hints *ReplicationAnalysisHints)
 		a.ClusterDetails.ReadRecoveryInfo()
 
 		a.Replicas = *NewInstanceKeyMap()
-		a.Replicas.ReadCommaDelimitedList(m.GetString("slave_hosts"))
+		_ = a.Replicas.ReadCommaDelimitedList(m.GetString("slave_hosts"))
 
 		countValidOracleGTIDReplicas := m.GetUint("count_valid_oracle_gtid_replicas")
 		a.OracleGTIDImmediateTopology = countValidOracleGTIDReplicas == a.CountValidReplicas && a.CountValidReplicas > 0
@@ -725,7 +725,7 @@ func GetReplicationAnalysis(clusterName string, hints *ReplicationAnalysisHints)
 
 		if a.CountReplicas > 0 && hints.AuditAnalysis {
 			// Interesting enough for analysis
-			go auditInstanceAnalysisInChangelog(&a.AnalyzedInstanceKey, a.Analysis)
+			go func() { _ = auditInstanceAnalysisInChangelog(&a.AnalyzedInstanceKey, a.Analysis) }()
 		}
 		return nil
 	})
@@ -735,36 +735,6 @@ func GetReplicationAnalysis(clusterName string, hints *ReplicationAnalysisHints)
 	}
 	// TODO: result, err = getConcensusReplicationAnalysis(result)
 	return result, log.Errore(err)
-}
-
-func getConcensusReplicationAnalysis(analysisEntries []ReplicationAnalysis) ([]ReplicationAnalysis, error) {
-	if !orcraft.IsRaftEnabled() {
-		return analysisEntries, nil
-	}
-	if !config.Config.ExpectFailureAnalysisConcensus {
-		return analysisEntries, nil
-	}
-	concensusAnalysisEntries := []ReplicationAnalysis{}
-	peerAnalysisMap, err := ReadPeerAnalysisMap()
-	if err != nil {
-		return analysisEntries, err
-	}
-	quorumSize, err := orcraft.QuorumSize()
-	if err != nil {
-		return analysisEntries, err
-	}
-
-	for _, analysisEntry := range analysisEntries {
-		instanceAnalysis := NewInstanceAnalysis(&analysisEntry.AnalyzedInstanceKey, analysisEntry.Analysis)
-		analysisKey := instanceAnalysis.String()
-
-		peerAnalysisCount := peerAnalysisMap[analysisKey]
-		if 1+peerAnalysisCount >= quorumSize {
-			// this node and enough other nodes in agreement
-			concensusAnalysisEntries = append(concensusAnalysisEntries, analysisEntry)
-		}
-	}
-	return concensusAnalysisEntries, nil
 }
 
 // auditInstanceAnalysisInChangelog will write down an instance's analysis in the database_instance_analysis_changelog table.
@@ -881,7 +851,7 @@ func ReadReplicationAnalysisChangelog() (res [](*ReplicationAnalysisChangelog), 
 	})
 
 	if err != nil {
-		log.Errore(err)
+		_ = log.Errore(err)
 	}
 	return res, err
 }

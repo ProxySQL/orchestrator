@@ -48,7 +48,7 @@ var discoveryMetrics *collection.Collection
 func Http(continuousDiscovery bool) {
 	promptForSSLPasswords()
 	ometrics.InitPrometheus()
-	process.ContinuousRegistration(process.OrchestratorExecutionHttpMode, "")
+	process.ContinuousRegistration(string(process.OrchestratorExecutionHttpMode), "")
 
 	if config.Config.ServeAgentsHttp {
 		go agentsHttp()
@@ -85,7 +85,7 @@ func standardHttp(continuousDiscovery bool) {
 		{
 			if config.Config.HTTPAuthUser == "" {
 				// Still allowed; may be disallowed in future versions
-				log.Warning("AuthenticationMethod is configured as 'basic' but HTTPAuthUser undefined. Running without authentication.")
+				_ = log.Warning("AuthenticationMethod is configured as 'basic' but HTTPAuthUser undefined. Running without authentication.")
 			}
 			router.Use(http.BasicAuthMiddleware(config.Config.HTTPAuthUser, config.Config.HTTPAuthPassword))
 		}
@@ -142,7 +142,7 @@ func standardHttp(continuousDiscovery bool) {
 		if err != nil {
 			log.Fatale(err)
 		}
-		defer unixListener.Close()
+		defer func() { _ = unixListener.Close() }()
 		if err := nethttp.Serve(unixListener, router); err != nil {
 			log.Fatale(err)
 		}

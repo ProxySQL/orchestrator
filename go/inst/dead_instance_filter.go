@@ -45,7 +45,7 @@ var DeadInstancesFilter deadInstancesFilter
 var deadInstancesCounter = metrics.NewCounter()
 
 func init() {
-	metrics.Register("discoveries.dead_instances", deadInstancesCounter)
+	_ = metrics.Register("discoveries.dead_instances", deadInstancesCounter)
 	DeadInstancesFilter.deadInstances = make(map[InstanceKey]deadInstance)
 	DeadInstancesFilter.deadInstancesMutex = sync.RWMutex{}
 }

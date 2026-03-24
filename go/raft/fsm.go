@@ -33,7 +33,7 @@ type fsm Store
 func (f *fsm) Apply(l *raft.Log) interface{} {
 	var c storeCommand
 	if err := json.Unmarshal(l.Data, &c); err != nil {
-		log.Errorf("failed to unmarshal command: %s", err.Error())
+		_ = log.Errorf("failed to unmarshal command: %s", err.Error())
 	}
 
 	if c.Op == YieldCommand {
@@ -88,7 +88,7 @@ func (f *fsm) Snapshot() (raft.FSMSnapshot, error) {
 
 // Restore restores freno state
 func (f *fsm) Restore(rc io.ReadCloser) error {
-	defer rc.Close()
+	defer func() { _ = rc.Close() }()
 
 	return f.snapshotCreatorApplier.Restore(rc)
 }

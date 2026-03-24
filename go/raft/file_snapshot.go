@@ -5,11 +5,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/proxysql/golib/log"
 	"hash"
 	"hash/crc64"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sort"
@@ -17,6 +15,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/raft"
+	"github.com/proxysql/golib/log"
 )
 
 const (
@@ -101,10 +100,7 @@ func NewFileSnapshotStoreWithLogger(base string, retain int) (*FileSnapshotStore
 // NewFileSnapshotStore creates a new FileSnapshotStore based
 // on a base directory. The `retain` parameter controls how many
 // snapshots are retained. Must be at least 1.
-func NewFileSnapshotStore(base string, retain int, logOutput io.Writer) (*FileSnapshotStore, error) {
-	if logOutput == nil {
-		logOutput = os.Stderr
-	}
+func NewFileSnapshotStore(base string, retain int, _ io.Writer) (*FileSnapshotStore, error) {
 	return NewFileSnapshotStoreWithLogger(base, retain)
 }
 
@@ -209,7 +205,7 @@ func (f *FileSnapshotStore) List() ([]*raft.SnapshotMeta, error) {
 // getSnapshots returns all the known snapshots.
 func (f *FileSnapshotStore) getSnapshots() ([]*fileSnapshotMeta, error) {
 	// Get the eligible snapshots
-	snapshots, err := ioutil.ReadDir(f.path)
+	snapshots, err := os.ReadDir(f.path)
 	if err != nil {
 		_ = log.Errorf("snapshot: Failed to scan snapshot dir: %v", err)
 		return nil, err
@@ -255,7 +251,7 @@ func (f *FileSnapshotStore) readMeta(name string) (*fileSnapshotMeta, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer fh.Close()
+	defer func() { _ = fh.Close() }()
 
 	// Buffer the file IO
 	buffered := bufio.NewReader(fh)
@@ -293,23 +289,23 @@ func (f *FileSnapshotStore) Open(id string) (*raft.SnapshotMeta, io.ReadCloser, 
 	_, err = io.Copy(stateHash, fh)
 	if err != nil {
 		_ = log.Errorf("snapshot: Failed to read state file: %v", err)
-		fh.Close()
+		_ = fh.Close()
 		return nil, nil, err
 	}
 
 	// Verify the hash
 	computed := stateHash.Sum(nil)
-	if bytes.Compare(meta.CRC, computed) != 0 {
+	if !bytes.Equal(meta.CRC, computed) {
 		_ = log.Errorf("snapshot: CRC checksum failed (stored: %v computed: %v)",
 			meta.CRC, computed)
-		fh.Close()
+		_ = fh.Close()
 		return nil, nil, fmt.Errorf("CRC mismatch")
 	}
 
 	// Seek to the start
 	if _, err := fh.Seek(0, 0); err != nil {
 		_ = log.Errorf("snapshot: State file seek failed: %v", err)
-		fh.Close()
+		_ = fh.Close()
 		return nil, nil, err
 	}
 
@@ -344,7 +340,7 @@ func (f *FileSnapshotStore) ReapSnapshots(currentSnapshotMeta *fileSnapshotMeta)
 	for _, snapshot := range snapshots {
 		if snapshot.Term > currentSnapshotMeta.Term ||
 			snapshot.Term == currentSnapshotMeta.Term && snapshot.Index > currentSnapshotMeta.Index {
-			reapSnapshot(snapshot)
+			_ = reapSnapshot(snapshot)
 			deprecatedSnapshotsReaped = true
 		}
 	}
@@ -358,7 +354,7 @@ func (f *FileSnapshotStore) ReapSnapshots(currentSnapshotMeta *fileSnapshotMeta)
 		}
 	}
 	for i := f.retain; i < len(snapshots); i++ {
-		reapSnapshot(snapshots[i])
+		_ = reapSnapshot(snapshots[i])
 	}
 	return nil
 }
@@ -462,11 +458,11 @@ func (s *FileSnapshotSink) writeMeta() error {
 	if err != nil {
 		return err
 	}
-	defer fh.Close()
+	defer func() { _ = fh.Close() }()
 
 	// Buffer the file IO
 	buffered := bufio.NewWriter(fh)
-	defer buffered.Flush()
+	defer func() { _ = buffered.Flush() }()
 
 	// Write out as JSON
 	enc := json.NewEncoder(buffered)

@@ -61,7 +61,7 @@ func TestCreateOrReturnCollection(t *testing.T) {
 // TestExpirePeriod checks that the set expire period is returned
 func TestExpirePeriod(t *testing.T) {
 	oneSecond := time.Second
-	twoSeconds := 2 * oneSecond
+	twoDuration := 2 * oneSecond
 
 	// create a new collection
 	c := &Collection{}
@@ -73,9 +73,9 @@ func TestExpirePeriod(t *testing.T) {
 	}
 
 	// change the period and check again
-	c.SetExpirePeriod(twoSeconds)
-	if c.ExpirePeriod() != twoSeconds {
-		t.Errorf("TestExpirePeriod: did not get back twoSeconds")
+	c.SetExpirePeriod(twoDuration)
+	if c.ExpirePeriod() != twoDuration {
+		t.Errorf("TestExpirePeriod: did not get back twoDuration")
 	}
 }
 
@@ -96,7 +96,7 @@ func TestAppend(t *testing.T) {
 	}
 	for _, v := range []int{1, 2, 3} {
 		tm := &testMetric{}
-		c.Append(tm)
+		_ = c.Append(tm)
 		if len(c.Metrics()) != v {
 			t.Errorf("TestExpirePeriod: len(Metrics) = %d, expecting %d", len(c.Metrics()), v)
 		}

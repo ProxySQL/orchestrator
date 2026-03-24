@@ -459,16 +459,16 @@ func (this *HttpWeb) RegisterDebug(router chi.Router) {
 	router.Get(this.URLPrefix+"/debug/vars", func(w http.ResponseWriter, r *http.Request) {
 		// from expvar.go, since the expvarHandler isn't exported :(
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		fmt.Fprintf(w, "{\n")
+		_, _ = fmt.Fprintf(w, "{\n")
 		first := true
 		expvar.Do(func(kv expvar.KeyValue) {
 			if !first {
-				fmt.Fprintf(w, ",\n")
+				_, _ = fmt.Fprintf(w, ",\n")
 			}
 			first = false
-			fmt.Fprintf(w, "%q: %s", kv.Key, kv.Value)
+			_, _ = fmt.Fprintf(w, "%q: %s", kv.Key, kv.Value)
 		})
-		fmt.Fprintf(w, "\n}\n")
+		_, _ = fmt.Fprintf(w, "\n}\n")
 	})
 
 	// list all the /debug/ endpoints we want

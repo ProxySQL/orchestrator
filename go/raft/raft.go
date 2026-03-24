@@ -46,7 +46,7 @@ const (
 	raftTimeout            = 10 * time.Second
 )
 
-var RaftNotRunning error = fmt.Errorf("raft is not configured/running")
+var ErrRaftNotRunning error = fmt.Errorf("raft is not configured/running")
 var store *Store
 var raftSetupComplete int64
 var ThisHostname string
@@ -155,12 +155,12 @@ func Setup(applier CommandApplier, snapshotCreatorApplier SnapshotCreatorApplier
 	go func() {
 		for isTurnedLeader := range leaderCh {
 			if isTurnedLeader {
-				PublishCommand("leader-uri", thisLeaderURI)
+				_, _ = PublishCommand("leader-uri", thisLeaderURI)
 			}
 		}
 	}()
 
-	setupHttpClient()
+	_ = setupHttpClient()
 
 	atomic.StoreInt64(&raftSetupComplete, 1)
 	return nil
@@ -183,7 +183,7 @@ func normalizeRaftHostnameIP(host string) (string, error) {
 	ips, err := net.LookupIP(host)
 	if err != nil {
 		// resolve failed. But we don't want to fail the entire operation for that
-		log.Errore(err)
+		_ = log.Errore(err)
 		return host, nil
 	}
 	// resolve success!
@@ -268,18 +268,18 @@ func Snapshot() error {
 func AsyncSnapshot() error {
 	asyncDuration := (time.Duration(rand.Int63()) % asyncSnapshotTimeframe)
 	go time.AfterFunc(asyncDuration, func() {
-		Snapshot()
+		_ = Snapshot()
 	})
 	return nil
 }
 
 func StepDown() {
-	getRaft().StepDown()
+	_ = getRaft().StepDown()
 }
 
 func Yield() error {
 	if !IsRaftEnabled() {
-		return RaftNotRunning
+		return ErrRaftNotRunning
 	}
 	return getRaft().Yield()
 }
@@ -294,14 +294,14 @@ func GetRaftAdvertise() string {
 
 func GetPeers() ([]string, error) {
 	if !IsRaftEnabled() {
-		return []string{}, RaftNotRunning
+		return []string{}, ErrRaftNotRunning
 	}
 	return store.peerStore.Peers()
 }
 
 func IsPeer(peer string) (bool, error) {
 	if !IsRaftEnabled() {
-		return false, RaftNotRunning
+		return false, ErrRaftNotRunning
 	}
 	return (store.raftBind == peer), nil
 }
@@ -309,7 +309,7 @@ func IsPeer(peer string) (bool, error) {
 // PublishCommand will distribute a command across the group
 func PublishCommand(op string, value interface{}) (response interface{}, err error) {
 	if !IsRaftEnabled() {
-		return nil, RaftNotRunning
+		return nil, ErrRaftNotRunning
 	}
 	b, err := json.Marshal(value)
 	if err != nil {
@@ -400,10 +400,10 @@ func Monitor() {
 			if IsLeader() {
 				athenticationToken := util.NewToken().Short()
 				healthRequestAuthenticationTokenCache.Set(athenticationToken, true, cache.DefaultExpiration)
-				go PublishCommand("request-health-report", athenticationToken)
+				go func() { _, _ = PublishCommand("request-health-report", athenticationToken) }()
 			}
 		case err := <-fatalRaftErrorChan:
-			log.Fatale(err)
+			_ = log.Fatale(err)
 		}
 	}
 }

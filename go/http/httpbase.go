@@ -160,19 +160,6 @@ func getUserId(req *http.Request) string {
 	}
 }
 
-func getClusterHint(params map[string]string) string {
-	if params["clusterHint"] != "" {
-		return params["clusterHint"]
-	}
-	if params["clusterName"] != "" {
-		return params["clusterName"]
-	}
-	if params["host"] != "" && params["port"] != "" {
-		return fmt.Sprintf("%s:%s", params["host"], params["port"])
-	}
-	return ""
-}
-
 // getClusterHintFromRequest extracts the cluster hint from chi URL params.
 func getClusterHintFromRequest(r *http.Request) string {
 	if v := chi.URLParam(r, "clusterHint"); v != "" {
@@ -206,16 +193,6 @@ func figureClusterName(hint string) (clusterName string, err error) {
 	}
 	instanceKey, _ := inst.ParseRawInstanceKey(hint)
 	return inst.FigureClusterName(hint, instanceKey, nil)
-}
-
-// getClusterNameIfExists returns a cluster name by params hint, or an empty cluster name
-// if no hint is given
-func getClusterNameIfExists(params map[string]string) (clusterName string, err error) {
-	if clusterHint := getClusterHint(params); clusterHint == "" {
-		return "", nil
-	} else {
-		return figureClusterName(clusterHint)
-	}
 }
 
 // BasicAuthMiddleware returns a middleware that performs HTTP Basic Authentication.

@@ -21,7 +21,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net"
 	"net/http"
 	"strings"
@@ -87,9 +87,9 @@ func readResponse(res *http.Response, err error) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer res.Body.Close()
+	defer func() { _ = res.Body.Close() }()
 
-	body, err := ioutil.ReadAll(res.Body)
+	body, err := io.ReadAll(res.Body)
 	if err != nil {
 		return nil, err
 	}
@@ -120,7 +120,7 @@ func SubmitAgent(hostname string, port int, token string) (string, error) {
 	}
 
 	// Try to discover topology instances when an agent submits
-	go DiscoverAgentInstance(hostname, port)
+	go func() { _ = DiscoverAgentInstance(hostname, port) }()
 
 	return hostname, err
 }
@@ -129,18 +129,18 @@ func SubmitAgent(hostname string, port int, token string) (string, error) {
 func DiscoverAgentInstance(hostname string, port int) error {
 	agent, err := GetAgent(hostname)
 	if err != nil {
-		log.Errorf("Couldn't get agent for %s: %v", hostname, err)
+		_ = log.Errorf("Couldn't get agent for %s: %v", hostname, err)
 		return err
 	}
 
 	instanceKey := agent.GetInstance()
 	instance, err := inst.ReadTopologyInstance(instanceKey)
 	if err != nil {
-		log.Errorf("Failed to read topology for %v. err=%+v", instanceKey, err)
+		_ = log.Errorf("Failed to read topology for %v. err=%+v", instanceKey, err)
 		return err
 	}
 	if instance == nil {
-		log.Errorf("Failed to read topology for %v", instanceKey)
+		_ = log.Errorf("Failed to read topology for %v", instanceKey)
 		return err
 	}
 	log.Infof("Discovered Agent Instance: %v", instance.Key)
@@ -177,7 +177,7 @@ func ReadOutdatedAgentsHosts() ([]string, error) {
 	})
 
 	if err != nil {
-		log.Errore(err)
+		_ = log.Errore(err)
 	}
 	return res, err
 }
@@ -210,7 +210,7 @@ func ReadAgents() ([]Agent, error) {
 	})
 
 	if err != nil {
-		log.Errore(err)
+		_ = log.Errore(err)
 	}
 	return res, err
 
@@ -322,7 +322,7 @@ func GetAgent(hostname string) (Agent, error) {
 				err = json.Unmarshal(body, &agent.AvailableLocalSnapshots)
 			}
 			if err != nil {
-				log.Errore(err)
+				_ = log.Errore(err)
 			}
 		}
 		{
@@ -359,7 +359,7 @@ func GetAgent(hostname string) (Agent, error) {
 			mySQLRunningUri := fmt.Sprintf("%s/mysql-status?token=%s", uri, token)
 			body, err := readResponse(httpGet(mySQLRunningUri))
 			if err == nil {
-				err = json.Unmarshal(body, &agent.MySQLRunning)
+				_ = json.Unmarshal(body, &agent.MySQLRunning)
 			}
 			// Actually an error is OK here since "status" returns with non-zero exit code when MySQL not running
 		}
@@ -434,7 +434,7 @@ func executeAgentCommandWithMethodFunc(hostname string, command string, methodFu
 	if onResponse != nil {
 		(*onResponse)(body)
 	}
-	auditAgentOperation("agent-command", &agent, command)
+	_ = auditAgentOperation("agent-command", &agent, command)
 
 	return agent, err
 }
@@ -519,7 +519,7 @@ func CustomCommand(hostname string, cmd string) (output string, err error) {
 func seedCommandCompleted(hostname string, seedId int64) (Agent, bool, error) {
 	result := false
 	onResponse := func(body []byte) {
-		json.Unmarshal(body, &result)
+		_ = json.Unmarshal(body, &result)
 	}
 	agent, err := executeAgentCommand(hostname, fmt.Sprintf("seed-command-completed/%d", seedId), &onResponse)
 	return agent, result, err
@@ -529,7 +529,7 @@ func seedCommandCompleted(hostname string, seedId int64) (Agent, bool, error) {
 func seedCommandSucceeded(hostname string, seedId int64) (Agent, bool, error) {
 	result := false
 	onResponse := func(body []byte) {
-		json.Unmarshal(body, &result)
+		_ = json.Unmarshal(body, &result)
 	}
 	agent, err := executeAgentCommand(hostname, fmt.Sprintf("seed-command-succeeded/%d", seedId), &onResponse)
 	return agent, result, err
@@ -543,7 +543,7 @@ func AbortSeed(seedId int64) error {
 	}
 
 	for _, seedOperation := range seedOperations {
-		AbortSeedCommand(seedOperation.TargetHostname, seedId)
+		_, _ = AbortSeedCommand(seedOperation.TargetHostname, seedId)
 		AbortSeedCommand(seedOperation.SourceHostname, seedId)
 	}
 	updateSeedComplete(seedId, errors.New("Aborted"))
@@ -702,8 +702,8 @@ func executeSeed(seedId int64, targetHostname string, sourceHostname string) err
 	if err != nil {
 		return updateSeedStateEntry(seedStateId, err)
 	}
-	sourceAgent, err = GetAgent(sourceHostname)
-	seedStateId, _ = submitSeedStateEntry(seedId, fmt.Sprintf("MySQL data volume on source host %s is %d bytes", sourceHostname, sourceAgent.MountPoint.MySQLDiskUsage), "")
+	sourceAgent, _ = GetAgent(sourceHostname)
+	_, _ = submitSeedStateEntry(seedId, fmt.Sprintf("MySQL data volume on source host %s is %d bytes", sourceHostname, sourceAgent.MountPoint.MySQLDiskUsage), "")
 
 	seedStateId, _ = submitSeedStateEntry(seedId, fmt.Sprintf("Erasing MySQL data on %s", targetHostname), "")
 	_, err = deleteMySQLDatadir(targetHostname)
@@ -719,14 +719,14 @@ func executeSeed(seedId int64, targetHostname string, sourceHostname string) err
 
 	if sourceAgent.MountPoint.MySQLDiskUsage > targetAgent.MySQLDatadirDiskFree {
 		Unmount(sourceHostname)
-		return updateSeedStateEntry(seedStateId, fmt.Errorf("Not enough disk space on target host %s. Required: %d, available: %d. Bailing out.", targetHostname, sourceAgent.MountPoint.MySQLDiskUsage, targetAgent.MySQLDatadirDiskFree))
+		return updateSeedStateEntry(seedStateId, fmt.Errorf("not enough disk space on target host %s, required: %d, available: %d, bailing out", targetHostname, sourceAgent.MountPoint.MySQLDiskUsage, targetAgent.MySQLDatadirDiskFree))
 	}
 
 	// ...
-	seedStateId, _ = submitSeedStateEntry(seedId, fmt.Sprintf("%s will now receive data in background", targetHostname), "")
+	_, _ = submitSeedStateEntry(seedId, fmt.Sprintf("%s will now receive data in background", targetHostname), "")
 	ReceiveMySQLSeedData(targetHostname, seedId)
 
-	seedStateId, _ = submitSeedStateEntry(seedId, fmt.Sprintf("Waiting %d seconds for %s to start listening for incoming data", config.Config.SeedWaitSecondsBeforeSend, targetHostname), "")
+	_, _ = submitSeedStateEntry(seedId, fmt.Sprintf("Waiting %d seconds for %s to start listening for incoming data", config.Config.SeedWaitSecondsBeforeSend, targetHostname), "")
 	time.Sleep(time.Duration(config.Config.SeedWaitSecondsBeforeSend) * time.Second)
 
 	seedStateId, _ = submitSeedStateEntry(seedId, fmt.Sprintf("%s will now send data to %s in background", sourceHostname, targetHostname), "")
@@ -762,7 +762,7 @@ func executeSeed(seedId int64, targetHostname string, sourceHostname string) err
 			AbortSeedCommand(sourceHostname, seedId)
 			AbortSeedCommand(targetHostname, seedId)
 			Unmount(sourceHostname)
-			return updateSeedStateEntry(seedStateId, errors.New("10 iterations have passed without progress. Bailing out."))
+			return updateSeedStateEntry(seedStateId, errors.New("10 iterations have passed without progress, bailing out"))
 		}
 
 		var copyPct int64 = 0
@@ -795,10 +795,10 @@ func executeSeed(seedId int64, targetHostname string, sourceHostname string) err
 		return updateSeedStateEntry(seedStateId, err)
 	}
 
-	seedStateId, _ = submitSeedStateEntry(seedId, fmt.Sprintf("Submitting MySQL instance for discovery: %s", targetHostname), "")
+	_, _ = submitSeedStateEntry(seedId, fmt.Sprintf("Submitting MySQL instance for discovery: %s", targetHostname), "")
 	SeededAgents <- &targetAgent
 
-	seedStateId, _ = submitSeedStateEntry(seedId, "Done", "")
+	_, _ = submitSeedStateEntry(seedId, "Done", "")
 
 	return nil
 }

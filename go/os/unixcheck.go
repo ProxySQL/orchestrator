@@ -42,20 +42,20 @@ func UserInGroups(authUser string, powerAuthGroups []string) bool {
 		// The user not being known is not an error so don't report this.
 		// ERROR Failed to lookup user "simon": user: unknown user simon
 		if !strings.Contains(err.Error(), "unknown user") {
-			log.Errorf("Failed to lookup user %q: %v", authUser, err)
+			_ = log.Errorf("Failed to lookup user %q: %v", authUser, err)
 		}
 		return false
 	}
 	gids, err := currentUser.GroupIds()
 	if err != nil {
-		log.Errorf("Failed to lookup groupids for user %q: %v", authUser, err)
+		_ = log.Errorf("Failed to lookup groupids for user %q: %v", authUser, err)
 		return false
 	}
 	// get the group name from the id and check if the name is in powerGroupMap
 	for _, gid := range gids {
 		group, err := user.LookupGroupId(gid)
 		if err != nil {
-			log.Errorf("Failed to lookup group id for gid %s: %v", gid, err) // yes gids are strings!
+			_ = log.Errorf("Failed to lookup group id for gid %s: %v", gid, err) // yes gids are strings!
 			return false
 		}
 

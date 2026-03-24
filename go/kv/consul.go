@@ -40,8 +40,7 @@ func getConsulKVCacheKey(dc, key string) string {
 type consulStore struct {
 	client                        *consulapi.Client
 	kvCache                       *cache.Cache
-	pairsDistributionSuccessMutex sync.Mutex
-	distributionReentry           int64
+	distributionReentry int64
 }
 
 // NewConsulStore creates a new consul store. It is possible that the client for this store is nil,
@@ -63,7 +62,7 @@ func NewConsulStore() KVStore {
 		// ConsulAclToken defaults to ""
 		consulConfig.Token = config.Config.ConsulAclToken
 		if client, err := consulapi.NewClient(consulConfig); err != nil {
-			log.Errore(err)
+			_ = log.Errore(err)
 		} else {
 			store.client = client
 		}
@@ -155,7 +154,7 @@ func (this *consulStore) DistributePairs(kvPairs [](*KVPair)) (err error) {
 				}
 
 				if _, e := this.client.KV().Put(consulPair, writeOptions); e != nil {
-					log.Errorf("consulStore.DistributePairs(): failed %s", kcCacheKey)
+					_ = log.Errorf("consulStore.DistributePairs(): failed %s", kcCacheKey)
 					failed++
 					err = e
 				} else {

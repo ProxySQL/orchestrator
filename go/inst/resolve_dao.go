@@ -31,11 +31,11 @@ var readUnresolvedHostnameCounter = metrics.NewCounter()
 var readAllResolvedHostnamesCounter = metrics.NewCounter()
 
 func init() {
-	metrics.Register("resolve.write_resolved", writeResolvedHostnameCounter)
-	metrics.Register("resolve.write_unresolved", writeUnresolvedHostnameCounter)
-	metrics.Register("resolve.read_resolved", readResolvedHostnameCounter)
-	metrics.Register("resolve.read_unresolved", readUnresolvedHostnameCounter)
-	metrics.Register("resolve.read_resolved_all", readAllResolvedHostnamesCounter)
+	_ = metrics.Register("resolve.write_resolved", writeResolvedHostnameCounter)
+	_ = metrics.Register("resolve.write_unresolved", writeUnresolvedHostnameCounter)
+	_ = metrics.Register("resolve.read_resolved", readResolvedHostnameCounter)
+	_ = metrics.Register("resolve.read_unresolved", readUnresolvedHostnameCounter)
+	_ = metrics.Register("resolve.read_resolved_all", readAllResolvedHostnamesCounter)
 }
 
 // WriteResolvedHostname stores a hostname and the resolved hostname to backend database
@@ -77,7 +77,7 @@ func WriteResolvedHostname(hostname string, resolvedHostname string) error {
 
 // ReadResolvedHostname returns the resolved hostname given a hostname, or empty if not exists
 func ReadResolvedHostname(hostname string) (string, error) {
-	var resolvedHostname string = ""
+	var resolvedHostname = ""
 
 	query := `
 		select
@@ -180,33 +180,6 @@ func readUnresolvedHostname(hostname string) (string, error) {
 		log.Errore(err)
 	}
 	return unresolvedHostname, err
-}
-
-// readMissingHostnamesToResolve gets those (unresolved, e.g. VIP) hostnames that *should* be present in
-// the hostname_resolve table, but aren't.
-func readMissingKeysToResolve() (result InstanceKeyMap, err error) {
-	query := `
-   		select
-   				hostname_unresolve.unresolved_hostname,
-   				database_instance.port
-   			from
-   				database_instance
-   				join hostname_unresolve on (database_instance.hostname = hostname_unresolve.hostname)
-   				left join hostname_resolve on (database_instance.hostname = hostname_resolve.resolved_hostname)
-   			where
-   				hostname_resolve.hostname is null
-	   		`
-
-	err = db.QueryOrchestratorRowsMap(query, func(m sqlutils.RowMap) error {
-		instanceKey := InstanceKey{Hostname: m.GetString("unresolved_hostname"), Port: m.GetInt("port")}
-		result.AddKey(instanceKey)
-		return nil
-	})
-
-	if err != nil {
-		log.Errore(err)
-	}
-	return result, err
 }
 
 // WriteHostnameUnresolve upserts an entry in hostname_unresolve

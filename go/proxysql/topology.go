@@ -29,8 +29,8 @@ func (c *Client) GetServers() ([]ServerEntry, error) {
 	if err != nil {
 		return nil, fmt.Errorf("proxysql: GetServers: %v", err)
 	}
-	defer db.Close()
-	defer rows.Close()
+	defer func() { _ = db.Close() }()
+	defer func() { _ = rows.Close() }()
 
 	var servers []ServerEntry
 	for rows.Next() {
@@ -60,8 +60,8 @@ func (c *Client) GetServersByHostgroup(hostgroupID int) ([]ServerEntry, error) {
 	if err != nil {
 		return nil, fmt.Errorf("proxysql: GetServersByHostgroup(%d): %v", hostgroupID, err)
 	}
-	defer db.Close()
-	defer rows.Close()
+	defer func() { _ = db.Close() }()
+	defer func() { _ = rows.Close() }()
 
 	var servers []ServerEntry
 	for rows.Next() {

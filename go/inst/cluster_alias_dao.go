@@ -255,7 +255,7 @@ func ForgetLongUnseenClusterAliases() error {
 	if err != nil {
 		return log.Errore(err)
 	}
-	AuditOperation("forget-clustr-aliases", nil, fmt.Sprintf("Forgotten aliases: %d", rows))
+	_ = AuditOperation("forget-clustr-aliases", nil, fmt.Sprintf("Forgotten aliases: %d", rows))
 	return err
 }
 

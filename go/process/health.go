@@ -75,7 +75,7 @@ type HealthStatus struct {
 	Hostname           string
 	Token              string
 	IsActiveNode       bool
-	ActiveNode         NodeHealth
+	ActiveNode         *NodeHealth
 	Error              error
 	AvailableNodes     [](*NodeHealth)
 	RaftLeader         string
@@ -89,7 +89,7 @@ type OrchestratorExecutionMode string
 
 const (
 	OrchestratorExecutionCliMode  OrchestratorExecutionMode = "CLIMode"
-	OrchestratorExecutionHttpMode                           = "HttpMode"
+	OrchestratorExecutionHttpMode OrchestratorExecutionMode = "HttpMode"
 )
 
 var continuousRegistrationOnce sync.Once
@@ -111,7 +111,7 @@ func HealthTest() (health *HealthStatus, err error) {
 		return healthStatus.(*HealthStatus), nil
 	}
 
-	health = &HealthStatus{Healthy: false, Hostname: ThisHostname, Token: util.ProcessToken.Hash}
+	health = &HealthStatus{Healthy: false, Hostname: ThisHostname, Token: util.ProcessToken.Hash, ActiveNode: &NodeHealth{}}
 	defer lastHealthCheckCache.Set(cacheKey, health, cache.DefaultExpiration)
 
 	if healthy, err := RegisterNode(ThisNodeHealth); err != nil {
@@ -135,7 +135,7 @@ func HealthTest() (health *HealthStatus, err error) {
 			return health, log.Errore(err)
 		}
 	}
-	health.AvailableNodes, err = ReadAvailableNodes(true)
+	health.AvailableNodes, _ = ReadAvailableNodes(true)
 
 	return health, nil
 }
@@ -165,7 +165,7 @@ func ContinuousRegistration(extraInfo string, command string) {
 		tickOperation := func() {
 			healthy, err := RegisterNode(ThisNodeHealth)
 			if err != nil {
-				log.Errorf("ContinuousRegistration: RegisterNode failed: %+v", err)
+				_ = log.Errorf("ContinuousRegistration: RegisterNode failed: %+v", err)
 			}
 			if healthy {
 				atomic.StoreInt64(&LastContinousCheckHealthy, 1)

@@ -132,11 +132,11 @@ var writeBufferLatency = stopwatch.NewNamedStopwatch()
 var emptyQuotesRegexp = regexp.MustCompile(`^""$`)
 
 func init() {
-	metrics.Register("instance.access_denied", accessDeniedCounter)
-	metrics.Register("instance.read_topology", readTopologyInstanceCounter)
-	metrics.Register("instance.read", readInstanceCounter)
-	metrics.Register("instance.write", writeInstanceCounter)
-	writeBufferLatency.AddMany([]string{"wait", "write"})
+	_ = metrics.Register("instance.access_denied", accessDeniedCounter)
+	_ = metrics.Register("instance.read_topology", readTopologyInstanceCounter)
+	_ = metrics.Register("instance.read", readInstanceCounter)
+	_ = metrics.Register("instance.write", writeInstanceCounter)
+	_ = writeBufferLatency.AddMany([]string{"wait", "write"})
 	writeBufferLatency.Start("wait")
 
 	go initializeInstanceDao()
@@ -184,7 +184,7 @@ func ExecDBWriteFunc(f func() error) error {
 			}
 		}
 		m.ExecuteLatency = time.Since(m.Timestamp.Add(m.WaitLatency))
-		backendWrites.Append(m)
+		_ = backendWrites.Append(m)
 		<-instanceWriteChan // assume this takes no time
 	}()
 	res := f()
@@ -216,7 +216,7 @@ func logReadTopologyInstanceError(instanceKey *InstanceKey, hint string, err err
 	} else {
 		msg = fmt.Sprintf("ReadTopologyInstance(%+v) %+v: %+v",
 			*instanceKey,
-			strings.Replace(hint, "%", "%%", -1), // escape %
+			strings.ReplaceAll(hint, "%", "%%"), // escape %
 			err)
 	}
 	return log.Errorf("%s", msg)
@@ -379,7 +379,7 @@ func ReadTopologyInstanceBufferable(instanceKey *InstanceKey, bufferWrites bool,
 	if !instanceKey.IsValid() {
 		latency.Start("backend")
 		if err := UpdateInstanceLastAttemptedCheck(instanceKey); err != nil {
-			log.Errorf("ReadTopologyInstanceBufferable: %+v: %v", instanceKey, err)
+			_ = log.Errorf("ReadTopologyInstanceBufferable: %+v: %v", instanceKey, err)
 		}
 		latency.Stop("backend")
 		return instance, instanceDiscoverySkipped, fmt.Errorf("ReadTopologyInstance will not act on invalid instance key: %+v", *instanceKey)
@@ -437,10 +437,10 @@ func ReadTopologyInstanceBufferable(instanceKey *InstanceKey, bufferWrites bool,
 		}
 		if isMaxScale110 {
 			// Only this is supported:
-			db.QueryRow("select @@server_id").Scan(&instance.ServerID)
+			_ = db.QueryRow("select @@server_id").Scan(&instance.ServerID)
 		} else {
-			db.QueryRow("select @@global.server_id").Scan(&instance.ServerID)
-			db.QueryRow("select @@global.server_uuid").Scan(&instance.ServerUUID)
+			_ = db.QueryRow("select @@global.server_id").Scan(&instance.ServerID)
+			_ = db.QueryRow("select @@global.server_uuid").Scan(&instance.ServerUUID)
 		}
 	} else {
 		// NOT MaxScale
@@ -513,7 +513,7 @@ func ReadTopologyInstanceBufferable(instanceKey *InstanceKey, bufferWrites bool,
 		instance.IsDetachedMaster = instance.MasterKey.IsDetached()
 		instance.SecondsBehindMaster = m.GetNullInt64(instance.QSP.seconds_behind_master())
 		if instance.SecondsBehindMaster.Valid && instance.SecondsBehindMaster.Int64 < 0 {
-			log.Warningf("Host: %+v, instance.SecondsBehindMaster < 0 [%+v], correcting to 0", instanceKey, instance.SecondsBehindMaster.Int64)
+			_ = log.Warningf("Host: %+v, instance.SecondsBehindMaster < 0 [%+v], correcting to 0", instanceKey, instance.SecondsBehindMaster.Int64)
 			instance.SecondsBehindMaster.Int64 = 0
 		}
 		// And until told otherwise:
@@ -600,23 +600,24 @@ func ReadTopologyInstanceBufferable(instanceKey *InstanceKey, bufferWrites bool,
 				err := sqlutils.QueryRowsMap(db, "show global variables like 'rpl_semi_sync_%'", func(m sqlutils.RowMap) error {
 					variableName := m.GetString("Variable_name")
 					// Learn if semi-sync plugin is loaded and what is its version
-					if variableName == "rpl_semi_sync_master_enabled" {
+					switch variableName {
+					case "rpl_semi_sync_master_enabled":
 						instance.SemiSyncMasterEnabled = (m.GetString("Value") == "ON")
 						semiSyncMasterPluginLoaded = true
 						instance.SemiSyncMasterPluginNewVersion = false
-					} else if variableName == "rpl_semi_sync_source_enabled" {
+					case "rpl_semi_sync_source_enabled":
 						instance.SemiSyncMasterEnabled = (m.GetString("Value") == "ON")
 						semiSyncMasterPluginLoaded = true
 						instance.SemiSyncMasterPluginNewVersion = true
-					} else if variableName == "rpl_semi_sync_slave_enabled" {
+					case "rpl_semi_sync_slave_enabled":
 						instance.SemiSyncReplicaEnabled = (m.GetString("Value") == "ON")
 						semiSyncReplicaPluginLoaded = true
 						instance.SemiSyncReplicaPluginNewVersion = false
-					} else if variableName == "rpl_semi_sync_replica_enabled" {
+					case "rpl_semi_sync_replica_enabled":
 						instance.SemiSyncReplicaEnabled = (m.GetString("Value") == "ON")
 						semiSyncReplicaPluginLoaded = true
 						instance.SemiSyncReplicaPluginNewVersion = true
-					} else {
+					default:
 						// additional info
 						matched, regexperr := regexp.MatchString("^rpl_semi_sync_(master|source)_timeout$", variableName)
 						if regexperr != nil {
@@ -782,7 +783,7 @@ func ReadTopologyInstanceBufferable(instanceKey *InstanceKey, bufferWrites bool,
 			defer waitGroup.Done()
 			if err := db.QueryRow(config.Config.ReplicationLagQuery).Scan(&instance.ReplicationLagSeconds); err == nil {
 				if instance.ReplicationLagSeconds.Valid && instance.ReplicationLagSeconds.Int64 < 0 {
-					log.Warningf("Host: %+v, instance.SlaveLagSeconds < 0 [%+v], correcting to 0", instanceKey, instance.ReplicationLagSeconds.Int64)
+					_ = log.Warningf("Host: %+v, instance.SlaveLagSeconds < 0 [%+v], correcting to 0", instanceKey, instance.ReplicationLagSeconds.Int64)
 					instance.ReplicationLagSeconds.Int64 = 0
 				}
 			} else {
@@ -968,7 +969,7 @@ func ReadTopologyInstanceBufferable(instanceKey *InstanceKey, bufferWrites bool,
 		if config.Config.AutoPseudoGTID {
 			var err error
 			instance.UsingPseudoGTID, err = isInjectedPseudoGTID(instance.ClusterName)
-			log.Errore(err)
+			_ = log.Errore(err)
 		} else if config.Config.DetectPseudoGTIDQuery != "" {
 			waitGroup.Add(1)
 			go func() {
@@ -1102,7 +1103,7 @@ Cleanup:
 				redactedMasterExecutedGtidSet, _ := NewOracleGtidSet(instance.masterExecutedGtidSet)
 				redactedMasterExecutedGtidSet.RemoveUUID(instance.MasterUUID)
 
-				db.QueryRow("select gtid_subtract(?, ?)", redactedExecutedGtidSet.String(), redactedMasterExecutedGtidSet.String()).Scan(&instance.GtidErrant)
+				_ = db.QueryRow("select gtid_subtract(?, ?)", redactedExecutedGtidSet.String(), redactedMasterExecutedGtidSet.String()).Scan(&instance.GtidErrant)
 			}
 		}
 	}
@@ -1260,7 +1261,7 @@ func ReadInstanceClusterAttributes(instance *Instance) (err error) {
 		clusterNameByCoMasterKey := instance.MasterKey.StringCode()
 		if clusterName != clusterNameByInstanceKey && clusterName != clusterNameByCoMasterKey {
 			// Can be caused by a co-master topology failover
-			log.Errorf("ReadInstanceClusterAttributes: in co-master topology %s is not in (%s, %s). Forcing it to become one of them", clusterName, clusterNameByInstanceKey, clusterNameByCoMasterKey)
+			_ = log.Errorf("ReadInstanceClusterAttributes: in co-master topology %s is not in (%s, %s). Forcing it to become one of them", clusterName, clusterNameByInstanceKey, clusterNameByCoMasterKey)
 			clusterName = math.TernaryString(instance.Key.SmallerThan(&instance.MasterKey), clusterNameByInstanceKey, clusterNameByCoMasterKey)
 		}
 		if clusterName == clusterNameByInstanceKey {
@@ -1319,7 +1320,7 @@ func BulkReadInstance() ([](*InstanceKey), error) {
 }
 
 func ReadInstancePromotionRule(instance *Instance) (err error) {
-	var promotionRule CandidatePromotionRule = NeutralPromoteRule
+	var promotionRule = NeutralPromoteRule
 	query := `
 			select
 				ifnull(nullif(promotion_rule, ''), 'neutral') as promotion_rule
@@ -1421,7 +1422,7 @@ func readInstanceRow(m sqlutils.RowMap) *Instance {
 	instance.InstanceAlias = m.GetString("instance_alias")
 	instance.LastDiscoveryLatency = time.Duration(m.GetInt64("last_discovery_latency")) * time.Nanosecond
 
-	instance.Replicas.ReadJson(replicasJSON)
+	_ = instance.Replicas.ReadJson(replicasJSON)
 	instance.applyFlavorName()
 
 	/* Read Group Replication variables below */
@@ -1431,7 +1432,7 @@ func readInstanceRow(m sqlutils.RowMap) *Instance {
 	instance.ReplicationGroupMemberRole = m.GetString("replication_group_member_role")
 	instance.ReplicationGroupPrimaryInstanceKey = InstanceKey{Hostname: m.GetString("replication_group_primary_host"),
 		Port: m.GetInt("replication_group_primary_port")}
-	instance.ReplicationGroupMembers.ReadJson(m.GetString("replication_group_members"))
+	_ = instance.ReplicationGroupMembers.ReadJson(m.GetString("replication_group_members"))
 	//instance.ReplicationGroup = m.GetString("replication_group_")
 
 	// problems
@@ -1536,7 +1537,7 @@ func ReadInstance(instanceKey *InstanceKey) (*Instance, bool, error) {
 
 // ReadClusterInstances reads all instances of a given cluster
 func ReadClusterInstances(clusterName string) ([](*Instance), error) {
-	if strings.Index(clusterName, "'") >= 0 {
+	if strings.Contains(clusterName, "'") {
 		return [](*Instance){}, log.Errorf("Invalid cluster name: %s", clusterName)
 	}
 	condition := `cluster_name = ?`
@@ -2101,14 +2102,14 @@ func ReviewUnseenInstances() error {
 
 		masterHostname, err := ResolveHostname(instance.MasterKey.Hostname)
 		if err != nil {
-			log.Errore(err)
+			_ = log.Errore(err)
 			continue
 		}
 		instance.MasterKey.Hostname = masterHostname
 		savedClusterName := instance.ClusterName
 
 		if err := ReadInstanceClusterAttributes(instance); err != nil {
-			log.Errore(err)
+			_ = log.Errore(err)
 		} else if instance.ClusterName != savedClusterName {
 			updateInstanceClusterName(instance)
 			operations++
@@ -2345,7 +2346,7 @@ func ReadCountMySQLSnapshots(hostnames []string) (map[string]int, error) {
 	})
 
 	if err != nil {
-		log.Errore(err)
+		_ = log.Errore(err)
 	}
 	return res, err
 }
@@ -2541,7 +2542,7 @@ func ReadAllInstanceKeys() ([]InstanceKey, error) {
 	err := db.QueryOrchestrator(query, sqlutils.Args(), func(m sqlutils.RowMap) error {
 		instanceKey, merr := NewResolveInstanceKey(m.GetString("hostname"), m.GetInt("port"))
 		if merr != nil {
-			log.Errore(merr)
+			_ = log.Errore(merr)
 		} else if !InstanceIsForgotten(instanceKey) {
 			// only if not in "forget" cache
 			res = append(res, *instanceKey)
@@ -2606,7 +2607,7 @@ func ReadOutdatedInstanceKeys() ([]InstanceKey, error) {
 	err := db.QueryOrchestrator(query, args, func(m sqlutils.RowMap) error {
 		instanceKey, merr := NewResolveInstanceKey(m.GetString("hostname"), m.GetInt("port"))
 		if merr != nil {
-			log.Errore(merr)
+			_ = log.Errore(merr)
 		} else if !InstanceIsForgotten(instanceKey) {
 			// only if not in "forget" cache
 			res = append(res, *instanceKey)
@@ -2616,7 +2617,7 @@ func ReadOutdatedInstanceKeys() ([]InstanceKey, error) {
 	})
 
 	if err != nil {
-		log.Errore(err)
+		_ = log.Errore(err)
 	}
 	return res, err
 
@@ -2634,11 +2635,11 @@ func mkInsertOdku(table string, columns []string, values []string, nrRows int, i
 	}
 
 	var q bytes.Buffer
-	var ignore string = ""
+	var ignore = ""
 	if insertIgnore {
 		ignore = "ignore"
 	}
-	var valRow string = fmt.Sprintf("(%s)", strings.Join(values, ", "))
+	var valRow = fmt.Sprintf("(%s)", strings.Join(values, ", "))
 	var val bytes.Buffer
 	val.WriteString(valRow)
 	for i := 1; i < nrRows; i++ {
@@ -2646,7 +2647,7 @@ func mkInsertOdku(table string, columns []string, values []string, nrRows int, i
 		val.WriteString(valRow)
 	}
 
-	var col string = strings.Join(columns, ", ")
+	var col = strings.Join(columns, ", ")
 	var odku bytes.Buffer
 	odku.WriteString(fmt.Sprintf("%s=VALUES(%s)", columns[0], columns[0]))
 	for _, c := range columns[1:] {
@@ -2671,10 +2672,8 @@ func mkInsertOdkuForInstances(instances []*Instance, instanceWasActuallyFound bo
 		return "", nil, nil
 	}
 
-	insertIgnore := false
-	if !instanceWasActuallyFound {
-		insertIgnore = true
-	}
+	insertIgnore := !instanceWasActuallyFound
+
 	var columns = []string{
 		"hostname",
 		"port",
@@ -2755,7 +2754,7 @@ func mkInsertOdkuForInstances(instances []*Instance, instanceWasActuallyFound bo
 		"replication_group_primary_port",
 	}
 
-	var values []string = make([]string, len(columns), len(columns))
+	var values = make([]string, len(columns))
 	for i := range columns {
 		values[i] = "?"
 	}
@@ -2882,7 +2881,7 @@ func writeManyInstances(instances []*Instance, instanceWasActuallyFound bool, up
 	}
 	if _, err := db.ExecOrchestrator(sql, args...); err != nil {
 		if strings.Contains(err.Error(), tooManyPlaceholders) {
-			return fmt.Errorf("writeManyInstances(?,%v,%v): error: %+v, len(instances): %v, len(args): %v.  Reduce InstanceWriteBufferSize to avoid len(args) being > 64k, a limit in the MySQL source code.",
+			return fmt.Errorf("writeManyInstances(?,%v,%v): error: %+v, len(instances): %v, len(args): %v.  reduce InstanceWriteBufferSize to avoid len(args) being > 64k, a limit in the MySQL source code",
 				instanceWasActuallyFound,
 				updateLastSeen,
 				err.Error(),
@@ -2977,12 +2976,12 @@ func flushInstanceWriteBuffer() {
 	}
 	err := ExecDBWriteFunc(writeFunc)
 	if err != nil {
-		log.Errorf("flushInstanceWriteBuffer: %v", err)
+		_ = log.Errorf("flushInstanceWriteBuffer: %v", err)
 	}
 
 	writeBufferLatency.Stop("write")
 
-	writeBufferMetrics.Append(&WriteBufferMetric{
+	_ = writeBufferMetrics.Append(&WriteBufferMetric{
 		Timestamp:    time.Now(),
 		WaitLatency:  writeBufferLatency.Elapsed("wait"),
 		WriteLatency: writeBufferLatency.Elapsed("write"),
@@ -3437,7 +3436,7 @@ func PopulateGroupReplicationInformation(instance *Instance, db *sql.DB) error {
 				"%+v: %+v", instance.Key, err)
 		}
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	foundGroupPrimary := false
 	// Loop over the query results and populate GR instance attributes from the row that matches the instance being
 	// probed. In addition, figure out the group primary and also add it as attribute of the instance.
@@ -3461,7 +3460,7 @@ func PopulateGroupReplicationInformation(instance *Instance, db *sql.DB) error {
 			}
 			groupMemberKey, err := NewResolveInstanceKey(host, int(port))
 			if err != nil {
-				log.Errorf("Unable to resolve instance for group member %v:%v", host, port)
+				_ = log.Errorf("Unable to resolve instance for group member %v:%v", host, port)
 				continue
 			}
 			// Set the replication group primary from what we find in performance_schema.replication_group_members for
@@ -3479,7 +3478,7 @@ func PopulateGroupReplicationInformation(instance *Instance, db *sql.DB) error {
 				instance.AddGroupMemberKey(groupMemberKey) // This helps us keep info on all members of the same group as the instance
 			}
 		} else {
-			log.Errorf("Unable to scan row  group replication information while processing %+v, skipping the "+
+			_ = log.Errorf("Unable to scan row  group replication information while processing %+v, skipping the "+
 				"row and continuing: %+v", instance.Key, err)
 		}
 	}

@@ -19,7 +19,7 @@ package orcraft
 import (
 	"crypto/tls"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net"
 	"net/http"
 	"strings"
@@ -89,7 +89,7 @@ func setupHttpClient() error {
 func HttpGetLeader(path string) (response []byte, err error) {
 	leaderURI := LeaderURI.Get()
 	if leaderURI == "" {
-		return nil, fmt.Errorf("Raft leader URI unknown")
+		return nil, fmt.Errorf("raft leader URI unknown")
 	}
 	leaderAPI := leaderURI
 	if config.Config.URLPrefix != "" {
@@ -101,6 +101,9 @@ func HttpGetLeader(path string) (response []byte, err error) {
 	url := fmt.Sprintf("%s/%s", leaderAPI, path)
 
 	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
 	switch strings.ToLower(config.Config.AuthenticationMethod) {
 	case "basic", "multi":
 		req.SetBasicAuth(config.Config.HTTPAuthUser, config.Config.HTTPAuthPassword)
@@ -110,9 +113,9 @@ func HttpGetLeader(path string) (response []byte, err error) {
 	if err != nil {
 		return nil, err
 	}
-	defer res.Body.Close()
+	defer func() { _ = res.Body.Close() }()
 
-	body, err := ioutil.ReadAll(res.Body)
+	body, err := io.ReadAll(res.Body)
 	if err != nil {
 		return nil, err
 	}

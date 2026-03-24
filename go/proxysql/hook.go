@@ -72,7 +72,7 @@ func (h *Hook) PostFailover(newMasterHost string, newMasterPort int, oldMasterHo
 		return fmt.Errorf("proxysql: post-failover LOAD TO RUNTIME failed: %v", err)
 	}
 	if err := h.client.Exec("SAVE MYSQL SERVERS TO DISK"); err != nil {
-		log.Errorf("proxysql: post-failover SAVE TO DISK failed (non-fatal): %v", err)
+		_ = log.Errorf("proxysql: post-failover SAVE TO DISK failed (non-fatal): %v", err)
 	}
 	log.Infof("proxysql: post-failover: promoted %s:%d as writer", newMasterHost, newMasterPort)
 	return nil
@@ -88,7 +88,7 @@ func buildPreFailoverSQL(action, host string, port, writerHostgroup int) (string
 	case "none":
 		return "", nil
 	default:
-		log.Warningf("proxysql: unknown preFailoverAction '%s', defaulting to 'offline_soft'", action)
+		_ = log.Warningf("proxysql: unknown preFailoverAction '%s', defaulting to 'offline_soft'", action)
 		return "UPDATE mysql_servers SET status='OFFLINE_SOFT' WHERE hostname=? AND port=? AND hostgroup_id=?", args
 	}
 }

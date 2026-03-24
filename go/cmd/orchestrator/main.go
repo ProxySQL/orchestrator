@@ -68,7 +68,7 @@ func main() {
 	flag.Parse()
 
 	if *destination != "" && *sibling != "" {
-		log.Fatalf("-s and -d are synonyms, yet both were specified. You're probably doing the wrong thing.")
+		_ = log.Fatalf("-s and -d are synonyms, yet both were specified. You're probably doing the wrong thing.")
 	}
 	switch *config.RuntimeCLIFlags.PromotionRule {
 	case "prefer", "neutral", "prefer_not", "must_not":
@@ -77,7 +77,7 @@ func main() {
 		}
 	default:
 		{
-			log.Fatalf("-promotion-rule only supports prefer|neutral|prefer_not|must_not")
+			_ = log.Fatalf("-promotion-rule only supports prefer|neutral|prefer_not|must_not")
 		}
 	}
 	if *destination == "" {
@@ -125,11 +125,11 @@ func main() {
 		log.SetLevel(log.ERROR)
 	}
 	if config.Config.EnableSyslog {
-		log.EnableSyslogWriter("orchestrator")
+		_ = log.EnableSyslogWriter("orchestrator")
 		log.SetSyslogLevel(log.INFO)
 	}
 	if config.Config.AuditToSyslog {
-		inst.EnableAuditSyslog()
+		_ = inst.EnableAuditSyslog()
 	}
 	config.RuntimeCLIFlags.ConfiguredVersion = AppVersion
 	config.MarkConfigurationLoaded()

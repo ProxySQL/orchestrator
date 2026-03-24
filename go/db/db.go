@@ -139,10 +139,6 @@ func IsSQLite() bool {
 	return config.Config.IsSQLite()
 }
 
-func isInMemorySQLite() bool {
-	return config.Config.IsSQLite() && strings.Contains(config.Config.SQLite3DataFile, ":memory:")
-}
-
 // matchDSN tries to match the DSN or returns an error
 func matchDSN(dsn string) (string, error) {
 	re := regexp.MustCompile(dsnRegexp)
@@ -216,7 +212,7 @@ func OpenOrchestrator() (db *sql.DB, err error) {
 	}
 	if err == nil && !fromCache {
 		if !config.Config.SkipOrchestratorDatabaseUpdate {
-			initOrchestratorDB(db)
+			_ = initOrchestratorDB(db)
 		}
 		// A low value here will trigger reconnects which could
 		// make the number of backend connections hit the tcp
@@ -275,7 +271,7 @@ func registerOrchestratorDeployment(db *sql.DB) error {
 			)
 				`
 	if _, err := execInternal(db, query, config.RuntimeCLIFlags.ConfiguredVersion); err != nil {
-		log.Fatalf("Unable to write to orchestrator_metadata: %+v", err)
+		_ = log.Fatalf("Unable to write to orchestrator_metadata: %+v", err)
 	}
 	log.Debugf("Migrated database schema to version [%+v]", config.RuntimeCLIFlags.ConfiguredVersion)
 	return nil
@@ -286,7 +282,7 @@ func registerOrchestratorDeployment(db *sql.DB) error {
 func deployStatements(db *sql.DB, queries []string) error {
 	tx, err := db.Begin()
 	if err != nil {
-		log.Fatale(err)
+		_ = log.Fatale(err)
 	}
 	// Ugly workaround ahead.
 	// Origin of this workaround is the existence of some "timestamp NOT NULL," column definitions,
@@ -298,19 +294,15 @@ func deployStatements(db *sql.DB, queries []string) error {
 	// My bad.
 	originalSqlMode := ""
 	if config.Config.IsMySQL() {
-		err = tx.QueryRow(`select @@session.sql_mode`).Scan(&originalSqlMode)
+		_ = tx.QueryRow(`select @@session.sql_mode`).Scan(&originalSqlMode)
 		if _, err := tx.Exec(`set @@session.sql_mode=REPLACE(@@session.sql_mode, 'NO_ZERO_DATE', '')`); err != nil {
-			log.Fatale(err)
+			_ = log.Fatale(err)
 		}
 		if _, err := tx.Exec(`set @@session.sql_mode=REPLACE(@@session.sql_mode, 'NO_ZERO_IN_DATE', '')`); err != nil {
-			log.Fatale(err)
+			_ = log.Fatale(err)
 		}
 	}
-	for i, query := range queries {
-		if i == 0 {
-			//log.Debugf("sql_mode is: %+v", originalSqlMode)
-		}
-
+	for _, query := range queries {
 		query, err := translateStatement(query)
 		if err != nil {
 			return log.Fatalf("Cannot initiate orchestrator: %+v; query=%+v", err, query)
@@ -327,17 +319,17 @@ func deployStatements(db *sql.DB, queries []string) error {
 				!strings.Contains(err.Error(), "check that column/key exists") &&
 				!strings.Contains(err.Error(), "already exists") &&
 				!strings.Contains(err.Error(), "Duplicate key name") {
-				log.Errorf("Error initiating orchestrator: %+v; query=%+v", err, query)
+				_ = log.Errorf("Error initiating orchestrator: %+v; query=%+v", err, query)
 			}
 		}
 	}
 	if config.Config.IsMySQL() {
 		if _, err := tx.Exec(`set session sql_mode=?`, originalSqlMode); err != nil {
-			log.Fatale(err)
+			_ = log.Fatale(err)
 		}
 	}
 	if err := tx.Commit(); err != nil {
-		log.Fatale(err)
+		_ = log.Fatale(err)
 	}
 	return nil
 }
@@ -353,16 +345,16 @@ func initOrchestratorDB(db *sql.DB) error {
 		return nil
 	}
 	if config.Config.PanicIfDifferentDatabaseDeploy && config.RuntimeCLIFlags.ConfiguredVersion != "" && !versionAlreadyDeployed {
-		log.Fatalf("PanicIfDifferentDatabaseDeploy is set. Configured version %s is not the version found in the database", config.RuntimeCLIFlags.ConfiguredVersion)
+		_ = log.Fatalf("PanicIfDifferentDatabaseDeploy is set. Configured version %s is not the version found in the database", config.RuntimeCLIFlags.ConfiguredVersion)
 	}
 	log.Debugf("Migrating database schema")
-	deployStatements(db, generateSQLBase)
-	deployStatements(db, generateSQLPatches)
-	registerOrchestratorDeployment(db)
+	_ = deployStatements(db, generateSQLBase)
+	_ = deployStatements(db, generateSQLPatches)
+	_ = registerOrchestratorDeployment(db)
 
 	if IsSQLite() {
-		ExecOrchestrator(`PRAGMA journal_mode = WAL`)
-		ExecOrchestrator(`PRAGMA synchronous = NORMAL`)
+		_, _ = ExecOrchestrator(`PRAGMA journal_mode = WAL`)
+		_, _ = ExecOrchestrator(`PRAGMA synchronous = NORMAL`)
 	}
 
 	return nil
