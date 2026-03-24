@@ -1,11 +1,16 @@
-name: system tests
+name: system tests (legacy - disabled)
+
+# DISABLED: This workflow depends on percona/orchestrator-ci-env which uses
+# dbdeployer MySQL sandboxes that fail on current GitHub Actions runners.
+# Replaced by the "Functional Tests" workflow which uses Docker Compose
+# with real MySQL 8.4 + ProxySQL containers and tests the same scenarios
+# (discovery, failover, ProxySQL hooks) reliably.
+#
+# To re-enable, fix the orchestrator-ci-env deployment or migrate its
+# test cases to the functional test framework.
 
 on:
-  pull_request:
-    branches:
-      - master
-  schedule:
-    - cron:  '43 */4 * * *'
+  workflow_dispatch:  # manual only
 
 jobs:
   system:
