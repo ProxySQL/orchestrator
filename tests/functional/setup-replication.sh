@@ -15,7 +15,8 @@ for REPLICA in mysql2 mysql3; do
                 SOURCE_PORT=3306,
                 SOURCE_USER='repl',
                 SOURCE_PASSWORD='repl_pass',
-                SOURCE_AUTO_POSITION=1;
+                SOURCE_AUTO_POSITION=1,
+                GET_SOURCE_PUBLIC_KEY=1;
             START REPLICA;
         " 2>/dev/null && break
         sleep 1
