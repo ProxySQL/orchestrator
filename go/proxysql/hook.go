@@ -33,11 +33,12 @@ func (h *Hook) PreFailover(oldMasterHost string, oldMasterPort int) error {
 	if !h.IsConfigured() {
 		return nil
 	}
-	log.Infof("proxysql: pre-failover: draining old master %s:%d (action=%s)", oldMasterHost, oldMasterPort, h.preFailoverAction)
 	query, args := buildPreFailoverSQL(h.preFailoverAction, oldMasterHost, oldMasterPort, h.writerHostgroup)
 	if query == "" {
+		log.Infof("proxysql: pre-failover: skipping drain of old master %s:%d (action=%s)", oldMasterHost, oldMasterPort, h.preFailoverAction)
 		return nil
 	}
+	log.Infof("proxysql: pre-failover: draining old master %s:%d (action=%s)", oldMasterHost, oldMasterPort, h.preFailoverAction)
 	if err := h.client.Exec(query, args...); err != nil {
 		return fmt.Errorf("proxysql: pre-failover drain failed: %v", err)
 	}
@@ -79,6 +80,7 @@ func buildPreFailoverSQL(action, host string, port, writerHostgroup int) (string
 	case "none":
 		return "", nil
 	default:
+		log.Warningf("proxysql: unknown preFailoverAction '%s', defaulting to 'offline_soft'", action)
 		return "UPDATE mysql_servers SET status='OFFLINE_SOFT' WHERE hostname=? AND port=? AND hostgroup_id=?", args
 	}
 }

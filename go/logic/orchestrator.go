@@ -26,6 +26,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/patrickmn/go-cache"
 	"github.com/proxysql/golib/log"
 	"github.com/proxysql/orchestrator/go/agent"
 	"github.com/proxysql/orchestrator/go/collection"
@@ -35,10 +36,9 @@ import (
 	"github.com/proxysql/orchestrator/go/kv"
 	ometrics "github.com/proxysql/orchestrator/go/metrics"
 	"github.com/proxysql/orchestrator/go/process"
-	orcraft "github.com/proxysql/orchestrator/go/raft"
 	"github.com/proxysql/orchestrator/go/proxysql"
+	orcraft "github.com/proxysql/orchestrator/go/raft"
 	"github.com/proxysql/orchestrator/go/util"
-	"github.com/patrickmn/go-cache"
 	"github.com/rcrowley/go-metrics"
 	"github.com/sjmudd/stopwatch"
 )

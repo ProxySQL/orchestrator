@@ -27,6 +27,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/patrickmn/go-cache"
 	"github.com/proxysql/golib/log"
 	"github.com/proxysql/orchestrator/go/attributes"
 	"github.com/proxysql/orchestrator/go/config"
@@ -35,10 +36,9 @@ import (
 	ometrics "github.com/proxysql/orchestrator/go/metrics"
 	"github.com/proxysql/orchestrator/go/os"
 	"github.com/proxysql/orchestrator/go/process"
-	orcraft "github.com/proxysql/orchestrator/go/raft"
 	"github.com/proxysql/orchestrator/go/proxysql"
+	orcraft "github.com/proxysql/orchestrator/go/raft"
 	"github.com/proxysql/orchestrator/go/util"
-	"github.com/patrickmn/go-cache"
 	"github.com/rcrowley/go-metrics"
 )
 

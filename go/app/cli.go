@@ -1788,7 +1788,6 @@ func Cli(command string, strict bool, instance string, destination string, owner
 		}
 	case registerCliCommand("proxysql-test", "ProxySQL", `Test connectivity to ProxySQL Admin interface`):
 		{
-			proxysql.InitHook()
 			hook := proxysql.GetHook()
 			if !hook.IsConfigured() {
 				log.Fatal("ProxySQL is not configured. Set ProxySQLAdminAddress and ProxySQLWriterHostgroup in config.")
@@ -1800,6 +1799,9 @@ func Cli(command string, strict bool, instance string, destination string, owner
 				config.Config.ProxySQLAdminPassword,
 				config.Config.ProxySQLAdminUseTLS,
 			)
+			if client == nil {
+				log.Fatal("ProxySQL client creation failed.")
+			}
 			if err := client.Ping(); err != nil {
 				log.Fatale(err)
 			}
@@ -1809,7 +1811,6 @@ func Cli(command string, strict bool, instance string, destination string, owner
 		}
 	case registerCliCommand("proxysql-servers", "ProxySQL", `Show mysql_servers from ProxySQL`):
 		{
-			proxysql.InitHook()
 			client := proxysql.NewClient(
 				config.Config.ProxySQLAdminAddress,
 				config.Config.ProxySQLAdminPort,

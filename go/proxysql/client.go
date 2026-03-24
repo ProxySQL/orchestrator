@@ -22,9 +22,11 @@ func NewClient(address string, port int, user, password string, useTLS bool) *Cl
 	if address == "" {
 		return nil
 	}
-	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/", user, password, address, port)
+	base := fmt.Sprintf("%s:%s@tcp(%s:%d)/", user, password, address, port)
+	params := "timeout=1s&readTimeout=1s&writeTimeout=1s"
+	dsn := base + "?" + params
 	if useTLS {
-		dsn += "?tls=true"
+		dsn = base + "?tls=true&" + params
 	}
 	return &Client{
 		dsn:     dsn,

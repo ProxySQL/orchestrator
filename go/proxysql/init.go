@@ -2,6 +2,7 @@ package proxysql
 
 import (
 	"sync"
+	"sync/atomic"
 
 	"github.com/proxysql/golib/log"
 	"github.com/proxysql/orchestrator/go/config"
@@ -9,8 +10,12 @@ import (
 
 var (
 	hookOnce    sync.Once
-	defaultHook = NewHook(nil, 0, 0, "")
+	defaultHook atomic.Pointer[Hook]
 )
+
+func init() {
+	defaultHook.Store(NewHook(nil, 0, 0, ""))
+}
 
 func InitHook() {
 	hookOnce.Do(func() {
@@ -37,10 +42,10 @@ func InitHook() {
 		} else if config.Config.ProxySQLAdminAddress != "" && config.Config.ProxySQLWriterHostgroup == 0 {
 			log.Warningf("ProxySQL: ProxySQLAdminAddress is set but ProxySQLWriterHostgroup is 0 (unconfigured). ProxySQL hooks will be inactive.")
 		}
-		defaultHook = hook
+		defaultHook.Store(hook)
 	})
 }
 
 func GetHook() *Hook {
-	return defaultHook
+	return defaultHook.Load()
 }

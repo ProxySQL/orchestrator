@@ -20,7 +20,7 @@ func TestNewClientNonNilWhenConfigured(t *testing.T) {
 
 func TestClientDSN(t *testing.T) {
 	client := NewClient("127.0.0.1", 6032, "admin", "secret", false)
-	expected := "admin:secret@tcp(127.0.0.1:6032)/"
+	expected := "admin:secret@tcp(127.0.0.1:6032)/?timeout=1s&readTimeout=1s&writeTimeout=1s"
 	if client.dsn != expected {
 		t.Errorf("expected DSN %q, got %q", expected, client.dsn)
 	}

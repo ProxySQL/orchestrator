@@ -53,12 +53,13 @@ After a new master is promoted:
 1. Old master is removed from the writer hostgroup
 2. New master is added to the writer hostgroup
 3. If reader hostgroup is configured: new master is removed from readers
-4. `LOAD MYSQL SERVERS TO RUNTIME` is executed to apply changes immediately
-5. `SAVE MYSQL SERVERS TO DISK` is executed to persist changes
+4. If reader hostgroup is configured: old master is added to the reader hostgroup as `OFFLINE_SOFT`
+5. `LOAD MYSQL SERVERS TO RUNTIME` is executed to apply changes immediately
+6. `SAVE MYSQL SERVERS TO DISK` is executed to persist changes
 
 ### Failover Timeline
 
-```
+```text
 Dead master detected
   → OnFailureDetectionProcesses (scripts)
     → PreFailoverProcesses (scripts)
