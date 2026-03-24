@@ -23,7 +23,9 @@ func NewClient(address string, port int, user, password string, useTLS bool) *Cl
 		return nil
 	}
 	base := fmt.Sprintf("%s:%s@tcp(%s:%d)/", user, password, address, port)
-	params := "timeout=1s&readTimeout=1s&writeTimeout=1s"
+	// interpolateParams=true: ProxySQL Admin does not support prepared statements (COM_STMT_PREPARE).
+	// This tells the Go MySQL driver to interpolate parameters client-side.
+	params := "interpolateParams=true&timeout=1s&readTimeout=1s&writeTimeout=1s"
 	dsn := base + "?" + params
 	if useTLS {
 		dsn = base + "?tls=true&" + params
