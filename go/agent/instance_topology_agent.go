@@ -30,7 +30,7 @@ func SyncReplicaRelayLogs(instance, otherInstance *inst.Instance) (*inst.Instanc
 	var nextCoordinates *inst.BinlogCoordinates
 	var content string
 	onResponse := func(contentBytes []byte) {
-		json.Unmarshal(contentBytes, &content)
+		_ = json.Unmarshal(contentBytes, &content)
 	}
 	log.Debugf("SyncReplicaRelayLogs: stopping replication")
 
@@ -72,7 +72,7 @@ Cleanup:
 		return instance, log.Errore(err)
 	}
 	// and we're done (pending deferred functions)
-	inst.AuditOperation("align-via-relaylogs", &instance.Key, fmt.Sprintf("aligned %+v by relaylogs from %+v", instance.Key, otherInstance.Key))
+	_ = inst.AuditOperation("align-via-relaylogs", &instance.Key, fmt.Sprintf("aligned %+v by relaylogs from %+v", instance.Key, otherInstance.Key))
 
 	return instance, err
 }

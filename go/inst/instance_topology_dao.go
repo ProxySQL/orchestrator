@@ -598,7 +598,7 @@ func MaybeDisableSemiSyncMaster(replicaInstance *Instance) (*Instance, error) {
 		log.Infof("semi-sync: %s: setting rpl_semi_sync_master_enabled: %t", &replicaInstance.Key, false)
 		replicaInstance, err := SetSemiSyncMaster(&replicaInstance.Key, false)
 		if err != nil {
-			log.Warningf("semi-sync: %s: cannot disable rpl_semi_sync_master_enabled; that's not that bad though", &replicaInstance.Key)
+			_ = log.Warningf("semi-sync: %s: cannot disable rpl_semi_sync_master_enabled; that's not that bad though", &replicaInstance.Key)
 		}
 		return replicaInstance, err
 	}
@@ -1480,7 +1480,7 @@ func CheckAndInjectPseudoGTIDOnWriter(instance *Instance) (injected bool, err er
 	}
 	if !canInject {
 		if util.ClearToLog("CheckAndInjectPseudoGTIDOnWriter", instance.Key.StringCode()) {
-			log.Warningf("AutoPseudoGTID enabled, but orchestrator has no privileges on %+v to inject pseudo-gtid", instance.Key)
+			_ = log.Warningf("AutoPseudoGTID enabled, but orchestrator has no privileges on %+v to inject pseudo-gtid", instance.Key)
 		}
 
 		return injected, nil

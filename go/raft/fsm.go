@@ -33,7 +33,7 @@ type fsm Store
 func (f *fsm) Apply(l *raft.Log) interface{} {
 	var c storeCommand
 	if err := json.Unmarshal(l.Data, &c); err != nil {
-		log.Errorf("failed to unmarshal command: %s", err.Error())
+		_ = log.Errorf("failed to unmarshal command: %s", err.Error())
 	}
 
 	if c.Op == YieldCommand {

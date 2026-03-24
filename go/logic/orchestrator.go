@@ -659,7 +659,7 @@ func ContinuousDiscovery() {
 					}
 				} else {
 					// Take this opportunity to refresh yourself
-					go inst.LoadHostnameResolveCache()
+					go func() { _ = inst.LoadHostnameResolveCache() }()
 				}
 			}()
 		case <-raftCaretakingTick:
@@ -673,7 +673,7 @@ func ContinuousDiscovery() {
 					go ClearActiveRecoveries()
 					go ExpireBlockedRecoveries()
 					go AcknowledgeCrashedRecoveries()
-					go inst.ExpireInstanceAnalysisChangelog()
+					go func() { _ = inst.ExpireInstanceAnalysisChangelog() }()
 
 					go func() {
 						// This function is non re-entrant (it can only be running once at any point in time)
@@ -693,7 +693,7 @@ func ContinuousDiscovery() {
 		case <-snapshotTopologiesTick:
 			go func() {
 				if IsLeaderOrActive() {
-					go inst.SnapshotTopologies()
+					go func() { _ = inst.SnapshotTopologies() }()
 				}
 			}()
 		}
@@ -702,7 +702,7 @@ func ContinuousDiscovery() {
 
 func pollAgent(hostname string) error {
 	polledAgent, err := agent.GetAgent(hostname)
-	agent.UpdateAgentLastChecked(hostname)
+	_ = agent.UpdateAgentLastChecked(hostname)
 
 	if err != nil {
 		return log.Errore(err)
@@ -735,8 +735,8 @@ func ContinuousAgentsPoll() {
 		// See if we should also forget agents (lower frequency)
 		select {
 		case <-caretakingTick:
-			agent.ForgetLongUnseenAgents()
-			agent.FailStaleSeeds()
+			_ = agent.ForgetLongUnseenAgents()
+			_ = agent.FailStaleSeeds()
 		default:
 		}
 	}
@@ -745,6 +745,6 @@ func ContinuousAgentsPoll() {
 func discoverSeededAgents() {
 	for seededAgent := range agent.SeededAgents {
 		instanceKey := &inst.InstanceKey{Hostname: seededAgent.Hostname, Port: int(seededAgent.MySQLPort)}
-		go inst.ReadTopologyInstance(instanceKey)
+		go func() { _, _ = inst.ReadTopologyInstance(instanceKey) }()
 	}
 }

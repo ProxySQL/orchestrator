@@ -159,7 +159,7 @@ func ResolveHostname(hostname string) (string, error) {
 	if config.Config.RejectHostnameResolvePattern != "" {
 		// Reject, don't even cache
 		if matched, _ := regexp.MatchString(config.Config.RejectHostnameResolvePattern, resolvedHostname); matched {
-			log.Warningf("ResolveHostname: %+v resolved to %+v but rejected due to RejectHostnameResolvePattern '%+v'", hostname, resolvedHostname, config.Config.RejectHostnameResolvePattern)
+			_ = log.Warningf("ResolveHostname: %+v resolved to %+v but rejected due to RejectHostnameResolvePattern '%+v'", hostname, resolvedHostname, config.Config.RejectHostnameResolvePattern)
 			return hostname, nil
 		}
 	}

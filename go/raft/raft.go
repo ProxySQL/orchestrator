@@ -155,7 +155,7 @@ func Setup(applier CommandApplier, snapshotCreatorApplier SnapshotCreatorApplier
 	go func() {
 		for isTurnedLeader := range leaderCh {
 			if isTurnedLeader {
-				PublishCommand("leader-uri", thisLeaderURI)
+				_, _ = PublishCommand("leader-uri", thisLeaderURI)
 			}
 		}
 	}()
@@ -183,7 +183,7 @@ func normalizeRaftHostnameIP(host string) (string, error) {
 	ips, err := net.LookupIP(host)
 	if err != nil {
 		// resolve failed. But we don't want to fail the entire operation for that
-		log.Errore(err)
+		_ = log.Errore(err)
 		return host, nil
 	}
 	// resolve success!
@@ -400,10 +400,10 @@ func Monitor() {
 			if IsLeader() {
 				athenticationToken := util.NewToken().Short()
 				healthRequestAuthenticationTokenCache.Set(athenticationToken, true, cache.DefaultExpiration)
-				go PublishCommand("request-health-report", athenticationToken)
+				go func() { _, _ = PublishCommand("request-health-report", athenticationToken) }()
 			}
 		case err := <-fatalRaftErrorChan:
-			log.Fatale(err)
+			_ = log.Fatale(err)
 		}
 	}
 }

@@ -161,7 +161,7 @@ func (this *consulTxnStore) updateDatacenterKVPairs(wg *sync.WaitGroup, dc strin
 	if len(getTxnOps) > 0 {
 		_, getTxnResp, _, terr = this.client.Txn().Txn(getTxnOps, queryOptions)
 		if terr != nil {
-			log.Errorf("consulTxnStore.DistributePairs(): %v", terr)
+			_ = log.Errorf("consulTxnStore.DistributePairs(): %v", terr)
 		}
 		resp.getTxns++
 	}
@@ -194,7 +194,7 @@ func (this *consulTxnStore) updateDatacenterKVPairs(wg *sync.WaitGroup, dc strin
 	// update key-value pairs in a single Consul Transaction
 	if len(setTxnOps) > 0 {
 		if resp.err = this.doWriteTxn(setTxnOps, queryOptions); resp.err != nil {
-			log.Errorf("consulTxnStore.DistributePairs(): failed %v, error %v", kcCacheKeys, resp.err)
+			_ = log.Errorf("consulTxnStore.DistributePairs(): failed %v, error %v", kcCacheKeys, resp.err)
 			resp.failed = len(setTxnOps)
 		} else {
 			for _, txnOp := range setTxnOps {

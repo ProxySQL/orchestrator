@@ -83,7 +83,7 @@ func BeginDowntime(downtime *Downtime) (err error) {
 	if err != nil {
 		return log.Errore(err)
 	}
-	AuditOperation("begin-downtime", downtime.Key, fmt.Sprintf("owner: %s, reason: %s", downtime.Owner, downtime.Reason))
+	_ = AuditOperation("begin-downtime", downtime.Key, fmt.Sprintf("owner: %s, reason: %s", downtime.Owner, downtime.Reason))
 
 	return nil
 }

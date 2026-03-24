@@ -117,7 +117,7 @@ func (relStore *RelationalStore) Set(key []byte, val []byte) error {
 	}
 	_, err = stmt.Exec(key, val)
 	if err != nil {
-		tx.Rollback()
+		_ = tx.Rollback()
 		return err
 	}
 	err = tx.Commit()
@@ -219,7 +219,7 @@ func (relStore *RelationalStore) StoreLogs(logs []*raft.Log) error {
 	for _, raftLog := range logs {
 		_, err = stmt.Exec(raftLog.Index, raftLog.Term, int(raftLog.Type), raftLog.Data)
 		if err != nil {
-			tx.Rollback()
+			_ = tx.Rollback()
 			return err
 		}
 	}

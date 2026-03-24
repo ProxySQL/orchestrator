@@ -30,7 +30,7 @@ import (
 func HealthLive(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{"status": "alive"})
+	_ = json.NewEncoder(w).Encode(map[string]string{"status": "alive"})
 }
 
 // HealthReady checks whether the backend DB is connected and the health check
@@ -42,10 +42,10 @@ func HealthReady(w http.ResponseWriter, r *http.Request) {
 
 	if healthy {
 		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(map[string]string{"status": "ready"})
+		_ = json.NewEncoder(w).Encode(map[string]string{"status": "ready"})
 	} else {
 		w.WriteHeader(http.StatusServiceUnavailable)
-		json.NewEncoder(w).Encode(map[string]string{"status": "not ready"})
+		_ = json.NewEncoder(w).Encode(map[string]string{"status": "not ready"})
 	}
 }
 

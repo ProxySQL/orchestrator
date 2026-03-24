@@ -53,7 +53,7 @@ func init() {
 	_ = metrics.Register("instance_tls.read", readInstanceTLSCounter)
 	_ = metrics.Register("instance_tls.write", writeInstanceTLSCounter)
 	_ = metrics.Register("instance_tls.read_cache", readInstanceTLSCacheCounter)
-	metrics.Register("instance_tls.write_cache", writeInstanceTLSCacheCounter)
+	_ = metrics.Register("instance_tls.write_cache", writeInstanceTLSCacheCounter)
 }
 
 type SqlUtilsLogger struct {

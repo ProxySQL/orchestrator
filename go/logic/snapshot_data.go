@@ -156,7 +156,7 @@ func (this *SnapshotDataCreatorApplier) Restore(rc io.ReadCloser) error {
 		existingKeys, _ := inst.ReadAllInstanceKeys()
 		for _, existingKey := range existingKeys {
 			if !snapshotInstanceKeyMap.HasKey(existingKey) {
-				inst.ForgetInstance(&existingKey)
+				_ = inst.ForgetInstance(&existingKey)
 				discardedKeys++
 			}
 		}

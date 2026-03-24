@@ -558,7 +558,7 @@ func readRecoveries(whereCondition string, limit string, args []interface{}) ([]
 		topologyRecovery.AnalysisEntry.ClusterDetails.ClusterName = m.GetString("cluster_name")
 		topologyRecovery.AnalysisEntry.ClusterDetails.ClusterAlias = m.GetString("cluster_alias")
 		topologyRecovery.AnalysisEntry.CountReplicas = m.GetUint("count_affected_slaves")
-		topologyRecovery.AnalysisEntry.ReadReplicaHostsFromString(m.GetString("slave_hosts"))
+		_ = topologyRecovery.AnalysisEntry.ReadReplicaHostsFromString(m.GetString("slave_hosts"))
 
 		topologyRecovery.SuccessorKey = &inst.InstanceKey{}
 		topologyRecovery.SuccessorKey.Hostname = m.GetString("successor_hostname")
@@ -568,8 +568,8 @@ func readRecoveries(whereCondition string, limit string, args []interface{}) ([]
 		topologyRecovery.AnalysisEntry.ClusterDetails.ReadRecoveryInfo()
 
 		topologyRecovery.AllErrors = strings.Split(m.GetString("all_errors"), "\n")
-		topologyRecovery.LostReplicas.ReadCommaDelimitedList(m.GetString("lost_slaves"))
-		topologyRecovery.ParticipatingInstanceKeys.ReadCommaDelimitedList(m.GetString("participating_instances"))
+		_ = topologyRecovery.LostReplicas.ReadCommaDelimitedList(m.GetString("lost_slaves"))
+		_ = topologyRecovery.ParticipatingInstanceKeys.ReadCommaDelimitedList(m.GetString("participating_instances"))
 
 		topologyRecovery.Acknowledged = m.GetBool("acknowledged")
 		topologyRecovery.AcknowledgedAt = m.GetString("acknowledged_at")
@@ -730,7 +730,7 @@ func readFailureDetections(whereCondition string, limit string, args []interface
 		failureDetection.AnalysisEntry.ClusterDetails.ClusterName = m.GetString("cluster_name")
 		failureDetection.AnalysisEntry.ClusterDetails.ClusterAlias = m.GetString("cluster_alias")
 		failureDetection.AnalysisEntry.CountReplicas = m.GetUint("count_affected_slaves")
-		failureDetection.AnalysisEntry.ReadReplicaHostsFromString(m.GetString("slave_hosts"))
+		_ = failureDetection.AnalysisEntry.ReadReplicaHostsFromString(m.GetString("slave_hosts"))
 		failureDetection.AnalysisEntry.StartActivePeriod = m.GetString("start_active_period")
 
 		failureDetection.RelatedRecoveryId = m.GetInt64("related_recovery_id")

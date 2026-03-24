@@ -129,7 +129,7 @@ func setupMessagePrefix() {
 		return
 	}
 	if act != "FQDN" && act != "hostname" && act != "custom" {
-		log.Warning("PrependMessagesWithOrcIdentity option has unsupported value '%+v'")
+		_ = log.Warning("PrependMessagesWithOrcIdentity option has unsupported value '%+v'")
 		return
 	}
 
@@ -139,7 +139,7 @@ func setupMessagePrefix() {
 
 	if act == "FQDN" {
 		if hostname, err = fqdn.FqdnHostname(); err != nil {
-			log.Warning("Failed to get Orchestrator's FQDN. Falling back to hostname.")
+			_ = log.Warning("Failed to get Orchestrator's FQDN. Falling back to hostname.")
 			hostname = ""
 			fallbackActive = true
 		}
@@ -147,7 +147,7 @@ func setupMessagePrefix() {
 	if fallbackActive || act == "hostname" {
 		fallbackActive = false
 		if hostname, err = os.Hostname(); err != nil {
-			log.Warning("Failed to get Orchestrator's FQDN. Falling back to custom prefix (if provided).")
+			_ = log.Warning("Failed to get Orchestrator's FQDN. Falling back to custom prefix (if provided).")
 			hostname = ""
 			fallbackActive = true
 		}
@@ -287,7 +287,7 @@ func (this *HttpAPI) Discover(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if orcraft.IsRaftEnabled() {
-		orcraft.PublishCommand("discover", instanceKey)
+		_, _ = orcraft.PublishCommand("discover", instanceKey)
 	} else {
 		logic.DiscoverInstance(instanceKey)
 	}
@@ -358,9 +358,9 @@ func (this *HttpAPI) ForgetCluster(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if orcraft.IsRaftEnabled() {
-		orcraft.PublishCommand("forget-cluster", clusterName)
+		_, _ = orcraft.PublishCommand("forget-cluster", clusterName)
 	} else {
-		inst.ForgetCluster(clusterName)
+		_ = inst.ForgetCluster(clusterName)
 	}
 	Respond(w, &APIResponse{Code: OK, Message: fmt.Sprintf("Cluster forgotten: %+v", clusterName)})
 }
@@ -375,7 +375,7 @@ func (this *HttpAPI) Resolve(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if conn, err := net.Dial("tcp", instanceKey.DisplayString()); err == nil {
-		conn.Close()
+		_ = conn.Close()
 	} else {
 		Respond(w, &APIResponse{Code: ERROR, Message: err.Error()})
 		return
@@ -3020,7 +3020,7 @@ func (this *HttpAPI) RaftYield(w http.ResponseWriter, r *http.Request) {
 		Respond(w, &APIResponse{Code: ERROR, Message: "raft-yield: not running with raft setup"})
 		return
 	}
-	orcraft.PublishYield(chi.URLParam(r, "node"))
+	_, _ = orcraft.PublishYield(chi.URLParam(r, "node"))
 	Respond(w, &APIResponse{Code: OK, Message: "Asynchronously yielded"})
 }
 
@@ -3035,7 +3035,7 @@ func (this *HttpAPI) RaftYieldHint(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	hint := chi.URLParam(r, "hint")
-	orcraft.PublishYieldHostnameHint(hint)
+	_, _ = orcraft.PublishYieldHostnameHint(hint)
 	Respond(w, &APIResponse{Code: OK, Message: fmt.Sprintf("Asynchronously yielded by hint %s", hint), Details: hint})
 }
 

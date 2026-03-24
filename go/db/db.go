@@ -325,11 +325,11 @@ func deployStatements(db *sql.DB, queries []string) error {
 	}
 	if config.Config.IsMySQL() {
 		if _, err := tx.Exec(`set session sql_mode=?`, originalSqlMode); err != nil {
-			log.Fatale(err)
+			_ = log.Fatale(err)
 		}
 	}
 	if err := tx.Commit(); err != nil {
-		log.Fatale(err)
+		_ = log.Fatale(err)
 	}
 	return nil
 }

@@ -342,7 +342,7 @@ func (f *FileSnapshotStore) ReapSnapshots(currentSnapshotMeta *fileSnapshotMeta)
 	for _, snapshot := range snapshots {
 		if snapshot.Term > currentSnapshotMeta.Term ||
 			snapshot.Term == currentSnapshotMeta.Term && snapshot.Index > currentSnapshotMeta.Index {
-			reapSnapshot(snapshot)
+			_ = reapSnapshot(snapshot)
 			deprecatedSnapshotsReaped = true
 		}
 	}
@@ -356,7 +356,7 @@ func (f *FileSnapshotStore) ReapSnapshots(currentSnapshotMeta *fileSnapshotMeta)
 		}
 	}
 	for i := f.retain; i < len(snapshots); i++ {
-		reapSnapshot(snapshots[i])
+		_ = reapSnapshot(snapshots[i])
 	}
 	return nil
 }
@@ -460,7 +460,7 @@ func (s *FileSnapshotSink) writeMeta() error {
 	if err != nil {
 		return err
 	}
-	defer fh.Close()
+	defer func() { _ = fh.Close() }()
 
 	// Buffer the file IO
 	buffered := bufio.NewWriter(fh)

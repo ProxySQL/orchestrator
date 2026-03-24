@@ -90,7 +90,7 @@ func (this *HttpAgentsAPI) AgentsHosts(w http.ResponseWriter, r *http.Request) {
 
 	if r.URL.Query().Get("format") == "txt" {
 		w.Header().Set("Content-Type", "text/plain")
-		w.Write([]byte(strings.Join(hostnames, "\n")))
+		_, _ = w.Write([]byte(strings.Join(hostnames, "\n")))
 	} else {
 		renderJSON(w, 200, hostnames)
 	}
@@ -111,7 +111,7 @@ func (this *HttpAgentsAPI) AgentsInstances(w http.ResponseWriter, r *http.Reques
 
 	if r.URL.Query().Get("format") == "txt" {
 		w.Header().Set("Content-Type", "text/plain")
-		w.Write([]byte(strings.Join(hostnames, "\n")))
+		_, _ = w.Write([]byte(strings.Join(hostnames, "\n")))
 	} else {
 		renderJSON(w, 200, hostnames)
 	}

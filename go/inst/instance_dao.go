@@ -132,10 +132,10 @@ var writeBufferLatency = stopwatch.NewNamedStopwatch()
 var emptyQuotesRegexp = regexp.MustCompile(`^""$`)
 
 func init() {
-	metrics.Register("instance.access_denied", accessDeniedCounter)
-	metrics.Register("instance.read_topology", readTopologyInstanceCounter)
-	metrics.Register("instance.read", readInstanceCounter)
-	metrics.Register("instance.write", writeInstanceCounter)
+	_ = metrics.Register("instance.access_denied", accessDeniedCounter)
+	_ = metrics.Register("instance.read_topology", readTopologyInstanceCounter)
+	_ = metrics.Register("instance.read", readInstanceCounter)
+	_ = metrics.Register("instance.write", writeInstanceCounter)
 	_ = writeBufferLatency.AddMany([]string{"wait", "write"})
 	writeBufferLatency.Start("wait")
 
@@ -1103,7 +1103,7 @@ Cleanup:
 				redactedMasterExecutedGtidSet, _ := NewOracleGtidSet(instance.masterExecutedGtidSet)
 				redactedMasterExecutedGtidSet.RemoveUUID(instance.MasterUUID)
 
-				db.QueryRow("select gtid_subtract(?, ?)", redactedExecutedGtidSet.String(), redactedMasterExecutedGtidSet.String()).Scan(&instance.GtidErrant)
+				_ = db.QueryRow("select gtid_subtract(?, ?)", redactedExecutedGtidSet.String(), redactedMasterExecutedGtidSet.String()).Scan(&instance.GtidErrant)
 			}
 		}
 	}
@@ -2102,14 +2102,14 @@ func ReviewUnseenInstances() error {
 
 		masterHostname, err := ResolveHostname(instance.MasterKey.Hostname)
 		if err != nil {
-			log.Errore(err)
+			_ = log.Errore(err)
 			continue
 		}
 		instance.MasterKey.Hostname = masterHostname
 		savedClusterName := instance.ClusterName
 
 		if err := ReadInstanceClusterAttributes(instance); err != nil {
-			log.Errore(err)
+			_ = log.Errore(err)
 		} else if instance.ClusterName != savedClusterName {
 			updateInstanceClusterName(instance)
 			operations++
@@ -2346,7 +2346,7 @@ func ReadCountMySQLSnapshots(hostnames []string) (map[string]int, error) {
 	})
 
 	if err != nil {
-		log.Errore(err)
+		_ = log.Errore(err)
 	}
 	return res, err
 }
@@ -2542,7 +2542,7 @@ func ReadAllInstanceKeys() ([]InstanceKey, error) {
 	err := db.QueryOrchestrator(query, sqlutils.Args(), func(m sqlutils.RowMap) error {
 		instanceKey, merr := NewResolveInstanceKey(m.GetString("hostname"), m.GetInt("port"))
 		if merr != nil {
-			log.Errore(merr)
+			_ = log.Errore(merr)
 		} else if !InstanceIsForgotten(instanceKey) {
 			// only if not in "forget" cache
 			res = append(res, *instanceKey)
@@ -2607,7 +2607,7 @@ func ReadOutdatedInstanceKeys() ([]InstanceKey, error) {
 	err := db.QueryOrchestrator(query, args, func(m sqlutils.RowMap) error {
 		instanceKey, merr := NewResolveInstanceKey(m.GetString("hostname"), m.GetInt("port"))
 		if merr != nil {
-			log.Errore(merr)
+			_ = log.Errore(merr)
 		} else if !InstanceIsForgotten(instanceKey) {
 			// only if not in "forget" cache
 			res = append(res, *instanceKey)
@@ -3460,7 +3460,7 @@ func PopulateGroupReplicationInformation(instance *Instance, db *sql.DB) error {
 			}
 			groupMemberKey, err := NewResolveInstanceKey(host, int(port))
 			if err != nil {
-				log.Errorf("Unable to resolve instance for group member %v:%v", host, port)
+				_ = log.Errorf("Unable to resolve instance for group member %v:%v", host, port)
 				continue
 			}
 			// Set the replication group primary from what we find in performance_schema.replication_group_members for
@@ -3478,7 +3478,7 @@ func PopulateGroupReplicationInformation(instance *Instance, db *sql.DB) error {
 				instance.AddGroupMemberKey(groupMemberKey) // This helps us keep info on all members of the same group as the instance
 			}
 		} else {
-			log.Errorf("Unable to scan row  group replication information while processing %+v, skipping the "+
+			_ = log.Errorf("Unable to scan row  group replication information while processing %+v, skipping the "+
 				"row and continuing: %+v", instance.Key, err)
 		}
 	}

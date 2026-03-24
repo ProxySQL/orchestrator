@@ -260,7 +260,7 @@ func Cli(command string, strict bool, instance string, destination string, owner
 		{
 			instanceKey, _ = inst.FigureInstanceKey(instanceKey, thisInstanceKey)
 			if instanceKey == nil {
-				log.Fatal("Cannot deduce instance:", instance)
+				_ = log.Fatal("Cannot deduce instance:", instance)
 			}
 			validateInstanceIsFound(instanceKey)
 
@@ -292,7 +292,7 @@ func Cli(command string, strict bool, instance string, destination string, owner
 		{
 			instanceKey, _ = inst.FigureInstanceKey(instanceKey, thisInstanceKey)
 			if instanceKey == nil {
-				log.Fatal("Cannot deduce instance:", instance)
+				_ = log.Fatal("Cannot deduce instance:", instance)
 			}
 
 			movedReplicas, _, errs, err := inst.MoveUpReplicas(instanceKey, pattern)
@@ -311,7 +311,7 @@ func Cli(command string, strict bool, instance string, destination string, owner
 		{
 			instanceKey, _ = inst.FigureInstanceKey(instanceKey, thisInstanceKey)
 			if destinationKey == nil {
-				log.Fatal("Cannot deduce destination/sibling:", destination)
+				_ = log.Fatal("Cannot deduce destination/sibling:", destination)
 			}
 			_, err := inst.MoveBelow(instanceKey, destinationKey)
 			if err != nil {
@@ -401,7 +401,7 @@ func Cli(command string, strict bool, instance string, destination string, owner
 
 			_, promotedBinlogServer, err := inst.RegroupReplicasBinlogServers(instanceKey, false)
 			if promotedBinlogServer == nil {
-				log.Fatalf("Could not regroup binlog server replicas of %+v; error: %+v", *instanceKey, err)
+				_ = log.Fatalf("Could not regroup binlog server replicas of %+v; error: %+v", *instanceKey, err)
 			}
 			fmt.Println(promotedBinlogServer.Key.DisplayString())
 			if err != nil {
