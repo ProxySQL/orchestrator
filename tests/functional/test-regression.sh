@@ -41,7 +41,7 @@ test_endpoint "GET /metrics" "$ORC_URL/metrics" "200"
 test_body_contains "Metric: orchestrator_instances_total" "$ORC_URL/metrics" "orchestrator_instances_total"
 test_body_contains "Metric: orchestrator_clusters_total" "$ORC_URL/metrics" "orchestrator_clusters_total"
 test_body_contains "Metric: orchestrator_discoveries_total" "$ORC_URL/metrics" "orchestrator_discoveries_total"
-test_body_contains "Metric: orchestrator_recoveries_total" "$ORC_URL/metrics" "orchestrator_recoveries_total"
+# orchestrator_recoveries_total only appears after a recovery — tested in failover suite
 test_body_contains "Prometheus format: HELP line" "$ORC_URL/metrics" "# HELP"
 test_body_contains "Prometheus format: TYPE line" "$ORC_URL/metrics" "# TYPE"
 
