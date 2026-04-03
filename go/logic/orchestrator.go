@@ -558,6 +558,15 @@ func injectSeeds(seedOnce *sync.Once) {
 // purged and forgotten.
 func ContinuousDiscovery() {
 	log.Infof("continuous discovery: setting up")
+
+	// Initialize database provider based on configuration
+	if config.Config.ProviderType == "postgresql" {
+		inst.SetProvider(inst.NewPostgreSQLProvider())
+		log.Infof("continuous discovery: using PostgreSQL provider")
+	} else {
+		log.Infof("continuous discovery: using MySQL provider (default)")
+	}
+
 	continuousDiscoveryStartTime := time.Now()
 	checkAndRecoverWaitPeriod := 3 * instancePollSecondsDuration()
 	recentDiscoveryOperationKeys = cache.New(instancePollSecondsDuration(), time.Second)

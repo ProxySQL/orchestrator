@@ -79,6 +79,7 @@ type Configuration struct {
 	PostgreSQLTopologyUser                     string // Username for connecting to PostgreSQL topology instances
 	PostgreSQLTopologyPassword                 string // Password for connecting to PostgreSQL topology instances
 	PostgreSQLSSLMode                          string // SSL mode for PostgreSQL connections: disable, require, verify-ca, verify-full. Default: "require"
+	ProviderType                               string // Database provider type: "mysql" (default) or "postgresql"
 	MySQLTopologyCredentialsConfigFile         string // my.cnf style configuration file from where to pick credentials. Expecting `user`, `password` under `[client]` section
 	MySQLTopologySSLPrivateKeyFile             string // Private key file used to authenticate with a Topology mysql instance with TLS
 	MySQLTopologySSLCertFile                   string // Certificate PEM file used to authenticate with a Topology mysql instance with TLS
@@ -318,6 +319,7 @@ func newConfiguration() *Configuration {
 		MySQLTopologyUseMutualTLS:                  false,
 		MySQLTopologyUseMixedTLS:                   true,
 		PostgreSQLSSLMode:                          "require",
+		ProviderType:                               "mysql",
 		MySQLTopologyMaxAllowedPacket:              -1,
 		MySQLOrchestratorUseMutualTLS:              false,
 		MySQLConnectTimeoutSeconds:                 2,
