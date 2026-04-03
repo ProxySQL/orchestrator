@@ -1220,6 +1220,11 @@ func ReadReplicationGroupPrimary(instance *Instance) (err error) {
 // It is a non-recursive function and so-called-recursion is performed upon periodic reading of
 // instances.
 func ReadInstanceClusterAttributes(instance *Instance) (err error) {
+	// PostgreSQL provider sets ClusterName directly during discovery.
+	// Skip the master-lookup logic which is MySQL-specific.
+	if config.Config.ProviderType == "postgresql" {
+		return nil
+	}
 	var masterOrGroupPrimaryInstanceKey InstanceKey
 	var masterOrGroupPrimaryClusterName string
 	var masterOrGroupPrimarySuggestedClusterAlias string
