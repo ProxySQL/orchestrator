@@ -183,27 +183,44 @@ func readPostgreSQLStandbyInfo(db *sql.DB, instance *Instance) error {
 		instance.SlaveLagSeconds = instance.ReplicationLagSeconds
 	}
 
-	// Extract primary host:port — prefer sender_host/sender_port (direct), fall back to conninfo parsing
+	// Extract primary host:port — try multiple sources
+	masterFound := false
+	// Source 1: sender_host/sender_port from pg_stat_wal_receiver
 	if senderHost.Valid && senderHost.String != "" {
 		port := int(senderPort.Int64)
 		if port == 0 {
 			port = 5432
 		}
-		instance.MasterKey = InstanceKey{
-			Hostname: senderHost.String,
-			Port:     port,
-		}
-	} else if conninfo.Valid {
+		instance.MasterKey = InstanceKey{Hostname: senderHost.String, Port: port}
+		masterFound = true
+	}
+	// Source 2: conninfo from pg_stat_wal_receiver
+	if !masterFound && conninfo.Valid && conninfo.String != "" {
 		host, port := parseConnInfo(conninfo.String)
 		if host != "" {
 			if port == 0 {
 				port = 5432
 			}
-			instance.MasterKey = InstanceKey{
-				Hostname: host,
-				Port:     port,
+			instance.MasterKey = InstanceKey{Hostname: host, Port: port}
+			masterFound = true
+		}
+	}
+	// Source 3: parse primary_conninfo from postgresql.auto.conf via SHOW
+	if !masterFound {
+		var primaryConninfo sql.NullString
+		if err := db.QueryRow("SELECT setting FROM pg_settings WHERE name = 'primary_conninfo'").Scan(&primaryConninfo); err == nil && primaryConninfo.Valid {
+			host, port := parseConnInfo(primaryConninfo.String)
+			if host != "" {
+				if port == 0 {
+					port = 5432
+				}
+				instance.MasterKey = InstanceKey{Hostname: host, Port: port}
+				masterFound = true
 			}
 		}
+	}
+	if !masterFound {
+		log.Warningf("PostgreSQL standby %s:%d: could not determine master host", instance.Key.Hostname, instance.Key.Port)
 	}
 
 	instance.HasReplicationCredentials = true
