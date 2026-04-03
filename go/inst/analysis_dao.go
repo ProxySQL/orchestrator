@@ -53,6 +53,10 @@ func initializeAnalysisDaoPostConfiguration() {
 
 // GetReplicationAnalysis will check for replication problems (dead master; unreachable master; etc)
 func GetReplicationAnalysis(clusterName string, hints *ReplicationAnalysisHints) ([]ReplicationAnalysis, error) {
+	if config.Config.ProviderType == "postgresql" {
+		return GetPostgreSQLReplicationAnalysis(clusterName, hints)
+	}
+
 	result := []ReplicationAnalysis{}
 
 	args := sqlutils.Args(config.Config.ReasonableLockedSemiSyncMasterSeconds, ValidSecondsFromSeenToLastAttemptedCheck(), config.Config.ReasonableReplicationLagSeconds, clusterName)

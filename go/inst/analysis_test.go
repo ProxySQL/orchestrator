@@ -30,6 +30,34 @@ func init() {
 	log.SetLevel(log.ERROR)
 }
 
+func TestPostgreSQLAnalysisCodes(t *testing.T) {
+	// Verify PostgreSQL analysis codes are distinct strings
+	codes := []AnalysisCode{
+		DeadPrimary,
+		DeadPrimaryAndSomeStandbys,
+		StandbyNotReplicating,
+		AllStandbyNotReplicating,
+		UnreachablePrimary,
+	}
+	seen := make(map[AnalysisCode]bool)
+	for _, code := range codes {
+		if code == "" {
+			t.Errorf("empty analysis code found")
+		}
+		if seen[code] {
+			t.Errorf("duplicate analysis code: %s", code)
+		}
+		seen[code] = true
+	}
+	// Verify they don't collide with MySQL codes
+	mysqlCodes := []AnalysisCode{DeadMaster, DeadMasterAndSomeReplicas, UnreachableMaster, NoProblem}
+	for _, mc := range mysqlCodes {
+		if seen[mc] {
+			t.Errorf("PostgreSQL code collides with MySQL code: %s", mc)
+		}
+	}
+}
+
 func TestGetAnalysisInstanceType(t *testing.T) {
 	{
 		analysis := &ReplicationAnalysis{}

@@ -226,6 +226,9 @@ func logReadTopologyInstanceError(instanceKey *InstanceKey, hint string, err err
 // server and writes the result synchronously to the orchestrator
 // backend.
 func ReadTopologyInstance(instanceKey *InstanceKey) (*Instance, error) {
+	if config.Config.ProviderType == "postgresql" {
+		return ReadPostgreSQLTopologyInstance(instanceKey)
+	}
 	instance, skipped, err := ReadTopologyInstanceBufferable(instanceKey, false, nil)
 	if skipped {
 		if config.Config.EnableDiscoveryFiltersLogs {
@@ -351,6 +354,18 @@ func expectReplicationThreadsState(instance *Instance, instanceKey *InstanceKey,
 // - writes are optionally buffered.
 // - timing information can be collected for the stages performed.
 func ReadTopologyInstanceBufferable(instanceKey *InstanceKey, bufferWrites bool, latency *stopwatch.NamedStopwatch) (inst *Instance, skipped bool, err error) {
+	// PostgreSQL path: delegate to PG-specific discovery and skip MySQL logic entirely
+	if config.Config.ProviderType == "postgresql" {
+		if latency != nil {
+			latency.Start("instance")
+		}
+		pgInst, pgErr := ReadPostgreSQLTopologyInstance(instanceKey)
+		if latency != nil {
+			latency.Stop("instance")
+		}
+		return pgInst, false, pgErr
+	}
+
 	defer func() {
 		if r := recover(); r != nil {
 			err = logReadTopologyInstanceError(instanceKey, "Unexpected, aborting", fmt.Errorf("%+v", r))

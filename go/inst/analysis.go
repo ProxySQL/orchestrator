@@ -59,6 +59,13 @@ const (
 	BinlogServerFailingToConnectToMaster                    AnalysisCode = "BinlogServerFailingToConnectToMaster"
 	// Group replication problems
 	DeadReplicationGroupMemberWithReplicas = "DeadReplicationGroupMemberWithReplicas"
+
+	// PostgreSQL streaming replication problems
+	DeadPrimary                AnalysisCode = "DeadPrimary"
+	DeadPrimaryAndSomeStandbys AnalysisCode = "DeadPrimaryAndSomeStandbys"
+	StandbyNotReplicating      AnalysisCode = "StandbyNotReplicating"
+	AllStandbyNotReplicating   AnalysisCode = "AllStandbyNotReplicating"
+	UnreachablePrimary         AnalysisCode = "UnreachablePrimary"
 )
 
 const (
