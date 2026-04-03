@@ -54,7 +54,7 @@ func GetPostgreSQLReplicationAnalysis(clusterName string, hints *ReplicationAnal
 			master_instance.binary_log_file,
 			master_instance.binary_log_pos,
 			0 AS is_downtimed,
-			master_instance.downtime_end_timestamp,
+			'' AS downtime_end_timestamp,
 			COUNT(replica_instance.server_id) AS count_replicas,
 			IFNULL(
 				SUM(
