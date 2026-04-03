@@ -131,7 +131,14 @@ sleep 3
 curl -s "$ORC_URL/api/discover/172.30.0.21/5432" > /dev/null 2>&1
 
 # Debug: dump cluster state before and during failover
-echo "DEBUG: Cluster state before failover:"
+echo "DEBUG: ALL instances in PG orchestrator:"
+curl -s "$ORC_URL/api/all-instances" 2>/dev/null | python3 -c "
+import json, sys
+for i in json.load(sys.stdin):
+    k=i['Key']; m=i['MasterKey']
+    print(f'  {k[\"Hostname\"]}:{k[\"Port\"]} Cluster={i[\"ClusterName\"]} RO={i[\"ReadOnly\"]} Master={m[\"Hostname\"]}:{m[\"Port\"]}')" 2>/dev/null || echo "  (failed)"
+
+echo "DEBUG: Cluster state before failover (cluster=$PG_CLUSTER):"
 curl -s "$ORC_URL/api/cluster/$PG_CLUSTER" 2>/dev/null | python3 -c "
 import json, sys
 for i in json.load(sys.stdin):
