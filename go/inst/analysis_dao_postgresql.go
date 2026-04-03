@@ -110,6 +110,7 @@ func GetPostgreSQLReplicationAnalysis(clusterName string, hints *ReplicationAnal
 			Port:     m.GetInt("port"),
 		}
 		a.ClusterDetails.ClusterName = m.GetString("cluster_name")
+		a.ClusterDetails.ReadRecoveryInfo()
 		a.AnalyzedInstanceDataCenter = m.GetString("data_center")
 		a.AnalyzedInstanceRegion = m.GetString("region")
 		a.AnalyzedInstancePhysicalEnvironment = m.GetString("physical_environment")
