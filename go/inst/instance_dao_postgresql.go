@@ -113,11 +113,14 @@ func ReadPostgreSQLTopologyInstance(instanceKey *InstanceKey) (*Instance, error)
 func readPostgreSQLStandbyInfo(db *sql.DB, instance *Instance) error {
 	// Get WAL receiver status and source connection info
 	var status, conninfo sql.NullString
+	var senderHost sql.NullString
+	var senderPort sql.NullInt64
 	err := db.QueryRow(`
-		SELECT status, conninfo
+		SELECT status, conninfo,
+			sender_host, sender_port
 		FROM pg_stat_wal_receiver
 		LIMIT 1
-	`).Scan(&status, &conninfo)
+	`).Scan(&status, &conninfo, &senderHost, &senderPort)
 
 	walReceiverActive := false
 	if err == sql.ErrNoRows {
@@ -180,12 +183,21 @@ func readPostgreSQLStandbyInfo(db *sql.DB, instance *Instance) error {
 		instance.SlaveLagSeconds = instance.ReplicationLagSeconds
 	}
 
-	// Extract primary host:port from conninfo
-	if conninfo.Valid {
+	// Extract primary host:port — prefer sender_host/sender_port (direct), fall back to conninfo parsing
+	if senderHost.Valid && senderHost.String != "" {
+		port := int(senderPort.Int64)
+		if port == 0 {
+			port = 5432
+		}
+		instance.MasterKey = InstanceKey{
+			Hostname: senderHost.String,
+			Port:     port,
+		}
+	} else if conninfo.Valid {
 		host, port := parseConnInfo(conninfo.String)
 		if host != "" {
 			if port == 0 {
-				port = config.Config.DefaultInstancePort
+				port = 5432
 			}
 			instance.MasterKey = InstanceKey{
 				Hostname: host,
