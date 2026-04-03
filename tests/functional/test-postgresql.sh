@@ -21,9 +21,12 @@ wait_for_orchestrator || { echo "FATAL: PostgreSQL orchestrator not reachable at
 echo ""
 echo "--- Discovery tests ---"
 
-# Discover by IP address so all instances share a consistent address scheme
+# Discover primary first, wait for it to be written to DB, then discover standby.
+# This ensures the standby inherits the primary's cluster_name during WriteInstance.
 echo "Seeding discovery with 172.30.0.20:5432 (pgprimary)..."
 curl -s "$ORC_URL/api/discover/172.30.0.20/5432" > /dev/null
+sleep 5
+echo "Seeding discovery with 172.30.0.21:5432 (pgstandby1)..."
 curl -s "$ORC_URL/api/discover/172.30.0.21/5432" > /dev/null
 
 echo "Waiting for topology discovery..."
