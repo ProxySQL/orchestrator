@@ -18,6 +18,7 @@ services:
       retries: 30
     networks:
       orchnet:
+        ipv4_address: 172.30.0.10
         aliases:
           - mysql1
 
@@ -41,6 +42,7 @@ services:
       retries: 30
     networks:
       orchnet:
+        ipv4_address: 172.30.0.11
         aliases:
           - mysql2
 
@@ -64,6 +66,7 @@ services:
       retries: 30
     networks:
       orchnet:
+        ipv4_address: 172.30.0.12
         aliases:
           - mysql3
 
@@ -89,6 +92,7 @@ services:
       retries: 30
     networks:
       orchnet:
+        ipv4_address: 172.30.0.13
         aliases:
           - proxysql
 
@@ -109,6 +113,7 @@ services:
       retries: 30
     networks:
       orchnet:
+        ipv4_address: 172.30.0.20
         aliases:
           - pgprimary
 
@@ -134,6 +139,7 @@ services:
       retries: 30
     networks:
       orchnet:
+        ipv4_address: 172.30.0.21
         aliases:
           - pgstandby1
 
@@ -164,6 +170,7 @@ services:
       start_period: 15s
     networks:
       orchnet:
+        ipv4_address: 172.30.0.30
         aliases:
           - orchestrator
 
@@ -194,9 +201,13 @@ services:
       start_period: 15s
     networks:
       orchnet:
+        ipv4_address: 172.30.0.31
         aliases:
           - orchestrator-pg
 
 networks:
   orchnet:
     driver: bridge
+    ipam:
+      config:
+        - subnet: 172.30.0.0/24

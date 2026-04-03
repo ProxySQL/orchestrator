@@ -111,20 +111,20 @@ test_body_contains "/api/clusters contains PG cluster" "$ORC_URL/api/clusters" "
 # ----------------------------------------------------------------
 echo ""
 echo "--- Failover test: kill pgprimary ---"
-# NOTE: PG failover in Docker Compose is unreliable because stopping the primary
-# container breaks Docker DNS for the entire network, making the standby unreachable
-# too. This causes orchestrator to see DeadMasterWithoutReplicas (no standbys to
-# promote). The MySQL failover test doesn't have this issue because MySQL containers
-# use static IPs and hostname resolution survives container stops.
-# TODO: Fix by using static IPs or a separate DNS server in docker-compose.
+# Static IPs are assigned in docker-compose.yml so the standby remains reachable
+# even when the primary container stops.
 
 echo "Stopping pgprimary container..."
 $COMPOSE stop pgprimary
 
-echo "Waiting for orchestrator to detect DeadPrimary and recover (max 90s)..."
+# Re-seed standby discovery by IP to ensure orchestrator can still reach it
+sleep 2
+curl -s "$ORC_URL/api/discover/172.30.0.21/5432" > /dev/null 2>&1
+
+echo "Waiting for orchestrator to detect DeadPrimary and recover (max 120s)..."
 RECOVERED=false
 SUCCESSOR=""
-for i in $(seq 1 90); do
+for i in $(seq 1 120); do
     RECOVERIES=$(curl -s "$ORC_URL/api/v2/recoveries" 2>/dev/null)
     HAS_RECOVERY=$(echo "$RECOVERIES" | python3 -c "
 import json, sys
@@ -151,7 +151,7 @@ done
 if [ "$RECOVERED" = "true" ]; then
     pass "DeadPrimary detected and recovered (successor: $SUCCESSOR)"
 else
-    skip "DeadPrimary failover (Docker DNS limitation — see comment above)"
+    fail "DeadPrimary: no recovery detected within 120s"
     # Dump debug info
     echo "  DEBUG: Recent recoveries:"
     curl -s "$ORC_URL/api/v2/recoveries" 2>/dev/null | python3 -m json.tool 2>/dev/null | head -30

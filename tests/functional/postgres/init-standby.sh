@@ -7,6 +7,7 @@ set -e
 
 PGDATA="/var/lib/postgresql/data"
 PRIMARY_HOST="pgprimary"
+PRIMARY_IP="172.30.0.20"
 PRIMARY_PORT=5432
 
 echo "Waiting for primary to accept connections..."
@@ -25,8 +26,10 @@ gosu postgres pg_basebackup \
 
 # pg_basebackup with -R creates standby.signal and sets primary_conninfo
 # in postgresql.auto.conf. Override to ensure correct connection string.
+# Use IP address for primary_conninfo so it survives primary container restarts
+# (Docker DNS breaks when a container stops, but IP routing still works)
 cat > "$PGDATA/postgresql.auto.conf" <<EOF
-primary_conninfo = 'host=$PRIMARY_HOST port=$PRIMARY_PORT user=repl password=repl_pass'
+primary_conninfo = 'host=$PRIMARY_IP port=$PRIMARY_PORT user=repl password=repl_pass'
 EOF
 
 touch "$PGDATA/standby.signal"
