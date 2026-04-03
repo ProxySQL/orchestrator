@@ -181,6 +181,26 @@ Alternatively, provide credentials directly in the config (less secure):
 - **MySQL topology access**: Orchestrator must be able to reach every MySQL server it monitors on their MySQL ports.
 - **MySQL backend access** (if using MySQL backend): Orchestrator must reach its backend database.
 - **ProxySQL admin port** (default 6032): Required only if ProxySQL integration is enabled.
+- **PostgreSQL topology access** (if using PostgreSQL mode): Orchestrator must be able to reach every PostgreSQL instance on its listen port (default 5432).
+
+### PostgreSQL Prerequisites
+
+When managing PostgreSQL topologies instead of MySQL, the following prerequisites apply:
+
+- **PostgreSQL 12+** is required (for `pg_promote()` support).
+- Streaming replication must already be configured between primary and standbys.
+- All PostgreSQL instances must listen on the same port (configured via `DefaultInstancePort`).
+- The orchestrator user needs the `pg_monitor` role on all instances:
+
+```sql
+CREATE USER orchestrator WITH PASSWORD 'orch_pass';
+GRANT pg_monitor TO orchestrator;
+```
+
+- `pg_hba.conf` must allow connections from the orchestrator host on all instances.
+- Set `ProviderType` to `"postgresql"` in the orchestrator configuration.
+
+See [Tutorial 5](tutorials.md#tutorial-5-setting-up-orchestrator-with-postgresql-streaming-replication) for a complete walkthrough.
 
 ---
 
@@ -319,6 +339,33 @@ Control logging of filtered discoveries:
 }
 ```
 
+### PostgreSQL Discovery
+
+When `ProviderType` is set to `"postgresql"`, orchestrator uses a PostgreSQL-specific discovery mechanism instead of `SHOW SLAVE STATUS` / `SHOW SLAVE HOSTS`.
+
+**How PostgreSQL discovery works:**
+
+1. Orchestrator connects to a PostgreSQL instance and runs `SELECT pg_is_in_recovery()` to determine whether it is a primary or standby.
+
+2. **For a primary**, orchestrator queries:
+   - `SELECT pg_current_wal_lsn()::text` -- current WAL write position
+   - `SELECT client_hostname, client_addr, client_port FROM pg_stat_replication` -- connected standbys
+
+3. **For a standby**, orchestrator queries:
+   - `SELECT status, conninfo FROM pg_stat_wal_receiver` -- WAL receiver status and connection to the primary
+   - `SELECT pg_is_wal_replay_paused()` -- whether WAL replay is paused
+   - `SELECT pg_last_wal_replay_lsn()::text` -- current replay position
+   - `SELECT EXTRACT(EPOCH FROM now() - pg_last_xact_replay_timestamp())` -- replication lag in seconds
+
+4. The primary's host and port are extracted from the standby's `conninfo` field (the `primary_conninfo` connection string).
+
+**Key differences from MySQL discovery:**
+
+- Discovery does not use `SHOW SLAVE HOSTS` or `PROCESSLIST`. Instead it reads PostgreSQL system views.
+- The `client_port` in `pg_stat_replication` is an ephemeral port. Orchestrator uses `DefaultInstancePort` (set this to 5432) for all standby instance keys.
+- WAL LSN values are converted to int64 for internal storage and comparison.
+- PostgreSQL instances always report `GTIDMode: "ON"` since WAL-based replication is always position-aware.
+
 ---
 
 ## Chapter 4: Failure Detection
@@ -415,6 +462,29 @@ curl http://orchestrator:3000/api/replication-analysis
 
 # Web UI: Clusters -> Failure analysis
 ```
+
+### PostgreSQL Failure Detection
+
+When running in PostgreSQL mode (`ProviderType: "postgresql"`), orchestrator uses PostgreSQL-specific failure analysis. The analysis query reads from orchestrator's backend database (where instance data was stored during discovery) and produces analysis codes specific to PostgreSQL streaming replication.
+
+**PostgreSQL-specific analysis codes:**
+
+| Analysis Code | Condition |
+|---|---|
+| `DeadPrimary` | Primary is unreachable, standbys exist but none are replicating. This is the most common failover trigger. |
+| `DeadPrimaryAndSomeStandbys` | Primary is unreachable and either no standbys are reachable, or only some standbys are still replicating. |
+| `UnreachablePrimary` | Primary is unreachable but all standbys report they are still replicating (possible transient network issue). |
+| `AllStandbyNotReplicating` | Primary is reachable but none of its standbys are replicating. |
+| `StandbyNotReplicating` | Primary is reachable but one or more standbys are not replicating. |
+| `DeadMasterWithoutReplicas` | Primary is unreachable and has no standbys (nothing to fail over to). |
+
+**Differences from MySQL failure detection:**
+
+- No intermediate master failure types (PostgreSQL does not have intermediate masters).
+- No co-master failure types (PostgreSQL does not support multi-master replication).
+- No semi-sync related failure types.
+- No binlog server related failure types.
+- The analysis only examines `replication_depth=0` instances (primaries) and their direct standbys.
 
 ---
 
@@ -598,6 +668,35 @@ orchestrator-client -c recover -i dead.instance.com:3306
 # Force master failover regardless of orchestrator's analysis
 orchestrator-client -c force-master-failover --alias mycluster
 ```
+
+### PostgreSQL Recovery
+
+When `ProviderType` is `"postgresql"`, orchestrator performs PostgreSQL-specific recovery when a `DeadPrimary` is detected. The recovery process differs significantly from MySQL failover.
+
+**Recovery flow for a dead PostgreSQL primary:**
+
+1. **Pre-failover hooks** execute (same `PreFailoverProcesses` configuration as MySQL).
+2. **Read replicas** of the dead primary from orchestrator's backend database.
+3. **Select the best standby** for promotion. The selection criteria are:
+   - Must have a valid last check (instance was recently reachable)
+   - Must not be downtimed
+   - If a candidate key is specified and the candidate is valid, it is preferred
+   - Otherwise, the standby with the lowest replication lag and highest WAL LSN (most up-to-date) is chosen
+4. **Promote the standby** by calling `pg_promote(true, 60)` on the selected standby. Orchestrator waits up to 30 seconds for the instance to exit recovery mode.
+5. **Reconfigure remaining standbys** to replicate from the new primary:
+   - For each standby (except the promoted one), orchestrator runs `ALTER SYSTEM SET primary_conninfo = '...'` with the new primary's host, port, and credentials
+   - Then calls `pg_reload_conf()` to apply the change
+   - Pauses and resumes WAL replay to force reconnection to the new primary
+6. **Post-failover hooks** execute (`PostMasterFailoverProcesses` and `PostFailoverProcesses`).
+
+**Differences from MySQL recovery:**
+
+- No GTID/Pseudo-GTID coordination is needed. PostgreSQL standbys do not need to "catch up" to a specific binlog position before reparenting.
+- No intermediate master recovery. PostgreSQL topologies are flat (primary + standbys).
+- Promotion is a single `pg_promote()` call rather than a sequence of `STOP SLAVE` / `RESET SLAVE` / `CHANGE MASTER`.
+- Standby reconfiguration uses `ALTER SYSTEM` instead of `CHANGE MASTER TO`.
+- Standbys that fail to reconfigure are added to `LostReplicas` but do not block the recovery.
+- Graceful master takeover is not yet supported for PostgreSQL.
 
 ---
 
