@@ -110,7 +110,7 @@ test_endpoint "GET /api/clusters" "$ORC_URL/api/clusters" "200"
 test_endpoint "GET /api/v2/clusters" "$ORC_URL/api/v2/clusters" "200"
 test_endpoint "GET /api/v2/status" "$ORC_URL/api/v2/status" "200"
 test_body_contains "/api/v2/status healthy" "$ORC_URL/api/v2/status" '"status"'
-test_body_contains "/api/clusters contains PG cluster" "$ORC_URL/api/clusters" "pgprimary"
+test_body_contains "/api/clusters contains PG cluster" "$ORC_URL/api/clusters" "172.30.0.20"
 
 # ----------------------------------------------------------------
 echo ""
@@ -126,6 +126,28 @@ sleep 2
 curl -s "$ORC_URL/api/discover/172.30.0.21/5432" > /dev/null 2>&1
 sleep 3
 curl -s "$ORC_URL/api/discover/172.30.0.21/5432" > /dev/null 2>&1
+
+# Debug: dump cluster state before and during failover
+echo "DEBUG: Cluster state before failover:"
+curl -s "$ORC_URL/api/cluster/$PG_CLUSTER" 2>/dev/null | python3 -c "
+import json, sys
+for i in json.load(sys.stdin):
+    k=i['Key']; m=i['MasterKey']
+    print(f'  {k[\"Hostname\"]}:{k[\"Port\"]} RO={i[\"ReadOnly\"]} Master={m[\"Hostname\"]}:{m[\"Port\"]} Depth={i[\"ReplicationDepth\"]}')" 2>/dev/null || echo "  (failed)"
+
+# Wait a bit for re-discovery, then dump state
+sleep 15
+echo "DEBUG: Cluster state after primary stop + re-discovery:"
+curl -s "$ORC_URL/api/cluster/$PG_CLUSTER" 2>/dev/null | python3 -c "
+import json, sys
+for i in json.load(sys.stdin):
+    k=i['Key']; m=i['MasterKey']
+    print(f'  {k[\"Hostname\"]}:{k[\"Port\"]} RO={i[\"ReadOnly\"]} Master={m[\"Hostname\"]}:{m[\"Port\"]} Depth={i[\"ReplicationDepth\"]} Valid={i[\"IsLastCheckValid\"]}')" 2>/dev/null || echo "  (failed)"
+echo "DEBUG: Replication analysis:"
+curl -s "$ORC_URL/api/replication-analysis" 2>/dev/null | python3 -c "
+import json, sys
+for a in json.load(sys.stdin):
+    print(f'  {a[\"AnalyzedInstanceKey\"][\"Hostname\"]}:{a[\"AnalyzedInstanceKey\"][\"Port\"]} Analysis={a[\"Analysis\"]} Replicas={a[\"CountReplicas\"]} ValidReplicas={a[\"CountValidReplicas\"]}')" 2>/dev/null || echo "  (failed)"
 
 echo "Waiting for orchestrator to detect DeadPrimary and recover (max 120s)..."
 RECOVERED=false
