@@ -11,14 +11,14 @@ PRIMARY_IP="172.30.0.20"
 PRIMARY_PORT=5432
 
 echo "Waiting for primary to accept connections..."
-until pg_isready -h "$PRIMARY_HOST" -p "$PRIMARY_PORT" -U postgres; do
+until pg_isready -h "$PRIMARY_IP" -p "$PRIMARY_PORT" -U postgres; do
     sleep 1
 done
 
-echo "Running pg_basebackup from $PRIMARY_HOST..."
+echo "Running pg_basebackup from $PRIMARY_IP..."
 rm -rf "$PGDATA"/*
 gosu postgres pg_basebackup \
-    -h "$PRIMARY_HOST" \
+    -h "$PRIMARY_IP" \
     -p "$PRIMARY_PORT" \
     -U repl \
     -D "$PGDATA" \

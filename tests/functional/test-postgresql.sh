@@ -21,8 +21,10 @@ wait_for_orchestrator || { echo "FATAL: PostgreSQL orchestrator not reachable at
 echo ""
 echo "--- Discovery tests ---"
 
-echo "Seeding discovery with pgprimary:5432..."
-curl -s "$ORC_URL/api/discover/pgprimary/5432" > /dev/null
+# Discover by IP address so all instances share a consistent address scheme
+echo "Seeding discovery with 172.30.0.20:5432 (pgprimary)..."
+curl -s "$ORC_URL/api/discover/172.30.0.20/5432" > /dev/null
+curl -s "$ORC_URL/api/discover/172.30.0.21/5432" > /dev/null
 
 echo "Waiting for topology discovery..."
 PG_CLUSTER=""
@@ -31,7 +33,7 @@ for i in $(seq 1 60); do
 import json, sys
 c = json.load(sys.stdin)
 for name in c:
-    if 'pgprimary' in name or 'pg' in name.lower():
+    if '172.30.0.20' in name or 'pgprimary' in name or 'pg' in name.lower():
         print(name)
         sys.exit(0)
 if c:
@@ -46,7 +48,7 @@ if c:
     fi
     # Re-seed standby periodically
     if [ "$((i % 10))" = "0" ]; then
-        curl -s "$ORC_URL/api/discover/pgstandby1/5432" > /dev/null 2>&1
+        curl -s "$ORC_URL/api/discover/172.30.0.21/5432" > /dev/null 2>&1
     fi
     sleep 1
 done
@@ -69,7 +71,8 @@ PRIMARY_RO=$(curl -s "$ORC_URL/api/cluster/$PG_CLUSTER" 2>/dev/null | python3 -c
 import json, sys
 instances = json.load(sys.stdin)
 for inst in instances:
-    if 'pgprimary' in inst.get('Key', {}).get('Hostname', ''):
+    h = inst.get('Key', {}).get('Hostname', '')
+    if '172.30.0.20' in h or 'pgprimary' in h:
         print('true' if inst.get('ReadOnly', True) else 'false')
         sys.exit(0)
 print('unknown')
@@ -86,7 +89,8 @@ STANDBY_RO=$(curl -s "$ORC_URL/api/cluster/$PG_CLUSTER" 2>/dev/null | python3 -c
 import json, sys
 instances = json.load(sys.stdin)
 for inst in instances:
-    if 'pgstandby1' in inst.get('Key', {}).get('Hostname', ''):
+    h = inst.get('Key', {}).get('Hostname', '')
+    if '172.30.0.21' in h or 'pgstandby1' in h:
         print('true' if inst.get('ReadOnly', False) else 'false')
         sys.exit(0)
 print('unknown')
@@ -119,6 +123,8 @@ $COMPOSE stop pgprimary
 
 # Re-seed standby discovery by IP to ensure orchestrator can still reach it
 sleep 2
+curl -s "$ORC_URL/api/discover/172.30.0.21/5432" > /dev/null 2>&1
+sleep 3
 curl -s "$ORC_URL/api/discover/172.30.0.21/5432" > /dev/null 2>&1
 
 echo "Waiting for orchestrator to detect DeadPrimary and recover (max 120s)..."
