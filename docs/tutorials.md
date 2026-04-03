@@ -497,3 +497,209 @@ fi
 ```
 
 For the full endpoint reference, see the [API v2 documentation](api-v2.md). An [OpenAPI 3.0 specification](api/openapi.yaml) is also available for client generation.
+
+---
+
+## Tutorial 5: Setting up orchestrator with PostgreSQL streaming replication
+
+This tutorial walks you through configuring orchestrator to manage a PostgreSQL streaming replication topology. Orchestrator discovers PostgreSQL primaries and standbys, monitors replication health, and can perform automated failover when a primary fails.
+
+### What you will need
+
+- **PostgreSQL 12+** primary with one or more streaming replication standbys already configured
+- Go 1.25+ installed (for building from source)
+- Network access from the orchestrator host to all PostgreSQL instances on port 5432
+
+### Step 1: Build orchestrator
+
+```bash
+git clone https://github.com/proxysql/orchestrator.git
+cd orchestrator
+go build -o bin/orchestrator ./go/cmd/orchestrator
+```
+
+### Step 2: Create an orchestrator user on PostgreSQL
+
+On your PostgreSQL **primary** (this user must exist on all instances -- primary and standbys):
+
+```sql
+CREATE USER orchestrator WITH PASSWORD 'orch_pass';
+GRANT pg_monitor TO orchestrator;
+```
+
+The `pg_monitor` role grants read access to `pg_stat_replication`, `pg_stat_wal_receiver`, and other monitoring views that orchestrator needs for discovery.
+
+> **Note:** If you are using PostgreSQL 9.6 (not recommended), you need to grant `SELECT` on the individual monitoring views instead of using `pg_monitor`.
+
+### Step 3: Ensure `pg_hba.conf` allows connections
+
+On each PostgreSQL instance, ensure `pg_hba.conf` allows connections from the orchestrator host:
+
+```
+# TYPE  DATABASE    USER           ADDRESS              METHOD
+host    all         orchestrator   orchestrator-host/32  md5
+```
+
+Reload PostgreSQL after editing:
+
+```bash
+psql -c "SELECT pg_reload_conf();"
+```
+
+### Step 4: Configure orchestrator for PostgreSQL
+
+Create `orchestrator.conf.json`:
+
+```json
+{
+  "Debug": true,
+  "ListenAddress": ":3000",
+  "ProviderType": "postgresql",
+  "PostgreSQLTopologyUser": "orchestrator",
+  "PostgreSQLTopologyPassword": "orch_pass",
+  "PostgreSQLSSLMode": "require",
+  "BackendDB": "sqlite",
+  "SQLite3DataFile": "/tmp/orchestrator.sqlite3",
+  "DefaultInstancePort": 5432,
+  "InstancePollSeconds": 5,
+  "RecoverMasterClusterFilters": ["*"],
+  "RecoverIntermediateMasterClusterFilters": ["*"],
+  "FailureDetectionPeriodBlockMinutes": 60,
+  "RecoveryPeriodBlockSeconds": 3600
+}
+```
+
+**Key fields explained:**
+
+| Field | Purpose |
+|-------|---------|
+| `ProviderType` | Set to `"postgresql"` to enable PostgreSQL mode. Default is `"mysql"`. |
+| `PostgreSQLTopologyUser` / `Password` | Credentials orchestrator uses to connect to your PostgreSQL instances. |
+| `PostgreSQLSSLMode` | SSL mode for PostgreSQL connections: `disable`, `require`, `verify-ca`, or `verify-full`. |
+| `DefaultInstancePort` | Set to `5432` for PostgreSQL (default is 3306 for MySQL). |
+
+### Step 5: Start orchestrator
+
+```bash
+bin/orchestrator -config orchestrator.conf.json http
+```
+
+You should see output indicating the service has started and is listening on port 3000.
+
+### Step 6: Discover your PostgreSQL topology
+
+Tell orchestrator about your PostgreSQL primary. Replace `pg-primary` with the actual hostname or IP:
+
+```bash
+curl http://localhost:3000/api/discover/pg-primary/5432
+```
+
+Expected output:
+
+```json
+{
+  "Key": {"Hostname": "pg-primary", "Port": 5432},
+  "Uptime": 1,
+  "FlavorName": "PostgreSQL",
+  "Version": "16.2",
+  "ReadOnly": false
+}
+```
+
+Orchestrator connects to the primary, queries `pg_stat_replication` to discover connected standbys, and recursively probes each standby.
+
+### Step 7: Verify discovery in the web UI
+
+Open your browser to `http://localhost:3000`. You should see your PostgreSQL replication topology visualized as a tree:
+
+- The primary node at the top (read-only: false)
+- Standby nodes underneath (read-only: true)
+- Replication lag displayed for each standby
+
+### Step 8: Verify via the API
+
+List discovered clusters:
+
+```bash
+curl -s http://localhost:3000/api/clusters
+```
+
+View the topology:
+
+```bash
+curl -s http://localhost:3000/api/topology/pg-primary/5432
+```
+
+Check replication analysis (should show `NoProblem` if everything is healthy):
+
+```bash
+curl -s http://localhost:3000/api/replication-analysis
+```
+
+Example healthy output:
+
+```json
+[]
+```
+
+An empty array means no problems detected.
+
+### Step 9: Test graceful failover
+
+To verify failover works, you can simulate a primary failure by stopping PostgreSQL on the primary:
+
+```bash
+# On the primary host:
+pg_ctl stop -D /var/lib/postgresql/16/main -m fast
+```
+
+Within a few seconds, orchestrator will detect the `DeadPrimary` condition and, if automated recovery is enabled, will:
+
+1. Select the best standby for promotion (lowest lag, most up-to-date WAL position)
+2. Call `pg_promote()` on the selected standby
+3. Reconfigure remaining standbys to replicate from the new primary via `ALTER SYSTEM SET primary_conninfo` and `pg_reload_conf()`
+
+Monitor the recovery in the web UI or via the API:
+
+```bash
+curl -s http://localhost:3000/api/replication-analysis
+```
+
+After recovery completes:
+
+```bash
+curl -s http://localhost:3000/api/topology/new-primary-host/5432
+```
+
+You should see the new primary at the top with the remaining standbys underneath.
+
+### Step 10: Verify the recovered topology
+
+Check that all standbys are replicating from the new primary:
+
+```bash
+# On the new primary:
+psql -c "SELECT client_hostname, state, sent_lsn, replay_lsn FROM pg_stat_replication;"
+```
+
+Check orchestrator's view:
+
+```bash
+curl -s http://localhost:3000/api/v2/clusters | python3 -m json.tool
+```
+
+### Differences from MySQL mode
+
+When running in PostgreSQL mode, be aware of these differences:
+
+- **No intermediate masters.** PostgreSQL streaming replication does not support cascading replication in the same way as MySQL. Orchestrator treats all standbys as direct replicas of the primary.
+- **No GTID/Pseudo-GTID.** PostgreSQL uses WAL (Write-Ahead Log) positions (LSN) instead of GTIDs. Orchestrator maps LSN to its internal binlog coordinate system.
+- **Promotion uses `pg_promote()`.** Instead of `STOP SLAVE` / `RESET SLAVE` / `CHANGE MASTER`, orchestrator calls `pg_promote()` on the standby to make it a primary.
+- **Standby reconfiguration uses `ALTER SYSTEM`.** To repoint a standby to a new primary, orchestrator updates `primary_conninfo` via `ALTER SYSTEM` and reloads the configuration.
+- **ProxySQL integration is not supported** in PostgreSQL mode. Use PgBouncer or another PostgreSQL-aware connection pooler.
+
+### Next steps
+
+- [Database providers documentation](database-providers.md) -- architecture and provider details
+- [Configuration reference](reference.md) -- all PostgreSQL-related configuration fields
+- [User manual](user-manual.md) -- PostgreSQL sections in chapters 2-5

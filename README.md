@@ -10,7 +10,7 @@
 
 ![Orchestrator logo](docs/images/orchestrator-logo-wide.png)
 
-`orchestrator` is a MySQL high availability and replication management tool, runs as a service and provides command line access, HTTP API and Web interface. `orchestrator` supports:
+`orchestrator` is a MySQL and PostgreSQL high availability and replication management tool, runs as a service and provides command line access, HTTP API and Web interface. `orchestrator` supports:
 
 #### Discovery
 
@@ -71,7 +71,8 @@ See [Observability documentation](docs/observability.md) and [API v2 documentati
 - Manual and automated failovers with full audit trail
 - Pseudo-GTID and Oracle GTID support
 - Datacenter/physical location awareness
-- Database provider abstraction for future multi-database support
+- **PostgreSQL support** -- discovery, failure detection, and automated failover for PostgreSQL streaming replication topologies
+- Database provider abstraction for multi-database support
 - HTTP security/authentication methods
 
 Read the [Orchestrator documentation](https://github.com/proxysql/orchestrator/tree/master/docs)

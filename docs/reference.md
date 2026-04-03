@@ -103,6 +103,7 @@ Orchestrator is configured via a JSON file. All fields belong to the `Configurat
 |-------|------|---------|-------------|
 | `Debug` | bool | `false` | Set debug mode (similar to `--debug` option) |
 | `EnableSyslog` | bool | `false` | Should logs be directed (in addition) to syslog daemon? |
+| `ProviderType` | string | `"mysql"` | Database provider type: `"mysql"` (default) or `"postgresql"`. When set to `"postgresql"`, orchestrator uses PostgreSQL-specific discovery, failure detection, and recovery logic. See [Database Providers](database-providers.md) for details. |
 
 ### 1.2 HTTP / Network
 

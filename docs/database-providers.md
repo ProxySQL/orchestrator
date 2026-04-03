@@ -6,9 +6,10 @@ Orchestrator supports a database provider abstraction layer that decouples core
 orchestration logic from database-specific operations. This allows orchestrator
 to manage different database engines through a common interface.
 
-MySQL is the default provider. PostgreSQL is also supported for streaming
-replication topologies. The abstraction layer is designed to support additional
-providers in the future.
+MySQL is the default provider. PostgreSQL is fully supported for streaming
+replication topologies, including discovery, failure detection, and automated
+failover. The abstraction layer is designed to support additional providers in
+the future.
 
 ## Architecture
 
@@ -87,53 +88,100 @@ is needed to use it.
 
 The PostgreSQL provider (`PostgreSQLProvider`) supports PostgreSQL streaming
 replication topologies. It uses the `lib/pq` driver to connect to PostgreSQL
-instances.
+instances and provides full support for discovery, failure detection, and
+automated failover.
 
-### Configuration
+### Switching to PostgreSQL Mode
 
-Add the following fields to your orchestrator configuration JSON:
+Set `ProviderType` to `"postgresql"` in your orchestrator configuration:
 
 ```json
 {
+  "ProviderType": "postgresql",
   "PostgreSQLTopologyUser": "orchestrator",
-  "PostgreSQLTopologyPassword": "secret"
+  "PostgreSQLTopologyPassword": "secret",
+  "PostgreSQLSSLMode": "require",
+  "DefaultInstancePort": 5432
 }
 ```
 
-These credentials are used to connect to PostgreSQL topology instances for
-discovery and replication management operations.
+When `ProviderType` is set to `"postgresql"`, orchestrator automatically uses
+the PostgreSQL provider for all topology operations: discovery, failure
+analysis, and recovery.
 
-### Activating the Provider
+### Configuration Fields
 
-To use PostgreSQL instead of MySQL, register the provider during startup:
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `ProviderType` | string | `"mysql"` | Set to `"postgresql"` to enable PostgreSQL mode |
+| `PostgreSQLTopologyUser` | string | `""` | Username for connecting to PostgreSQL instances |
+| `PostgreSQLTopologyPassword` | string | `""` | Password for connecting to PostgreSQL instances |
+| `PostgreSQLSSLMode` | string | `"require"` | SSL mode: `disable`, `require`, `verify-ca`, `verify-full` |
 
-```go
-import "github.com/proxysql/orchestrator/go/inst"
+The orchestrator user on PostgreSQL needs the `pg_monitor` role:
 
-inst.SetProvider(inst.NewPostgreSQLProvider())
+```sql
+CREATE USER orchestrator WITH PASSWORD 'secret';
+GRANT pg_monitor TO orchestrator;
 ```
 
-### How It Works
+### Supported Operations
 
-| Operation           | PostgreSQL Implementation                                     |
-|---------------------|---------------------------------------------------------------|
+| Operation | PostgreSQL Implementation |
+|-----------|--------------------------|
+| **Discovery (primary)** | Queries `pg_current_wal_lsn()` for WAL position and `pg_stat_replication` to discover connected standbys. |
+| **Discovery (standby)** | Queries `pg_stat_wal_receiver` for WAL receiver status and `pg_last_wal_replay_lsn()` for replay position. Extracts primary host/port from `conninfo`. |
+| **Replication lag** | Computes `EXTRACT(EPOCH FROM now() - pg_last_xact_replay_timestamp())` on standbys. |
+| **Failure detection** | Analyzes reachability of primary and replication status of standbys. Produces `DeadPrimary`, `DeadPrimaryAndSomeStandbys`, `StandbyNotReplicating`, `AllStandbyNotReplicating`, and `UnreachablePrimary` analysis codes. |
+| **Promotion** | Calls `pg_promote(true, 60)` on the selected standby and waits up to 30 seconds for it to exit recovery mode. |
+| **Standby reconfiguration** | Updates `primary_conninfo` via `ALTER SYSTEM`, calls `pg_reload_conf()`, and pauses/resumes WAL replay to force reconnection. |
+| **Best standby selection** | Prefers standbys with: valid last check, replication running, lowest lag, highest WAL LSN, not downtimed. A candidate key is preferred if specified and valid. |
 | GetReplicationStatus | Queries `pg_stat_wal_receiver` (standby) or `pg_current_wal_lsn()` (primary). Reports WAL LSN as position and `replay_lag` as lag. |
-| IsReplicaRunning    | Checks `pg_stat_wal_receiver` for an active WAL receiver with `status = 'streaming'`. |
-| SetReadOnly         | Runs `ALTER SYSTEM SET default_transaction_read_only = on/off` followed by `SELECT pg_reload_conf()`. |
-| IsReadOnly          | Queries `SHOW default_transaction_read_only`.                 |
-| StartReplication    | Calls `SELECT pg_wal_replay_resume()`. Streaming replication itself starts automatically when the standby connects. |
-| StopReplication     | Calls `SELECT pg_wal_replay_pause()` to pause WAL replay. The WAL receiver remains connected. |
+| IsReplicaRunning | Checks `pg_stat_wal_receiver` for an active WAL receiver with `status = 'streaming'`. |
+| SetReadOnly | Runs `ALTER SYSTEM SET default_transaction_read_only = on/off` followed by `SELECT pg_reload_conf()`. |
+| IsReadOnly | Queries `SHOW default_transaction_read_only`. |
+| StartReplication | Calls `SELECT pg_wal_replay_resume()`. Streaming replication itself starts automatically when the standby connects. |
+| StopReplication | Calls `SELECT pg_wal_replay_pause()` to pause WAL replay. The WAL receiver remains connected. |
 
-### Differences from MySQL
+### Differences from MySQL Mode
 
 - **No separate IO/SQL threads.** PostgreSQL does not have the concept of
-  separate IO and SQL threads. The `IOThreadRunning` and `SQLThreadRunning`
-  fields in `ReplicationStatus` both mirror the WAL receiver state.
+  separate IO and SQL threads. The WAL receiver handles both receiving and
+  applying. Orchestrator maps the WAL receiver status to both the IO and SQL
+  thread fields.
+- **No intermediate masters.** PostgreSQL streaming replication uses a flat
+  primary-standby topology. There is no equivalent of MySQL intermediate masters.
+  Orchestrator treats all standbys as direct replicas of the primary.
+- **WAL-based positioning.** PostgreSQL uses WAL LSN (Log Sequence Number)
+  instead of binlog file:position or GTIDs. Orchestrator converts LSN to an
+  int64 for internal use.
 - **Streaming replication is automatic.** `StartReplication` resumes WAL replay
   but cannot start the WAL receiver itself -- that is controlled by PostgreSQL's
   `primary_conninfo` configuration.
 - **StopReplication pauses replay only.** The WAL receiver continues to receive
   WAL segments; only application (replay) is paused.
+- **Promotion uses `pg_promote()`.** Available since PostgreSQL 12. Orchestrator
+  calls `pg_promote(true, 60)` which waits for promotion to complete.
+- **Reconfiguration uses `ALTER SYSTEM`.** To repoint a standby, orchestrator
+  updates `primary_conninfo` via `ALTER SYSTEM SET` and reloads the config.
+- **No topology refactoring.** Moving replicas between masters (drag-and-drop in
+  the UI) is not supported in PostgreSQL mode. Only failover and standby
+  reconfiguration are available.
+- **No ProxySQL integration.** ProxySQL hooks are MySQL-specific. Use PgBouncer
+  or another PostgreSQL-aware connection pooler.
+
+### Limitations and Known Issues
+
+- **Cascading replication** (standby replicating from another standby) is not
+  currently detected or managed.
+- **Logical replication** is not supported -- only physical streaming replication.
+- **Synchronous replication** settings are not managed by orchestrator. If you
+  use `synchronous_standby_names`, you must manage it separately.
+- **`client_port` from `pg_stat_replication`** is an ephemeral port, not the
+  PostgreSQL listen port. Orchestrator uses `DefaultInstancePort` for standby
+  discovery, so all instances must listen on the same port.
+- **Graceful master takeover** (planned switchover) is not yet implemented for
+  PostgreSQL. Only unplanned failover (dead primary) is supported.
 
 ## Implementing a New Provider
 
