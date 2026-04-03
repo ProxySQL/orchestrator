@@ -1,6 +1,7 @@
 #!/bin/bash
 # Initialize a PostgreSQL standby via pg_basebackup from the primary.
 # This script replaces the default entrypoint for standby containers.
+# Must handle running as root (Docker default) then switching to postgres user.
 
 set -e
 
@@ -15,7 +16,7 @@ done
 
 echo "Running pg_basebackup from $PRIMARY_HOST..."
 rm -rf "$PGDATA"/*
-pg_basebackup \
+gosu postgres pg_basebackup \
     -h "$PRIMARY_HOST" \
     -p "$PRIMARY_PORT" \
     -U repl \
@@ -29,9 +30,8 @@ primary_conninfo = 'host=$PRIMARY_HOST port=$PRIMARY_PORT user=repl password=rep
 EOF
 
 touch "$PGDATA/standby.signal"
-
-# Fix permissions (pg_basebackup may set them correctly, but be safe)
+chown -R postgres:postgres "$PGDATA"
 chmod 0700 "$PGDATA"
 
 echo "Starting PostgreSQL in standby mode..."
-exec postgres -D "$PGDATA"
+exec gosu postgres postgres -D "$PGDATA"
