@@ -1770,10 +1770,8 @@ func getCheckAndRecoverFunction(analysisCode inst.AnalysisCode, analyzedInstance
 	case inst.NoWriteableMasterStructureWarning:
 		return checkAndRecoverNonWriteableMaster, true
 	// PostgreSQL streaming replication
-	case inst.DeadPrimary, inst.DeadPrimaryAndSomeStandbys:
+	case inst.DeadPrimary, inst.DeadPrimaryAndSomeStandbys, inst.UnreachablePrimary:
 		return checkAndRecoverDeadPrimary, true
-	case inst.UnreachablePrimary:
-		return checkAndRecoverGenericProblem, false
 	case inst.AllStandbyNotReplicating:
 		return checkAndRecoverGenericProblem, false
 	case inst.StandbyNotReplicating:
@@ -1810,9 +1808,7 @@ func runEmergentOperations(analysisEntry *inst.ReplicationAnalysis, allowInstanc
 	case inst.FirstTierReplicaFailingToConnectToMaster:
 		go emergentlyReadTopologyInstance(&analysisEntry.AnalyzedInstanceMasterKey, analysisEntry.Analysis)
 	// PostgreSQL: emergent operations for dead/unreachable primary
-	case inst.DeadPrimary, inst.DeadPrimaryAndSomeStandbys:
-		go emergentlyReadTopologyInstanceReplicas(&analysisEntry.AnalyzedInstanceKey, analysisEntry.Analysis)
-	case inst.UnreachablePrimary:
+	case inst.DeadPrimary, inst.DeadPrimaryAndSomeStandbys, inst.UnreachablePrimary:
 		go emergentlyReadTopologyInstance(&analysisEntry.AnalyzedInstanceKey, analysisEntry.Analysis)
 		go emergentlyReadTopologyInstanceReplicas(&analysisEntry.AnalyzedInstanceKey, analysisEntry.Analysis)
 	case inst.AllStandbyNotReplicating:
