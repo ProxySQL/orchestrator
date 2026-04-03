@@ -86,6 +86,14 @@ func ReadPostgreSQLTopologyInstance(instanceKey *InstanceKey) (*Instance, error)
 
 	instance.ReadOnly = inRecovery
 
+	// Set cluster name: for primaries it's their own key, for standbys it's the master's key
+	if inRecovery && instance.MasterKey.Hostname != "" {
+		instance.ClusterName = instance.MasterKey.StringCode()
+	} else {
+		instance.ClusterName = instance.Key.StringCode()
+	}
+	instance.SuggestedClusterAlias = instance.ClusterName
+
 	// Set discovery latency
 	instance.LastDiscoveryLatency = time.Since(readingStartTime)
 
