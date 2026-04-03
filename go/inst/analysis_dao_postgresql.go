@@ -53,7 +53,7 @@ func GetPostgreSQLReplicationAnalysis(clusterName string, hints *ReplicationAnal
 			master_instance.physical_environment,
 			master_instance.binary_log_file,
 			master_instance.binary_log_pos,
-			master_instance.is_downtimed,
+			0 AS is_downtimed,
 			master_instance.downtime_end_timestamp,
 			COUNT(replica_instance.server_id) AS count_replicas,
 			IFNULL(
@@ -79,7 +79,7 @@ func GetPostgreSQLReplicationAnalysis(clusterName string, hints *ReplicationAnal
 				0
 			) AS count_replicas_failing_to_connect,
 			IFNULL(
-				SUM(replica_instance.is_downtimed),
+				SUM(0),
 				0
 			) AS count_downtimed_replicas,
 			master_instance.slave_hosts
