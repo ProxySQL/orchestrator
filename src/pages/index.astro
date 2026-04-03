@@ -7,10 +7,10 @@ const rawBase = import.meta.env.BASE_URL;
 const base = rawBase.endsWith('/') ? rawBase : rawBase + '/';
 ---
 
-<Base title="Orchestrator — MySQL High Availability, Simplified">
+<Base title="Orchestrator — MySQL & PostgreSQL High Availability, Simplified">
   <Hero
-    title="Orchestrator — MySQL High Availability, Simplified"
-    subtitle='Automated failover, topology management, and ProxySQL integration. Maintained by <a href="https://proxysql.com">ProxySQL</a>.'
+    title="Orchestrator — MySQL & PostgreSQL High Availability, Simplified"
+    subtitle='Automated failover, topology management, and ProxySQL integration for MySQL and PostgreSQL. Maintained by <a href="https://proxysql.com">ProxySQL</a>.'
     primaryCta={{ label: "Get Started", href: `${base}docs/` }}
     secondaryCta={{ label: "View on GitHub", href: "https://github.com/ProxySQL/orchestrator" }}
   />
@@ -19,7 +19,7 @@ const base = rawBase.endsWith('/') ? rawBase : rawBase + '/';
     <div class="container">
       <h2 class="text-center section-heading">Why Orchestrator?</h2>
       <p class="text-center section-subheading">
-        Everything you need to manage MySQL replication at scale.
+        Everything you need to manage MySQL and PostgreSQL replication at scale.
       </p>
       <div class="card-grid">
         <FeatureCard
