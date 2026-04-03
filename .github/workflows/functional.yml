@@ -12,7 +12,7 @@ on:
 jobs:
   functional:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
 
     steps:
     - uses: actions/checkout@v4
@@ -77,17 +77,84 @@ jobs:
     - name: Run failover tests
       run: bash tests/functional/test-failover.sh
 
+    # ---- PostgreSQL functional tests ----
+    - name: Start PostgreSQL containers
+      working-directory: tests/functional
+      run: |
+        docker compose up -d pgprimary
+        echo "Waiting for pgprimary to be healthy..."
+        timeout 120 bash -c '
+          while true; do
+            STATUS=$(docker compose ps pgprimary --format json 2>/dev/null | python3 -c "
+        import json, sys
+        for line in sys.stdin:
+            svc = json.loads(line)
+            if \"healthy\" in svc.get(\"Status\",\"\").lower():
+                print(\"healthy\")
+                sys.exit(0)
+        print(\"waiting\")
+        " 2>/dev/null || echo "waiting")
+            if [ "$STATUS" = "healthy" ]; then
+              echo "pgprimary healthy"
+              exit 0
+            fi
+            sleep 2
+          done
+        ' || { echo "Timeout waiting for pgprimary"; docker compose logs pgprimary --tail=30; exit 1; }
+        docker compose up -d pgstandby1
+        echo "Waiting for pgstandby1 to be healthy..."
+        timeout 120 bash -c '
+          while true; do
+            STATUS=$(docker compose ps pgstandby1 --format json 2>/dev/null | python3 -c "
+        import json, sys
+        for line in sys.stdin:
+            svc = json.loads(line)
+            if \"healthy\" in svc.get(\"Status\",\"\").lower():
+                print(\"healthy\")
+                sys.exit(0)
+        print(\"waiting\")
+        " 2>/dev/null || echo "waiting")
+            if [ "$STATUS" = "healthy" ]; then
+              echo "pgstandby1 healthy"
+              exit 0
+            fi
+            sleep 2
+          done
+        ' || { echo "Timeout waiting for pgstandby1"; docker compose logs pgstandby1 --tail=30; exit 1; }
+
+    - name: Start PostgreSQL orchestrator
+      working-directory: tests/functional
+      run: |
+        docker compose up -d orchestrator-pg
+        echo "Waiting for PostgreSQL orchestrator to be ready..."
+        timeout 120 bash -c '
+          while true; do
+            if curl -sf http://localhost:3098/api/clusters > /dev/null 2>&1; then
+              echo "PostgreSQL orchestrator ready"
+              exit 0
+            fi
+            sleep 2
+          done
+        ' || { echo "PostgreSQL orchestrator not ready"; docker compose logs orchestrator-pg --tail=50; exit 1; }
+
+    - name: Run PostgreSQL tests
+      run: bash tests/functional/test-postgresql.sh
+
     - name: Collect orchestrator logs
       if: always()
       working-directory: tests/functional
-      run: docker compose logs orchestrator > /tmp/orchestrator-test.log 2>&1 || true
+      run: |
+        docker compose logs orchestrator > /tmp/orchestrator-test.log 2>&1 || true
+        docker compose logs orchestrator-pg > /tmp/orchestrator-pg-test.log 2>&1 || true
 
     - name: Upload orchestrator logs
       if: always()
       uses: actions/upload-artifact@v4
       with:
         name: orchestrator-test-logs
-        path: /tmp/orchestrator-test.log
+        path: |
+          /tmp/orchestrator-test.log
+          /tmp/orchestrator-pg-test.log
 
     - name: Collect all docker logs on failure
       if: failure()

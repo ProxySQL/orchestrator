@@ -92,6 +92,51 @@ services:
         aliases:
           - proxysql
 
+  pgprimary:
+    image: postgres:17
+    hostname: pgprimary
+    environment:
+      POSTGRES_PASSWORD: testpass
+      POSTGRES_USER: postgres
+    volumes:
+      - ./postgres/init-primary.sh:/docker-entrypoint-initdb.d/init.sh
+    ports:
+      - "15432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    networks:
+      orchnet:
+        aliases:
+          - pgprimary
+
+  pgstandby1:
+    image: postgres:17
+    hostname: pgstandby1
+    environment:
+      POSTGRES_PASSWORD: testpass
+      PGUSER: postgres
+      PGPASSWORD: repl_pass
+    volumes:
+      - ./postgres/init-standby.sh:/init-standby.sh
+    entrypoint: ["/bin/bash", "/init-standby.sh"]
+    depends_on:
+      pgprimary:
+        condition: service_healthy
+    ports:
+      - "15433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    networks:
+      orchnet:
+        aliases:
+          - pgstandby1
+
   orchestrator:
     image: ubuntu:24.04
     hostname: orchestrator
@@ -121,6 +166,36 @@ services:
       orchnet:
         aliases:
           - orchestrator
+
+  orchestrator-pg:
+    image: ubuntu:24.04
+    hostname: orchestrator-pg
+    volumes:
+      - ../../bin/orchestrator:/usr/local/bin/orchestrator:ro
+      - ../../resources:/orchestrator/resources:ro
+      - ./orchestrator-pg-test.conf.json:/orchestrator/orchestrator.conf.json:ro
+    command: >
+      bash -c "
+        apt-get update -qq && apt-get install -y -qq curl sqlite3 > /dev/null 2>&1 &&
+        rm -f /tmp/orchestrator-pg-test.sqlite3 &&
+        cd /orchestrator &&
+        orchestrator -config orchestrator.conf.json http
+      "
+    ports:
+      - "3098:3098"
+    depends_on:
+      pgprimary:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:3098/api/clusters"]
+      interval: 5s
+      timeout: 3s
+      retries: 60
+      start_period: 15s
+    networks:
+      orchnet:
+        aliases:
+          - orchestrator-pg
 
 networks:
   orchnet:

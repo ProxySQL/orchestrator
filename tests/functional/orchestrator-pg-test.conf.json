@@ -1,0 +1,19 @@
+{
+  "Debug": true,
+  "ListenAddress": ":3098",
+  "ProviderType": "postgresql",
+  "PostgreSQLTopologyUser": "orchestrator",
+  "PostgreSQLTopologyPassword": "orch_pass",
+  "PostgreSQLSSLMode": "disable",
+  "MySQLOrchestratorHost": "",
+  "MySQLOrchestratorPort": 0,
+  "BackendDB": "sqlite",
+  "SQLite3DataFile": "/tmp/orchestrator-pg-test.sqlite3",
+  "DiscoverByShowSlaveHosts": false,
+  "InstancePollSeconds": 5,
+  "RecoveryPeriodBlockSeconds": 10,
+  "RecoverMasterClusterFilters": [".*"],
+  "RecoverIntermediateMasterClusterFilters": [".*"],
+  "AutoPseudoGTID": false,
+  "PrometheusEnabled": true
+}
