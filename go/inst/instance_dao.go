@@ -227,7 +227,12 @@ func logReadTopologyInstanceError(instanceKey *InstanceKey, hint string, err err
 // backend.
 func ReadTopologyInstance(instanceKey *InstanceKey) (*Instance, error) {
 	if config.Config.ProviderType == "postgresql" {
-		return ReadPostgreSQLTopologyInstance(instanceKey)
+		inst, err := ReadPostgreSQLTopologyInstance(instanceKey)
+		if err != nil {
+			// Mark the instance as checked-but-not-seen so analysis detects it as dead
+			_ = UpdateInstanceLastChecked(instanceKey, false)
+		}
+		return inst, err
 	}
 	instance, skipped, err := ReadTopologyInstanceBufferable(instanceKey, false, nil)
 	if skipped {
@@ -362,6 +367,9 @@ func ReadTopologyInstanceBufferable(instanceKey *InstanceKey, bufferWrites bool,
 		pgInst, pgErr := ReadPostgreSQLTopologyInstance(instanceKey)
 		if latency != nil {
 			latency.Stop("instance")
+		}
+		if pgErr != nil {
+			_ = UpdateInstanceLastChecked(instanceKey, false)
 		}
 		return pgInst, false, pgErr
 	}
