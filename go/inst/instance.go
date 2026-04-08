@@ -152,6 +152,9 @@ type Instance struct {
 
 	// Query string provider
 	QSP QueryStringProvider
+
+	// ProviderType indicates the database engine: "mysql" (default) or "postgresql"
+	ProviderType string
 }
 
 // NewInstance creates a new, empty instance
