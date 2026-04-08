@@ -60,6 +60,32 @@ const (
 var instanceReadChan = make(chan bool, backendDBConcurrency)
 var instanceWriteChan = make(chan bool, backendDBConcurrency)
 
+// detectProviderType determines whether an instance is MySQL or PostgreSQL.
+// It checks (in order):
+// 1. The orchestrator backend DB for a previously stored provider_type
+// 2. Port-based heuristic (5432 -> postgresql)
+// 3. The global config.Config.ProviderType as fallback (backward compat)
+func detectProviderType(instanceKey *InstanceKey) string {
+	// Check if we already know this instance's provider type from the backend DB
+	query := `SELECT provider_type FROM database_instance WHERE hostname = ? AND port = ?`
+	var providerType string
+	err := db.QueryOrchestrator(query, sqlutils.Args(instanceKey.Hostname, instanceKey.Port), func(m sqlutils.RowMap) error {
+		providerType = m.GetString("provider_type")
+		return nil
+	})
+	if err == nil && providerType != "" {
+		return providerType
+	}
+
+	// Port-based heuristic for new instances
+	if instanceKey.Port == 5432 {
+		return "postgresql"
+	}
+
+	// Fall back to global config (backward compatibility)
+	return config.Config.ProviderType
+}
+
 // InstancesByCountReplicas is a sortable type for Instance
 type InstancesByCountReplicas [](*Instance)
 
@@ -226,7 +252,8 @@ func logReadTopologyInstanceError(instanceKey *InstanceKey, hint string, err err
 // server and writes the result synchronously to the orchestrator
 // backend.
 func ReadTopologyInstance(instanceKey *InstanceKey) (*Instance, error) {
-	if config.Config.ProviderType == "postgresql" {
+	providerType := detectProviderType(instanceKey)
+	if providerType == "postgresql" {
 		inst, err := ReadPostgreSQLTopologyInstance(instanceKey)
 		if err != nil {
 			// Mark the instance as checked-but-not-seen so analysis detects it as dead
@@ -360,7 +387,7 @@ func expectReplicationThreadsState(instance *Instance, instanceKey *InstanceKey,
 // - timing information can be collected for the stages performed.
 func ReadTopologyInstanceBufferable(instanceKey *InstanceKey, bufferWrites bool, latency *stopwatch.NamedStopwatch) (inst *Instance, skipped bool, err error) {
 	// PostgreSQL path: delegate to PG-specific discovery and skip MySQL logic entirely
-	if config.Config.ProviderType == "postgresql" {
+	if detectProviderType(instanceKey) == "postgresql" {
 		if latency != nil {
 			latency.Start("instance")
 		}
@@ -1222,7 +1249,7 @@ func ReadReplicationGroupPrimary(instance *Instance) (err error) {
 func ReadInstanceClusterAttributes(instance *Instance) (err error) {
 	// PostgreSQL provider sets ClusterName directly during discovery.
 	// Skip the master-lookup logic which is MySQL-specific.
-	if config.Config.ProviderType == "postgresql" {
+	if instance.ProviderType == "postgresql" || detectProviderType(&instance.Key) == "postgresql" {
 		return nil
 	}
 	var masterOrGroupPrimaryInstanceKey InstanceKey
@@ -1462,6 +1489,10 @@ func readInstanceRow(m sqlutils.RowMap) *Instance {
 		Port: m.GetInt("replication_group_primary_port")}
 	_ = instance.ReplicationGroupMembers.ReadJson(m.GetString("replication_group_members"))
 	//instance.ReplicationGroup = m.GetString("replication_group_")
+	instance.ProviderType = m.GetString("provider_type")
+	if instance.ProviderType == "" {
+		instance.ProviderType = "mysql"
+	}
 
 	// problems
 	if !instance.IsLastCheckValid {
@@ -2780,6 +2811,7 @@ func mkInsertOdkuForInstances(instances []*Instance, instanceWasActuallyFound bo
 		"replication_group_members",
 		"replication_group_primary_host",
 		"replication_group_primary_port",
+		"provider_type",
 	}
 
 	var values = make([]string, len(columns))
@@ -2873,6 +2905,11 @@ func mkInsertOdkuForInstances(instances []*Instance, instanceWasActuallyFound bo
 		args = append(args, instance.ReplicationGroupMembers.ToJSONString())
 		args = append(args, instance.ReplicationGroupPrimaryInstanceKey.Hostname)
 		args = append(args, instance.ReplicationGroupPrimaryInstanceKey.Port)
+		providerType := instance.ProviderType
+		if providerType == "" {
+			providerType = "mysql"
+		}
+		args = append(args, providerType)
 	}
 
 	sql, err := mkInsertOdku("database_instance", columns, values, len(instances), insertIgnore)

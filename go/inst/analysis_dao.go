@@ -51,11 +51,53 @@ func initializeAnalysisDaoPostConfiguration() {
 	recentInstantAnalysis = cache.New(time.Duration(config.RecoveryPollSeconds*2)*time.Second, time.Second)
 }
 
+// hasPostgreSQLInstances checks whether the orchestrator backend has any
+// instances with provider_type='postgresql'. This is used to decide whether
+// PostgreSQL analysis should be run alongside MySQL analysis.
+func hasPostgreSQLInstances(clusterName string) bool {
+	query := `SELECT 1 FROM database_instance WHERE provider_type = 'postgresql'`
+	args := sqlutils.Args()
+	if clusterName != "" {
+		query += ` AND cluster_name = ?`
+		args = append(args, clusterName)
+	}
+	query += ` LIMIT 1`
+	found := false
+	_ = db.QueryOrchestrator(query, args, func(m sqlutils.RowMap) error {
+		found = true
+		return nil
+	})
+	return found
+}
+
+// hasMySQLInstances checks whether the orchestrator backend has any
+// instances with provider_type='mysql' (or empty, for backward compat).
+func hasMySQLInstances(clusterName string) bool {
+	query := `SELECT 1 FROM database_instance WHERE provider_type IN ('mysql', '')`
+	args := sqlutils.Args()
+	if clusterName != "" {
+		query += ` AND cluster_name = ?`
+		args = append(args, clusterName)
+	}
+	query += ` LIMIT 1`
+	found := false
+	_ = db.QueryOrchestrator(query, args, func(m sqlutils.RowMap) error {
+		found = true
+		return nil
+	})
+	return found
+}
+
 // GetReplicationAnalysis will check for replication problems (dead master; unreachable master; etc)
 func GetReplicationAnalysis(clusterName string, hints *ReplicationAnalysisHints) ([]ReplicationAnalysis, error) {
-	if config.Config.ProviderType == "postgresql" {
+	// When the global config is set to "postgresql" and there are no MySQL instances,
+	// use the pure PG path (backward compatibility).
+	if config.Config.ProviderType == "postgresql" && !hasMySQLInstances(clusterName) {
 		return GetPostgreSQLReplicationAnalysis(clusterName, hints)
 	}
+
+	// In multi-cluster mode, run both MySQL and PG analysis and merge results.
+	// First run MySQL analysis (below), then append PG results if any PG instances exist.
 
 	result := []ReplicationAnalysis{}
 
@@ -738,6 +780,17 @@ func GetReplicationAnalysis(clusterName string, hints *ReplicationAnalysisHints)
 		return result, log.Errore(err)
 	}
 	// TODO: result, err = getConcensusReplicationAnalysis(result)
+
+	// In multi-cluster mode, also run PostgreSQL analysis and merge results
+	if hasPostgreSQLInstances(clusterName) {
+		pgResult, pgErr := GetPostgreSQLReplicationAnalysis(clusterName, hints)
+		if pgErr != nil {
+			log.Errore(pgErr)
+		} else {
+			result = append(result, pgResult...)
+		}
+	}
+
 	return result, log.Errore(err)
 }
 

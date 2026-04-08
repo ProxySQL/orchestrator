@@ -57,6 +57,7 @@ func ReadPostgreSQLTopologyInstance(instanceKey *InstanceKey) (*Instance, error)
 	}
 	instance.Version = parsePostgreSQLVersion(version)
 	instance.FlavorName = "PostgreSQL"
+	instance.ProviderType = "postgresql"
 
 	// Check whether this instance is in recovery (standby) or is a primary
 	var inRecovery bool
