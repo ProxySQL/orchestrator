@@ -1,3 +1,17 @@
+/* ── Modern theme variables ─────────────────────────────────────────── */
+:root {
+    --orc-primary: #0d6efd;
+    --orc-primary-dark: #0a58ca;
+    --orc-bg: #f4f6f9;
+    --orc-card-bg: #ffffff;
+    --orc-card-border: #dee2e6;
+    --orc-card-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    --orc-navbar-bg: #212529;
+    --orc-font-family: system-ui, -apple-system, "Segoe UI", Roboto,
+        "Helvetica Neue", Arial, sans-serif;
+}
+
+/* ── Base ───────────────────────────────────────────────────────────── */
 .hiddenMessage {
     display: none;
 }
@@ -7,9 +21,57 @@
 }
 
 body {
-    background-color: #f7f7f7;
+    font-family: var(--orc-font-family);
+    background-color: var(--orc-bg);
     background-repeat: repeat;
-    padding-top: 50px;
+    padding-top: 56px;
+}
+
+/* ── Navbar ─────────────────────────────────────────────────────────── */
+.navbar {
+    background-color: var(--orc-navbar-bg) !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+    min-height: auto;
+    margin-bottom: 0;
+}
+
+.navbar .navbar-brand {
+    font-weight: 600;
+    letter-spacing: 0.02em;
+}
+
+/* ── Card-based panels ──────────────────────────────────────────────── */
+.card {
+    background-color: var(--orc-card-bg);
+    border: 1px solid var(--orc-card-border);
+    border-radius: 0.5rem;
+    box-shadow: var(--orc-card-shadow);
+    margin-bottom: 1rem;
+}
+
+.card-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid var(--orc-card-border);
+    font-weight: 600;
+}
+
+/* ── Bootstrap 3 → 5 compatibility helpers ──────────────────────────── */
+.pull-left  { float: left !important; }
+.pull-right { float: right !important; }
+
+.input-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+}
+
+.btn-xs {
+    padding: 0.125rem 0.375rem;
+    font-size: 0.75rem;
+    border-radius: 0.2rem;
+}
+
+.glyphicon {
+    font-family: "Glyphicons Halflings";
 }
 
 .orchestrator-brand {
@@ -35,9 +97,6 @@ body {
     overflow-y: auto;
 }
 
-.navbar {
-  margin-bottom: 0px;
-}
 
 .navbar-nav > li > .dropdown {
     padding-bottom: 15px;
@@ -408,7 +467,7 @@ body {
     padding: 5px 9px;
 }
 
-#node_modal .begin-downtime .panel-body {
+#node_modal .begin-downtime .card-body {
   background-color: #d9edf7;
 }
 
