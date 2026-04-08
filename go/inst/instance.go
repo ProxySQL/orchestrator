@@ -31,6 +31,35 @@ import (
 
 const ReasonableDiscoveryLatency = 500 * time.Millisecond
 
+// ChannelStatus represents the replication status of a single named channel.
+// In multi-source replication (MySQL 5.7+), each channel has its own IO/SQL thread,
+// coordinates, and lag information.
+type ChannelStatus struct {
+	ChannelName                 string
+	MasterKey                   InstanceKey
+	MasterUUID                  string
+	ReplicationIOThreadRunning  bool
+	ReplicationSQLThreadRunning bool
+	ReplicationIOThreadState    ReplicationThreadState
+	ReplicationSQLThreadState   ReplicationThreadState
+	ReadBinlogCoordinates       BinlogCoordinates
+	ExecBinlogCoordinates       BinlogCoordinates
+	RelaylogCoordinates         BinlogCoordinates
+	SecondsBehindMaster         sql.NullInt64
+	SQLDelay                    uint
+	LastSQLError                string
+	LastIOError                 string
+	UsingOracleGTID             bool
+	UsingMariaDBGTID            bool
+	HasReplicationFilters       bool
+	HasReplicationCredentials   bool
+}
+
+// IsGRInternalChannel returns true if this channel is a Group Replication internal channel.
+func (cs *ChannelStatus) IsGRInternalChannel() bool {
+	return cs.ChannelName == "group_replication_applier" || cs.ChannelName == "group_replication_recovery"
+}
+
 // Instance represents a database instance, including its current configuration & status.
 // It presents important replication configuration and detailed replication status.
 type Instance struct {
@@ -130,6 +159,10 @@ type Instance struct {
 	Problems []string
 
 	LastDiscoveryLatency time.Duration
+
+	// Multi-source replication (named channels)
+	ReplicationChannels []ChannelStatus // All replication channels (empty for single-source)
+	ManagedChannelName  string          // The channel orchestrator manages for this instance (empty = default)
 
 	seed bool // Means we force this instance to be written to backend, even if it's invalid, empty or forgotten
 

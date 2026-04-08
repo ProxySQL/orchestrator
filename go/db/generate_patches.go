@@ -622,4 +622,22 @@ var generateSQLPatches = []string{
 		database_instance
 			ADD COLUMN provider_type varchar(20) CHARACTER SET ascii NOT NULL DEFAULT 'mysql' AFTER replication_group_primary_port
 	`,
+	// Multi-source replication (named channels) support
+	`
+		CREATE TABLE IF NOT EXISTS database_instance_channels (
+			hostname varchar(128) NOT NULL,
+			port smallint(5) unsigned NOT NULL,
+			channel_name varchar(128) NOT NULL,
+			master_host varchar(128) NOT NULL,
+			master_port smallint(5) unsigned NOT NULL,
+			master_uuid varchar(64) NOT NULL DEFAULT '',
+			replication_io_running tinyint NOT NULL DEFAULT 0,
+			replication_sql_running tinyint NOT NULL DEFAULT 0,
+			seconds_behind_master bigint DEFAULT NULL,
+			last_io_error text NOT NULL,
+			last_sql_error text NOT NULL,
+			last_seen timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			PRIMARY KEY (hostname, port, channel_name)
+		)
+	`,
 }
