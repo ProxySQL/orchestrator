@@ -391,3 +391,53 @@ func GetQueryStringProvider(version string) QueryStringProvider {
 
 	return queryStringProvider80
 }
+
+// forChannelClause returns the "FOR CHANNEL 'name'" SQL suffix for channel-aware commands.
+// When channelName is empty (the default channel), it returns an empty string for
+// backward compatibility with single-source replication.
+func forChannelClause(channelName string) string {
+	if channelName == "" {
+		return ""
+	}
+	return " FOR CHANNEL '" + channelName + "'"
+}
+
+// StopReplicaForChannel returns the stop slave/replica SQL with an optional channel clause.
+func (qps *QueryStringProvider) StopReplicaForChannel(channelName string) string {
+	return qps.stop_slave() + forChannelClause(channelName)
+}
+
+// StartReplicaForChannel returns the start slave/replica SQL with an optional channel clause.
+func (qps *QueryStringProvider) StartReplicaForChannel(channelName string) string {
+	return qps.start_slave() + forChannelClause(channelName)
+}
+
+// ResetReplicaForChannel returns the reset slave/replica SQL with an optional channel clause.
+func (qps *QueryStringProvider) ResetReplicaForChannel(channelName string) string {
+	return qps.reset_slave() + forChannelClause(channelName)
+}
+
+// ResetReplicaAllForChannel returns the reset slave all SQL with an optional channel clause.
+func (qps *QueryStringProvider) ResetReplicaAllForChannel(channelName string) string {
+	return qps.reset_slave_50603_all() + forChannelClause(channelName)
+}
+
+// StopReplicaIOThreadForChannel returns the stop IO thread SQL with an optional channel clause.
+func (qps *QueryStringProvider) StopReplicaIOThreadForChannel(channelName string) string {
+	return qps.stop_slave_io_thread() + forChannelClause(channelName)
+}
+
+// StopReplicaSQLThreadForChannel returns the stop SQL thread SQL with an optional channel clause.
+func (qps *QueryStringProvider) StopReplicaSQLThreadForChannel(channelName string) string {
+	return qps.stop_slave_sql_thread() + forChannelClause(channelName)
+}
+
+// StartReplicaSQLThreadForChannel returns the start SQL thread SQL with an optional channel clause.
+func (qps *QueryStringProvider) StartReplicaSQLThreadForChannel(channelName string) string {
+	return qps.start_slave_sql_thread() + forChannelClause(channelName)
+}
+
+// StartReplicaIOThreadForChannel returns the start IO thread SQL with an optional channel clause.
+func (qps *QueryStringProvider) StartReplicaIOThreadForChannel(channelName string) string {
+	return qps.start_slave_io_thread() + forChannelClause(channelName)
+}
