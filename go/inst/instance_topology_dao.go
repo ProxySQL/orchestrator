@@ -398,6 +398,13 @@ func StopReplicas(replicas [](*Instance), stopReplicationMethod StopReplicationM
 
 // StopReplication stops replication on a given instance
 func StopReplication(instanceKey *InstanceKey) (*Instance, error) {
+	return StopReplicationForChannel(instanceKey, "")
+}
+
+// StopReplicationForChannel stops replication on a given instance, optionally for a specific channel.
+// When channelName is empty, it stops all replication (backward compatible behavior).
+// When channelName is specified, it stops only that channel.
+func StopReplicationForChannel(instanceKey *InstanceKey, channelName string) (*Instance, error) {
 	instance, err := ReadTopologyInstance(instanceKey)
 	if err != nil {
 		return instance, log.Errore(err)
@@ -407,7 +414,13 @@ func StopReplication(instanceKey *InstanceKey) (*Instance, error) {
 		return instance, fmt.Errorf("instance is not a replica: %+v", instanceKey)
 	}
 
-	_, err = ExecInstance(instanceKey, instance.QSP.stop_slave())
+	// For multi-source instances with no explicit channel, use the managed channel
+	effectiveChannel := channelName
+	if effectiveChannel == "" && len(instance.ReplicationChannels) > 1 {
+		effectiveChannel = instance.ManagedChannelName
+	}
+
+	_, err = ExecInstance(instanceKey, instance.QSP.StopReplicaForChannel(effectiveChannel))
 	if err != nil {
 		// Patch; current MaxScale behavior for STOP SLAVE is to throw an error if replica already stopped.
 		if instance.isMaxScale() && err.Error() == "Error 1199: Slave connection is not running" {
@@ -419,7 +432,7 @@ func StopReplication(instanceKey *InstanceKey) (*Instance, error) {
 	}
 	instance, err = ReadTopologyInstance(instanceKey)
 
-	log.Infof("Stopped replication on %+v, Self:%+v, Exec:%+v", *instanceKey, instance.SelfBinlogCoordinates, instance.ExecBinlogCoordinates)
+	log.Infof("Stopped replication on %+v (channel %q), Self:%+v, Exec:%+v", *instanceKey, effectiveChannel, instance.SelfBinlogCoordinates, instance.ExecBinlogCoordinates)
 	return instance, err
 }
 
@@ -448,6 +461,13 @@ func waitForReplicationState(instance *Instance, instanceKey *InstanceKey, expec
 
 // StartReplication starts replication on a given instance.
 func StartReplication(instanceKey *InstanceKey) (*Instance, error) {
+	return StartReplicationForChannel(instanceKey, "")
+}
+
+// StartReplicationForChannel starts replication on a given instance, optionally for a specific channel.
+// When channelName is empty, it starts all replication (backward compatible behavior).
+// When channelName is specified, it starts only that channel.
+func StartReplicationForChannel(instanceKey *InstanceKey, channelName string) (*Instance, error) {
 	instance, err := ReadTopologyInstance(instanceKey)
 	if err != nil {
 		return instance, log.Errore(err)
@@ -472,11 +492,17 @@ func StartReplication(instanceKey *InstanceKey) (*Instance, error) {
 		return instance, log.Errore(err)
 	}
 
-	_, err = ExecInstance(instanceKey, instance.QSP.start_slave())
+	// For multi-source instances with no explicit channel, use the managed channel
+	effectiveChannel := channelName
+	if effectiveChannel == "" && len(instance.ReplicationChannels) > 1 {
+		effectiveChannel = instance.ManagedChannelName
+	}
+
+	_, err = ExecInstance(instanceKey, instance.QSP.StartReplicaForChannel(effectiveChannel))
 	if err != nil {
 		return instance, log.Errore(err)
 	}
-	log.Infof("Started replication on %+v", instanceKey)
+	log.Infof("Started replication on %+v (channel %q)", instanceKey, effectiveChannel)
 
 	waitForReplicationState(instance, instanceKey, ReplicationThreadStateRunning)
 
@@ -942,6 +968,13 @@ func workaroundBug83713(instance *Instance, instanceKey *InstanceKey) {
 
 // ChangeMasterTo changes the given instance's master according to given input.
 func ChangeMasterTo(instanceKey *InstanceKey, masterKey *InstanceKey, masterBinlogCoordinates *BinlogCoordinates, skipUnresolve bool, gtidHint OperationGTIDHint) (*Instance, error) {
+	return ChangeMasterToForChannel(instanceKey, masterKey, masterBinlogCoordinates, skipUnresolve, gtidHint, "")
+}
+
+// ChangeMasterToForChannel changes the given instance's master for a specific replication channel.
+// When channelName is empty, this behaves identically to the original ChangeMasterTo for
+// backward compatibility with single-source replication.
+func ChangeMasterToForChannel(instanceKey *InstanceKey, masterKey *InstanceKey, masterBinlogCoordinates *BinlogCoordinates, skipUnresolve bool, gtidHint OperationGTIDHint, channelName string) (*Instance, error) {
 	instance, err := ReadTopologyInstance(instanceKey)
 	if err != nil {
 		return instance, log.Errore(err)
@@ -950,7 +983,7 @@ func ChangeMasterTo(instanceKey *InstanceKey, masterKey *InstanceKey, masterBinl
 	if instance.ReplicationThreadsExist() && !instance.ReplicationThreadsStopped() {
 		return instance, fmt.Errorf("ChangeMasterTo: Cannot change master on: %+v because replication threads are not stopped", *instanceKey)
 	}
-	log.Debugf("ChangeMasterTo: will attempt changing master on %+v to %+v, %+v", *instanceKey, *masterKey, *masterBinlogCoordinates)
+	log.Debugf("ChangeMasterTo: will attempt changing master on %+v to %+v, %+v (channel %q)", *instanceKey, *masterKey, *masterBinlogCoordinates, channelName)
 	changeToMasterKey := masterKey
 	if !skipUnresolve {
 		unresolvedMasterKey, nameUnresolved, err := UnresolveHostname(masterKey)
@@ -971,12 +1004,15 @@ func ChangeMasterTo(instanceKey *InstanceKey, masterKey *InstanceKey, masterBinl
 	originalMasterKey := instance.MasterKey
 	originalExecBinlogCoordinates := instance.ExecBinlogCoordinates
 
+	// Build the FOR CHANNEL suffix for multi-source replication
+	channelClause := forChannelClause(channelName)
+
 	var changeMasterFunc func() error
 	changedViaGTID := false
 	if instance.UsingMariaDBGTID && gtidHint != GTIDHintDeny {
 		// Keep on using GTID
 		changeMasterFunc = func() error {
-			_, err := ExecInstance(instanceKey, instance.QSP.change_master_to_master_host_port(),
+			_, err := ExecInstance(instanceKey, instance.QSP.change_master_to_master_host_port()+channelClause,
 				changeToMasterKey.Hostname, changeToMasterKey.Port)
 			return err
 		}
@@ -984,7 +1020,7 @@ func ChangeMasterTo(instanceKey *InstanceKey, masterKey *InstanceKey, masterBinl
 	} else if instance.UsingMariaDBGTID && gtidHint == GTIDHintDeny {
 		// Make sure to not use GTID
 		changeMasterFunc = func() error {
-			_, err = ExecInstance(instanceKey, instance.QSP.change_master_to_master_host_port_log_gtid_no(),
+			_, err = ExecInstance(instanceKey, instance.QSP.change_master_to_master_host_port_log_gtid_no()+channelClause,
 				changeToMasterKey.Hostname, changeToMasterKey.Port, masterBinlogCoordinates.LogFile, masterBinlogCoordinates.LogPos)
 			return err
 		}
@@ -1001,7 +1037,7 @@ func ChangeMasterTo(instanceKey *InstanceKey, masterKey *InstanceKey, masterBinl
 			mariadbGTIDHint = "current_pos"
 		}
 		changeMasterFunc = func() error {
-			_, err = ExecInstance(instanceKey, fmt.Sprintf("change master to master_host=?, master_port=?, master_use_gtid=%s", mariadbGTIDHint),
+			_, err = ExecInstance(instanceKey, fmt.Sprintf("change master to master_host=?, master_port=?, master_use_gtid=%s", mariadbGTIDHint)+channelClause,
 				changeToMasterKey.Hostname, changeToMasterKey.Port)
 			return err
 		}
@@ -1009,7 +1045,7 @@ func ChangeMasterTo(instanceKey *InstanceKey, masterKey *InstanceKey, masterBinl
 	} else if instance.UsingOracleGTID && gtidHint != GTIDHintDeny {
 		// Is Oracle; already uses GTID; keep using it.
 		changeMasterFunc = func() error {
-			_, err = ExecInstance(instanceKey, instance.QSP.change_master_to_master_host_port(),
+			_, err = ExecInstance(instanceKey, instance.QSP.change_master_to_master_host_port()+channelClause,
 				changeToMasterKey.Hostname, changeToMasterKey.Port)
 			return err
 		}
@@ -1017,14 +1053,14 @@ func ChangeMasterTo(instanceKey *InstanceKey, masterKey *InstanceKey, masterBinl
 	} else if instance.UsingOracleGTID && gtidHint == GTIDHintDeny {
 		// Is Oracle; already uses GTID
 		changeMasterFunc = func() error {
-			_, err = ExecInstance(instanceKey, instance.QSP.change_master_to_master_host_port_log_autoposition_no(),
+			_, err = ExecInstance(instanceKey, instance.QSP.change_master_to_master_host_port_log_autoposition_no()+channelClause,
 				changeToMasterKey.Hostname, changeToMasterKey.Port, masterBinlogCoordinates.LogFile, masterBinlogCoordinates.LogPos)
 			return err
 		}
 	} else if instance.SupportsOracleGTID && gtidHint == GTIDHintForce {
 		// Is Oracle; not using GTID right now; turn into GTID
 		changeMasterFunc = func() error {
-			_, err = ExecInstance(instanceKey, instance.QSP.change_master_to_master_host_port_autoposition_yes(),
+			_, err = ExecInstance(instanceKey, instance.QSP.change_master_to_master_host_port_autoposition_yes()+channelClause,
 				changeToMasterKey.Hostname, changeToMasterKey.Port)
 			return err
 		}
@@ -1032,7 +1068,7 @@ func ChangeMasterTo(instanceKey *InstanceKey, masterKey *InstanceKey, masterBinl
 	} else {
 		// Normal binlog file:pos
 		changeMasterFunc = func() error {
-			_, err = ExecInstance(instanceKey, instance.QSP.change_master_to_master_host_port_log(),
+			_, err = ExecInstance(instanceKey, instance.QSP.change_master_to_master_host_port_log()+channelClause,
 				changeToMasterKey.Hostname, changeToMasterKey.Port, masterBinlogCoordinates.LogFile, masterBinlogCoordinates.LogPos)
 			return err
 		}
@@ -1049,7 +1085,7 @@ func ChangeMasterTo(instanceKey *InstanceKey, masterKey *InstanceKey, masterBinl
 	WriteMasterPositionEquivalence(&originalMasterKey, &originalExecBinlogCoordinates, changeToMasterKey, masterBinlogCoordinates)
 	ResetInstanceRelaylogCoordinatesHistory(instanceKey)
 
-	log.Infof("ChangeMasterTo: Changed master on %+v to: %+v, %+v. GTID: %+v", *instanceKey, masterKey, masterBinlogCoordinates, changedViaGTID)
+	log.Infof("ChangeMasterTo: Changed master on %+v to: %+v, %+v. GTID: %+v, Channel: %q", *instanceKey, masterKey, masterBinlogCoordinates, changedViaGTID, channelName)
 
 	instance, err = ReadTopologyInstance(instanceKey)
 	return instance, err
