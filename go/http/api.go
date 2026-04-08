@@ -251,6 +251,23 @@ func (this *HttpAPI) Instance(w http.ResponseWriter, r *http.Request) {
 	renderJSON(w, http.StatusOK, instance)
 }
 
+// InstanceChannels returns the replication channels for a given instance.
+// For multi-source replicas, this returns all named replication channels and their status.
+func (this *HttpAPI) InstanceChannels(w http.ResponseWriter, r *http.Request) {
+	instanceKey, err := this.getInstanceKey(chi.URLParam(r, "host"), chi.URLParam(r, "port"))
+
+	if err != nil {
+		Respond(w, &APIResponse{Code: ERROR, Message: err.Error()})
+		return
+	}
+	instance, found, err := inst.ReadInstance(&instanceKey)
+	if (!found) || (err != nil) {
+		Respond(w, &APIResponse{Code: ERROR, Message: fmt.Sprintf("Cannot read instance: %+v", instanceKey)})
+		return
+	}
+	renderJSON(w, http.StatusOK, instance.ReplicationChannels)
+}
+
 // AsyncDiscover issues an asynchronous read on an instance. This is
 // useful for bulk loads of a new set of instances and will not block
 // if the instance is slow to respond or not reachable.
@@ -3926,6 +3943,7 @@ func (this *HttpAPI) RegisterRequests(router chi.Router) {
 	this.registerAPIRequest(router, "masters", this.Masters)
 	this.registerAPIRequest(router, "master/{clusterHint}", this.ClusterMaster)
 	this.registerAPIRequest(router, "instance-replicas/{host}/{port}", this.InstanceReplicas)
+	this.registerAPIRequest(router, "instance-channels/{host}/{port}", this.InstanceChannels)
 	this.registerAPIRequest(router, "all-instances", this.AllInstances)
 	this.registerAPIRequest(router, "downtimed", this.Downtimed)
 	this.registerAPIRequest(router, "downtimed/{clusterHint}", this.Downtimed)

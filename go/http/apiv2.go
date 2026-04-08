@@ -80,6 +80,7 @@ func RegisterV2Routes(r chi.Router) {
 
 		// Instance endpoints
 		r.Get("/instances/{host}/{port}", V2Instance)
+		r.Get("/instances/{host}/{port}/channels", V2InstanceChannels)
 
 		// Recovery endpoints
 		r.Get("/recoveries", V2Recoveries)
@@ -217,6 +218,34 @@ func V2Status(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	respondOK(w, health)
+}
+
+// V2InstanceChannels returns the replication channels for a specific MySQL instance.
+// For multi-source replicas, this returns all named replication channels and their status.
+func V2InstanceChannels(w http.ResponseWriter, r *http.Request) {
+	host := chi.URLParam(r, "host")
+	port := chi.URLParam(r, "port")
+
+	instanceKey, err := inst.NewResolveInstanceKeyStrings(host, port)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "INVALID_INSTANCE", fmt.Sprintf("Invalid instance key: %v", err))
+		return
+	}
+	instanceKey, err = inst.FigureInstanceKey(instanceKey, nil)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "INVALID_INSTANCE", fmt.Sprintf("Cannot resolve instance: %v", err))
+		return
+	}
+	instance, found, err := inst.ReadInstance(instanceKey)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "INSTANCE_READ_ERROR", fmt.Sprintf("Failed to read instance: %v", err))
+		return
+	}
+	if !found {
+		respondNotFound(w, fmt.Sprintf("Instance not found: %s:%s", host, port))
+		return
+	}
+	respondOK(w, instance.ReplicationChannels)
 }
 
 // V2ProxySQLServers returns all servers from ProxySQL's runtime_mysql_servers table.
