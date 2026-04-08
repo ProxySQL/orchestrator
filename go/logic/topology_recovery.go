@@ -2228,7 +2228,9 @@ func GracefulMasterTakeover(clusterName string, designatedKey *inst.InstanceKey,
 	if topologyRecovery.RecoveryType == MasterRecoveryGTID {
 		gtidHint = inst.GTIDHintForce
 	}
-	clusterMaster, err = inst.ChangeMasterTo(&clusterMaster.Key, &designatedInstance.Key, promotedMasterCoordinates, false, gtidHint)
+	// Use channel-aware operations to preserve other replication channels on multi-source replicas
+	managedChannel := clusterMaster.ManagedChannelName
+	clusterMaster, err = inst.ChangeMasterToForChannel(&clusterMaster.Key, &designatedInstance.Key, promotedMasterCoordinates, false, gtidHint, managedChannel)
 	if !clusterMaster.SelfBinlogCoordinates.Equals(demotedMasterSelfBinlogCoordinates) {
 		log.Errorf("GracefulMasterTakeover: sanity problem. Demoted master's coordinates changed from %+v to %+v while supposed to have been frozen", *demotedMasterSelfBinlogCoordinates, clusterMaster.SelfBinlogCoordinates)
 	}
@@ -2250,7 +2252,7 @@ func GracefulMasterTakeover(clusterName string, designatedKey *inst.InstanceKey,
 		}
 	}
 	if auto {
-		_, startReplicationErr := inst.StartReplication(&clusterMaster.Key)
+		_, startReplicationErr := inst.StartReplicationForChannel(&clusterMaster.Key, managedChannel)
 		if err == nil {
 			err = startReplicationErr
 		}
