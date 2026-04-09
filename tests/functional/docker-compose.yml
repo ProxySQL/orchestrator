@@ -205,6 +205,81 @@ services:
         aliases:
           - orchestrator-pg
 
+  orchestrator-raft1:
+    image: ubuntu:24.04
+    hostname: orchestrator-raft1
+    volumes:
+      - ../../bin/orchestrator:/usr/local/bin/orchestrator:ro
+      - ../../resources:/orchestrator/resources:ro
+      - ./orchestrator-raft1.conf.json:/orchestrator/orchestrator.conf.json:ro
+    command: >
+      bash -c "
+        apt-get update -qq && apt-get install -y -qq curl sqlite3 > /dev/null 2>&1 &&
+        mkdir -p /tmp/raft1 &&
+        cd /orchestrator &&
+        orchestrator -config orchestrator.conf.json http
+      "
+    ports:
+      - "3100:3099"
+    depends_on:
+      mysql1:
+        condition: service_healthy
+    networks:
+      orchnet:
+        ipv4_address: 172.30.0.40
+        aliases:
+          - orchestrator-raft1
+
+  orchestrator-raft2:
+    image: ubuntu:24.04
+    hostname: orchestrator-raft2
+    volumes:
+      - ../../bin/orchestrator:/usr/local/bin/orchestrator:ro
+      - ../../resources:/orchestrator/resources:ro
+      - ./orchestrator-raft2.conf.json:/orchestrator/orchestrator.conf.json:ro
+    command: >
+      bash -c "
+        apt-get update -qq && apt-get install -y -qq curl sqlite3 > /dev/null 2>&1 &&
+        mkdir -p /tmp/raft2 &&
+        cd /orchestrator &&
+        orchestrator -config orchestrator.conf.json http
+      "
+    ports:
+      - "3101:3099"
+    depends_on:
+      mysql1:
+        condition: service_healthy
+    networks:
+      orchnet:
+        ipv4_address: 172.30.0.41
+        aliases:
+          - orchestrator-raft2
+
+  orchestrator-raft3:
+    image: ubuntu:24.04
+    hostname: orchestrator-raft3
+    volumes:
+      - ../../bin/orchestrator:/usr/local/bin/orchestrator:ro
+      - ../../resources:/orchestrator/resources:ro
+      - ./orchestrator-raft3.conf.json:/orchestrator/orchestrator.conf.json:ro
+    command: >
+      bash -c "
+        apt-get update -qq && apt-get install -y -qq curl sqlite3 > /dev/null 2>&1 &&
+        mkdir -p /tmp/raft3 &&
+        cd /orchestrator &&
+        orchestrator -config orchestrator.conf.json http
+      "
+    ports:
+      - "3102:3099"
+    depends_on:
+      mysql1:
+        condition: service_healthy
+    networks:
+      orchnet:
+        ipv4_address: 172.30.0.42
+        aliases:
+          - orchestrator-raft3
+
 networks:
   orchnet:
     driver: bridge

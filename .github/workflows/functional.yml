@@ -289,3 +289,85 @@ jobs:
       env:
         PG_IMAGE: postgres:${{ matrix.pg_version }}
       run: docker compose down -v --remove-orphans 2>/dev/null || true
+
+  functional-raft:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: build
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Download orchestrator binary
+      uses: actions/download-artifact@v4
+      with:
+        name: orchestrator-binary
+        path: bin
+
+    - name: Make binary executable
+      run: chmod +x bin/orchestrator
+
+    - name: Start MySQL infrastructure
+      working-directory: tests/functional
+      run: |
+        docker compose up -d mysql1 mysql2 mysql3
+        echo "Waiting for MySQL to be healthy..."
+        timeout 120 bash -c '
+          while true; do
+            HEALTHY=$(docker compose ps --format json 2>/dev/null | python3 -c "
+        import json, sys
+        healthy = 0
+        for line in sys.stdin:
+            svc = json.loads(line)
+            if \"healthy\" in svc.get(\"Status\",\"\").lower():
+                healthy += 1
+        print(healthy)
+        " 2>/dev/null || echo "0")
+            if [ "$HEALTHY" -ge 3 ]; then
+              echo "All 3 MySQL services healthy"
+              exit 0
+            fi
+            sleep 2
+          done
+        ' || { echo "Timeout"; docker compose ps; docker compose logs --tail=30; exit 1; }
+
+    - name: Setup replication
+      run: bash tests/functional/setup-replication.sh
+
+    - name: Run Raft consensus tests
+      run: bash tests/functional/test-raft.sh
+
+    - name: Collect Raft orchestrator logs
+      if: always()
+      working-directory: tests/functional
+      run: |
+        docker compose logs orchestrator-raft1 > /tmp/orchestrator-raft1.log 2>&1 || true
+        docker compose logs orchestrator-raft2 > /tmp/orchestrator-raft2.log 2>&1 || true
+        docker compose logs orchestrator-raft3 > /tmp/orchestrator-raft3.log 2>&1 || true
+
+    - name: Upload Raft orchestrator logs
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: orchestrator-raft-logs
+        path: |
+          /tmp/orchestrator-raft1.log
+          /tmp/orchestrator-raft2.log
+          /tmp/orchestrator-raft3.log
+
+    - name: Collect all docker logs on failure
+      if: failure()
+      working-directory: tests/functional
+      run: docker compose logs > /tmp/docker-compose-raft-logs.txt 2>&1 || true
+
+    - name: Upload docker logs on failure
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: docker-compose-raft-logs
+        path: /tmp/docker-compose-raft-logs.txt
+
+    - name: Cleanup
+      if: always()
+      working-directory: tests/functional
+      run: docker compose down -v --remove-orphans 2>/dev/null || true

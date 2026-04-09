@@ -36,7 +36,7 @@ var createQueries = []string{
 			log_index integer,
 			term bigint not null,
 			log_type int not null,
-			data blob not null,
+			data blob,
 			PRIMARY KEY (log_index)
 		)
 	`,
@@ -44,7 +44,7 @@ var createQueries = []string{
 		CREATE TABLE IF NOT EXISTS raft_store (
 			store_id integer,
 			store_key varbinary(512) not null,
-			store_value blob not null,
+			store_value blob,
 			PRIMARY KEY (store_id)
 		)
 	`,
