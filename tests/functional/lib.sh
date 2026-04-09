@@ -33,7 +33,7 @@ summary() {
 test_endpoint() {
     local NAME="$1" URL="$2" EXPECT="$3"
     local CODE
-    CODE=$(curl -s -o /dev/null -w "%{http_code}" "$URL" 2>&1)
+    CODE=$(curl -s --max-time 10 -o /dev/null -w "%{http_code}" "$URL" 2>&1)
     if [ "$CODE" = "$EXPECT" ]; then
         pass "$NAME (HTTP $CODE)"
     else
@@ -45,7 +45,7 @@ test_endpoint() {
 test_body_contains() {
     local NAME="$1" URL="$2" EXPECT="$3"
     local BODY
-    BODY=$(curl -s "$URL" 2>&1)
+    BODY=$(curl -s --max-time 10 "$URL" 2>&1)
     if echo "$BODY" | grep -q "$EXPECT"; then
         pass "$NAME"
     else
@@ -57,7 +57,7 @@ test_body_contains() {
 wait_for_orchestrator() {
     echo "Waiting for orchestrator to be ready..."
     for i in $(seq 1 30); do
-        if curl -s -o /dev/null "$ORC_URL/api/clusters" 2>/dev/null; then
+        if curl -s --max-time 5 -o /dev/null "$ORC_URL/api/clusters" 2>/dev/null; then
             echo "Orchestrator ready after ${i}s"
             return 0
         fi
@@ -73,19 +73,19 @@ CLUSTER_NAME=""
 discover_topology() {
     local MASTER_HOST="$1"
     echo "Seeding discovery with $MASTER_HOST..."
-    curl -s "$ORC_URL/api/discover/$MASTER_HOST/3306" > /dev/null
+    curl -s --max-time 10 "$ORC_URL/api/discover/$MASTER_HOST/3306" > /dev/null
 
     # Also seed replicas directly
-    curl -s "$ORC_URL/api/discover/mysql2/3306" > /dev/null 2>&1
-    curl -s "$ORC_URL/api/discover/mysql3/3306" > /dev/null 2>&1
+    curl -s --max-time 10 "$ORC_URL/api/discover/mysql2/3306" > /dev/null 2>&1
+    curl -s --max-time 10 "$ORC_URL/api/discover/mysql3/3306" > /dev/null 2>&1
 
     echo "Waiting for topology discovery..."
     for i in $(seq 1 60); do
         # Get the cluster name dynamically
-        CLUSTER_NAME=$(curl -s "$ORC_URL/api/clusters" 2>/dev/null | python3 -c "import json,sys; c=json.load(sys.stdin); print(c[0] if c else '')" 2>/dev/null || echo "")
+        CLUSTER_NAME=$(curl -s --max-time 5 "$ORC_URL/api/clusters" 2>/dev/null | python3 -c "import json,sys; c=json.load(sys.stdin); print(c[0] if c else '')" 2>/dev/null || echo "")
         if [ -n "$CLUSTER_NAME" ]; then
             local COUNT
-            COUNT=$(curl -s "$ORC_URL/api/cluster/$CLUSTER_NAME" 2>/dev/null | python3 -c "import json,sys; print(len(json.load(sys.stdin)))" 2>/dev/null || echo "0")
+            COUNT=$(curl -s --max-time 5 "$ORC_URL/api/cluster/$CLUSTER_NAME" 2>/dev/null | python3 -c "import json,sys; print(len(json.load(sys.stdin)))" 2>/dev/null || echo "0")
             if [ "$COUNT" -ge 3 ] 2>/dev/null; then
                 echo "Full topology discovered (${COUNT} instances, cluster=$CLUSTER_NAME) after ${i}s"
                 return 0
@@ -93,8 +93,8 @@ discover_topology() {
         fi
         # Re-seed replicas periodically
         if [ "$((i % 10))" = "0" ]; then
-            curl -s "$ORC_URL/api/discover/mysql2/3306" > /dev/null 2>&1
-            curl -s "$ORC_URL/api/discover/mysql3/3306" > /dev/null 2>&1
+            curl -s --max-time 10 "$ORC_URL/api/discover/mysql2/3306" > /dev/null 2>&1
+            curl -s --max-time 10 "$ORC_URL/api/discover/mysql3/3306" > /dev/null 2>&1
         fi
         sleep 1
     done

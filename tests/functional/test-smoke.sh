@@ -14,7 +14,7 @@ echo ""
 echo "--- Discovery ---"
 
 # Get the actual cluster name (may differ from simple "mysql1")
-CLUSTERS=$(curl -s "$ORC_URL/api/clusters" 2>/dev/null)
+CLUSTERS=$(curl -s --max-time 10 "$ORC_URL/api/clusters" 2>/dev/null)
 CLUSTER_NAME=$(echo "$CLUSTERS" | python3 -c "import json,sys; c=json.load(sys.stdin); print(c[0] if c else '')" 2>/dev/null || echo "")
 echo "  Cluster name: $CLUSTER_NAME"
 
@@ -24,7 +24,7 @@ else
     fail "No cluster discovered" "Response: $CLUSTERS"
 fi
 
-INST_COUNT=$(curl -s "$ORC_URL/api/cluster/$CLUSTER_NAME" 2>/dev/null | python3 -c "import json,sys; print(len(json.load(sys.stdin)))" 2>/dev/null || echo "0")
+INST_COUNT=$(curl -s --max-time 10 "$ORC_URL/api/cluster/$CLUSTER_NAME" 2>/dev/null | python3 -c "import json,sys; print(len(json.load(sys.stdin)))" 2>/dev/null || echo "0")
 if [ "$INST_COUNT" -ge 2 ]; then
     pass "Instances discovered: $INST_COUNT"
 else
@@ -52,7 +52,7 @@ test_endpoint "GET /api/v2/recoveries" "$ORC_URL/api/v2/recoveries" "200"
 test_endpoint "GET /api/v2/proxysql/servers" "$ORC_URL/api/v2/proxysql/servers" "200"
 test_body_contains "V2 response has status field" "$ORC_URL/api/v2/clusters" '"status"'
 
-V2_404=$(curl -s -o /dev/null -w "%{http_code}" "$ORC_URL/api/v2/instances/nonexistent/9999")
+V2_404=$(curl -s --max-time 10 -o /dev/null -w "%{http_code}" "$ORC_URL/api/v2/instances/nonexistent/9999")
 if [ "$V2_404" = "404" ]; then
     pass "V2 returns 404 for unknown instance"
 else

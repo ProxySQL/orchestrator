@@ -24,15 +24,15 @@ echo "--- Discovery tests ---"
 # Discover primary first, wait for it to be written to DB, then discover standby.
 # This ensures the standby inherits the primary's cluster_name during WriteInstance.
 echo "Seeding discovery with 172.30.0.20:5432 (pgprimary)..."
-curl -s "$ORC_URL/api/discover/172.30.0.20/5432" > /dev/null
+curl -s --max-time 10 "$ORC_URL/api/discover/172.30.0.20/5432" > /dev/null
 sleep 5
 echo "Seeding discovery with 172.30.0.21:5432 (pgstandby1)..."
-curl -s "$ORC_URL/api/discover/172.30.0.21/5432" > /dev/null
+curl -s --max-time 10 "$ORC_URL/api/discover/172.30.0.21/5432" > /dev/null
 
 echo "Waiting for topology discovery..."
 PG_CLUSTER=""
 for i in $(seq 1 60); do
-    PG_CLUSTER=$(curl -s "$ORC_URL/api/clusters" 2>/dev/null | python3 -c "
+    PG_CLUSTER=$(curl -s --max-time 10 "$ORC_URL/api/clusters" 2>/dev/null | python3 -c "
 import json, sys
 c = json.load(sys.stdin)
 for name in c:
@@ -43,7 +43,7 @@ if c:
     print(c[0])
 " 2>/dev/null || echo "")
     if [ -n "$PG_CLUSTER" ]; then
-        COUNT=$(curl -s "$ORC_URL/api/cluster/$PG_CLUSTER" 2>/dev/null | python3 -c "import json,sys; print(len(json.load(sys.stdin)))" 2>/dev/null || echo "0")
+        COUNT=$(curl -s --max-time 10 "$ORC_URL/api/cluster/$PG_CLUSTER" 2>/dev/null | python3 -c "import json,sys; print(len(json.load(sys.stdin)))" 2>/dev/null || echo "0")
         if [ "$COUNT" -ge 2 ] 2>/dev/null; then
             echo "PostgreSQL topology discovered (${COUNT} instances, cluster=$PG_CLUSTER) after ${i}s"
             break
@@ -51,7 +51,7 @@ if c:
     fi
     # Re-seed standby periodically
     if [ "$((i % 10))" = "0" ]; then
-        curl -s "$ORC_URL/api/discover/172.30.0.21/5432" > /dev/null 2>&1
+        curl -s --max-time 10 "$ORC_URL/api/discover/172.30.0.21/5432" > /dev/null 2>&1
     fi
     sleep 1
 done
@@ -62,7 +62,7 @@ else
     fail "No PostgreSQL cluster discovered"
 fi
 
-INST_COUNT=$(curl -s "$ORC_URL/api/cluster/$PG_CLUSTER" 2>/dev/null | python3 -c "import json,sys; print(len(json.load(sys.stdin)))" 2>/dev/null || echo "0")
+INST_COUNT=$(curl -s --max-time 10 "$ORC_URL/api/cluster/$PG_CLUSTER" 2>/dev/null | python3 -c "import json,sys; print(len(json.load(sys.stdin)))" 2>/dev/null || echo "0")
 if [ "$INST_COUNT" -ge 2 ]; then
     pass "PostgreSQL instances discovered: $INST_COUNT"
 else
@@ -70,7 +70,7 @@ else
 fi
 
 # Verify primary is not read-only (not in recovery)
-PRIMARY_RO=$(curl -s "$ORC_URL/api/cluster/$PG_CLUSTER" 2>/dev/null | python3 -c "
+PRIMARY_RO=$(curl -s --max-time 10 "$ORC_URL/api/cluster/$PG_CLUSTER" 2>/dev/null | python3 -c "
 import json, sys
 instances = json.load(sys.stdin)
 for inst in instances:
@@ -88,7 +88,7 @@ else
 fi
 
 # Verify standby is read-only (in recovery)
-STANDBY_RO=$(curl -s "$ORC_URL/api/cluster/$PG_CLUSTER" 2>/dev/null | python3 -c "
+STANDBY_RO=$(curl -s --max-time 10 "$ORC_URL/api/cluster/$PG_CLUSTER" 2>/dev/null | python3 -c "
 import json, sys
 instances = json.load(sys.stdin)
 for inst in instances:
@@ -126,20 +126,20 @@ $COMPOSE stop pgprimary
 
 # Re-seed standby discovery by IP to ensure orchestrator can still reach it
 sleep 2
-curl -s "$ORC_URL/api/discover/172.30.0.21/5432" > /dev/null 2>&1
+curl -s --max-time 10 "$ORC_URL/api/discover/172.30.0.21/5432" > /dev/null 2>&1
 sleep 3
-curl -s "$ORC_URL/api/discover/172.30.0.21/5432" > /dev/null 2>&1
+curl -s --max-time 10 "$ORC_URL/api/discover/172.30.0.21/5432" > /dev/null 2>&1
 
 # Debug: dump cluster state before and during failover
 echo "DEBUG: ALL instances in PG orchestrator:"
-curl -s "$ORC_URL/api/all-instances" 2>/dev/null | python3 -c "
+curl -s --max-time 10 "$ORC_URL/api/all-instances" 2>/dev/null | python3 -c "
 import json, sys
 for i in json.load(sys.stdin):
     k=i['Key']; m=i['MasterKey']
     print(f'  {k[\"Hostname\"]}:{k[\"Port\"]} Cluster={i[\"ClusterName\"]} RO={i[\"ReadOnly\"]} Master={m[\"Hostname\"]}:{m[\"Port\"]}')" 2>/dev/null || echo "  (failed)"
 
 echo "DEBUG: Cluster state before failover (cluster=$PG_CLUSTER):"
-curl -s "$ORC_URL/api/cluster/$PG_CLUSTER" 2>/dev/null | python3 -c "
+curl -s --max-time 10 "$ORC_URL/api/cluster/$PG_CLUSTER" 2>/dev/null | python3 -c "
 import json, sys
 for i in json.load(sys.stdin):
     k=i['Key']; m=i['MasterKey']
@@ -148,13 +148,13 @@ for i in json.load(sys.stdin):
 # Wait a bit for re-discovery, then dump state
 sleep 15
 echo "DEBUG: Cluster state after primary stop + re-discovery:"
-curl -s "$ORC_URL/api/cluster/$PG_CLUSTER" 2>/dev/null | python3 -c "
+curl -s --max-time 10 "$ORC_URL/api/cluster/$PG_CLUSTER" 2>/dev/null | python3 -c "
 import json, sys
 for i in json.load(sys.stdin):
     k=i['Key']; m=i['MasterKey']
     print(f'  {k[\"Hostname\"]}:{k[\"Port\"]} RO={i[\"ReadOnly\"]} Master={m[\"Hostname\"]}:{m[\"Port\"]} Depth={i[\"ReplicationDepth\"]} Valid={i[\"IsLastCheckValid\"]}')" 2>/dev/null || echo "  (failed)"
 echo "DEBUG: Replication analysis:"
-curl -s "$ORC_URL/api/replication-analysis" 2>/dev/null | python3 -c "
+curl -s --max-time 10 "$ORC_URL/api/replication-analysis" 2>/dev/null | python3 -c "
 import json, sys
 for a in json.load(sys.stdin):
     print(f'  {a[\"AnalyzedInstanceKey\"][\"Hostname\"]}:{a[\"AnalyzedInstanceKey\"][\"Port\"]} Analysis={a[\"Analysis\"]} Replicas={a[\"CountReplicas\"]} ValidReplicas={a[\"CountValidReplicas\"]}')" 2>/dev/null || echo "  (failed)"
@@ -163,7 +163,7 @@ echo "Waiting for orchestrator to detect DeadPrimary and recover (max 120s)..."
 RECOVERED=false
 SUCCESSOR=""
 for i in $(seq 1 120); do
-    RECOVERIES=$(curl -s "$ORC_URL/api/v2/recoveries" 2>/dev/null)
+    RECOVERIES=$(curl -s --max-time 10 "$ORC_URL/api/v2/recoveries" 2>/dev/null)
     HAS_RECOVERY=$(echo "$RECOVERIES" | python3 -c "
 import json, sys
 d = json.load(sys.stdin)
@@ -192,15 +192,15 @@ else
     fail "DeadPrimary: no recovery detected within 120s"
     # Dump debug info
     echo "  DEBUG: Recent recoveries:"
-    curl -s "$ORC_URL/api/v2/recoveries" 2>/dev/null | python3 -m json.tool 2>/dev/null | head -30
+    curl -s --max-time 10 "$ORC_URL/api/v2/recoveries" 2>/dev/null | python3 -m json.tool 2>/dev/null | head -30
     echo "  DEBUG: Cluster topology:"
-    curl -s "$ORC_URL/api/cluster/$PG_CLUSTER" 2>/dev/null | python3 -m json.tool 2>/dev/null | head -30
+    curl -s --max-time 10 "$ORC_URL/api/cluster/$PG_CLUSTER" 2>/dev/null | python3 -m json.tool 2>/dev/null | head -30
 fi
 
 # Verify successor is no longer in recovery (promoted to primary)
 if [ "$RECOVERED" = "true" ]; then
     sleep 3
-    SUCCESSOR_RO=$(curl -s "$ORC_URL/api/cluster/$PG_CLUSTER" 2>/dev/null | python3 -c "
+    SUCCESSOR_RO=$(curl -s --max-time 10 "$ORC_URL/api/cluster/$PG_CLUSTER" 2>/dev/null | python3 -c "
 import json, sys
 instances = json.load(sys.stdin)
 for inst in instances:
@@ -220,7 +220,7 @@ print('unknown')
 fi
 
 # Verify recovery is recorded
-RECOVERY_API=$(curl -s "$ORC_URL/api/v2/recoveries" 2>/dev/null)
+RECOVERY_API=$(curl -s --max-time 10 "$ORC_URL/api/v2/recoveries" 2>/dev/null)
 if echo "$RECOVERY_API" | grep -q '"IsSuccessful":true'; then
     pass "Recovery audit: /api/v2/recoveries shows successful recovery"
 else

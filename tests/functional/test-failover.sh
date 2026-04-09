@@ -32,7 +32,7 @@ fi
 echo ""
 echo "--- Test 1: Graceful master takeover ---"
 
-RESULT=$(curl -s "$ORC_URL/api/graceful-master-takeover/$CLUSTER_NAME/mysql2/3306")
+RESULT=$(curl -s --max-time 10 "$ORC_URL/api/graceful-master-takeover/$CLUSTER_NAME/mysql2/3306")
 CODE=$(echo "$RESULT" | python3 -c "import json,sys; print(json.load(sys.stdin).get('Code',''))" 2>/dev/null)
 if [ "$CODE" = "OK" ]; then
     pass "Graceful takeover API returned OK"
@@ -95,9 +95,9 @@ docker compose -f tests/functional/docker-compose.yml exec -T proxysql \
 
 # Re-discover after topology change
 sleep 5
-curl -s "$ORC_URL/api/discover/mysql1/3306" > /dev/null
-curl -s "$ORC_URL/api/discover/mysql2/3306" > /dev/null
-curl -s "$ORC_URL/api/discover/mysql3/3306" > /dev/null
+curl -s --max-time 10 "$ORC_URL/api/discover/mysql1/3306" > /dev/null
+curl -s --max-time 10 "$ORC_URL/api/discover/mysql2/3306" > /dev/null
+curl -s --max-time 10 "$ORC_URL/api/discover/mysql3/3306" > /dev/null
 sleep 15
 
 echo "Topology restored, waiting for orchestrator to stabilize..."
@@ -113,7 +113,7 @@ docker compose -f tests/functional/docker-compose.yml stop mysql1
 echo "Waiting for orchestrator to detect DeadMaster and recover (max 60s)..."
 RECOVERED=false
 for i in $(seq 1 60); do
-    RECOVERIES=$(curl -s "$ORC_URL/api/v2/recoveries" 2>/dev/null)
+    RECOVERIES=$(curl -s --max-time 10 "$ORC_URL/api/v2/recoveries" 2>/dev/null)
     # Check for a successful recovery with DeadMaster analysis
     HAS_RECOVERY=$(echo "$RECOVERIES" | python3 -c "
 import json, sys
@@ -155,7 +155,7 @@ else
 fi
 
 # Check recovery via API
-RECOVERY_API=$(curl -s "$ORC_URL/api/v2/recoveries" 2>/dev/null)
+RECOVERY_API=$(curl -s --max-time 10 "$ORC_URL/api/v2/recoveries" 2>/dev/null)
 if echo "$RECOVERY_API" | grep -q '"IsSuccessful":true'; then
     pass "Recovery audit: /api/v2/recoveries shows successful recovery"
 else

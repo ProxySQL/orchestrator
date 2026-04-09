@@ -65,13 +65,13 @@ echo ""
 echo "--- Test 1: Discovery of named channels ---"
 
 # Re-seed discovery so orchestrator picks up the channel
-curl -s "$ORC_URL/api/discover/mysql3/3306" > /dev/null
+curl -s --max-time 10 "$ORC_URL/api/discover/mysql3/3306" > /dev/null
 sleep 10
 
 # Check channels API endpoint
 test_endpoint "GET /api/v2/channels" "$ORC_URL/api/v2/channels" "200"
 
-CHANNELS_BODY=$(curl -s "$ORC_URL/api/v2/channels" 2>&1)
+CHANNELS_BODY=$(curl -s --max-time 10 "$ORC_URL/api/v2/channels" 2>&1)
 if echo "$CHANNELS_BODY" | grep -q "extra"; then
     pass "Channel 'extra' listed in /api/v2/channels"
 else
@@ -84,7 +84,7 @@ echo "--- Test 2: Instance channels endpoint ---"
 
 test_endpoint "GET /api/instance-channels/mysql3/3306" "$ORC_URL/api/instance-channels/mysql3/3306" "200"
 
-INSTANCE_CHANNELS=$(curl -s "$ORC_URL/api/instance-channels/mysql3/3306" 2>&1)
+INSTANCE_CHANNELS=$(curl -s --max-time 10 "$ORC_URL/api/instance-channels/mysql3/3306" 2>&1)
 if echo "$INSTANCE_CHANNELS" | grep -q "extra"; then
     pass "Channel 'extra' listed in /api/instance-channels/mysql3/3306"
 else
@@ -95,7 +95,7 @@ fi
 echo ""
 echo "--- Test 3: Instance data includes channel info ---"
 
-INSTANCE_DATA=$(curl -s "$ORC_URL/api/instance/mysql3/3306" 2>&1)
+INSTANCE_DATA=$(curl -s --max-time 10 "$ORC_URL/api/instance/mysql3/3306" 2>&1)
 if echo "$INSTANCE_DATA" | grep -qi "channel\|replicat"; then
     pass "Instance data for mysql3 includes replication/channel info"
 else
