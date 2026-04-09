@@ -653,7 +653,7 @@ func moveInstanceBelowViaGTID(instance, otherInstance *Instance) (*Instance, err
 		goto Cleanup
 	}
 
-	instance, err = ChangeMasterTo(instanceKey, &otherInstance.Key, &otherInstance.SelfBinlogCoordinates, false, GTIDHintForce)
+	_, err = ChangeMasterTo(instanceKey, &otherInstance.Key, &otherInstance.SelfBinlogCoordinates, false, GTIDHintForce)
 	if err != nil {
 		goto Cleanup
 	}
@@ -1086,7 +1086,7 @@ func ResetReplicationOperation(instanceKey *InstanceKey) (*Instance, error) {
 		}
 	}
 
-	instance, err = ResetReplication(instanceKey)
+	_, err = ResetReplication(instanceKey)
 	if err != nil {
 		goto Cleanup
 	}
@@ -1132,7 +1132,7 @@ func DetachReplicaMasterHost(instanceKey *InstanceKey) (*Instance, error) {
 		goto Cleanup
 	}
 
-	instance, err = ChangeMasterTo(instanceKey, detachedMasterKey, &instance.ExecBinlogCoordinates, true, GTIDHintNeutral)
+	_, err = ChangeMasterTo(instanceKey, detachedMasterKey, &instance.ExecBinlogCoordinates, true, GTIDHintNeutral)
 	if err != nil {
 		goto Cleanup
 	}

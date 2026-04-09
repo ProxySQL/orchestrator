@@ -262,7 +262,7 @@ func DiscoverInstance(instanceKey inst.InstanceKey) {
 	}
 
 	latency.Start("backend")
-	instance, found, err := inst.ReadInstance(&instanceKey)
+	instance, found, _ := inst.ReadInstance(&instanceKey)
 	latency.Stop("backend")
 	if found && instance.IsUpToDate && instance.IsLastCheckValid {
 		// we've already discovered this one. Skip!
@@ -272,6 +272,7 @@ func DiscoverInstance(instanceKey inst.InstanceKey) {
 	discoveriesCounter.Inc(1)
 
 	// First we've ever heard of this instance. Continue investigation:
+	var err error
 	skipped := false
 	instance, skipped, err = inst.ReadTopologyInstanceBufferable(&instanceKey, config.Config.BufferInstanceWrites, latency)
 	// panic can occur (IO stuff). Therefore it may happen

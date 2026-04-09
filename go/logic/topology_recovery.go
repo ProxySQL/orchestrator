@@ -132,16 +132,16 @@ func NewTopologyRecovery(replicationAnalysis inst.ReplicationAnalysis) *Topology
 	return topologyRecovery
 }
 
-func (this *TopologyRecovery) AddError(err error) error {
+func (tr *TopologyRecovery) AddError(err error) error {
 	if err != nil {
-		this.AllErrors = append(this.AllErrors, err.Error())
+		tr.AllErrors = append(tr.AllErrors, err.Error())
 	}
 	return err
 }
 
-func (this *TopologyRecovery) AddErrors(errs []error) {
+func (tr *TopologyRecovery) AddErrors(errs []error) {
 	for _, err := range errs {
-		_ = this.AddError(err)
+		_ = tr.AddError(err)
 	}
 }
 
@@ -209,10 +209,10 @@ func init() {
 	_ = metrics.Register("recover.dead_co_master.start", recoverDeadCoMasterCounter)
 	_ = metrics.Register("recover.dead_co_master.success", recoverDeadCoMasterSuccessCounter)
 	_ = metrics.Register("recover.dead_co_master.fail", recoverDeadCoMasterFailureCounter)
-	metrics.Register("recover.dead_replication_group_member.start", recoverDeadReplicationGroupMemberCounter)
-	metrics.Register("recover.dead_replication_group_member.success", recoverDeadReplicationGroupMemberSuccessCounter)
-	metrics.Register("recover.dead_replication_group_member.fail", recoverDeadReplicationGroupMemberFailureCounter)
-	metrics.Register("recover.pending", countPendingRecoveriesGauge)
+	_ = metrics.Register("recover.dead_replication_group_member.start", recoverDeadReplicationGroupMemberCounter)
+	_ = metrics.Register("recover.dead_replication_group_member.success", recoverDeadReplicationGroupMemberSuccessCounter)
+	_ = metrics.Register("recover.dead_replication_group_member.fail", recoverDeadReplicationGroupMemberFailureCounter)
+	_ = metrics.Register("recover.pending", countPendingRecoveriesGauge)
 
 	go initializeTopologyRecoveryPostConfiguration()
 
@@ -1210,7 +1210,7 @@ func RecoverDeadIntermediateMaster(topologyRecovery *TopologyRecovery, skipProce
 		// So, match up all that's left, plan D
 		AuditTopologyRecovery(topologyRecovery, fmt.Sprintf("- RecoverDeadIntermediateMaster: will next attempt to relocate up from %+v", *failedInstanceKey))
 
-		relocatedReplicas, masterInstance, errs, err := inst.RelocateReplicas(failedInstanceKey, &analysisEntry.AnalyzedInstanceMasterKey, "")
+		relocatedReplicas, masterInstance, errs, _ := inst.RelocateReplicas(failedInstanceKey, &analysisEntry.AnalyzedInstanceMasterKey, "")
 		topologyRecovery.AddErrors(errs)
 		topologyRecovery.ParticipatingInstanceKeys.AddKey(analysisEntry.AnalyzedInstanceMasterKey)
 
@@ -2210,7 +2210,7 @@ func GracefulMasterTakeover(clusterName string, designatedKey *inst.InstanceKey,
 	log.Infof("GracefulMasterTakeover: attempting recovery")
 	recoveryAttempted, topologyRecovery, err := ForceExecuteRecovery(analysisEntry, &designatedInstance.Key, false)
 	if err != nil {
-		log.Errorf("GracefulMasterTakeover: noting an error, and for now proceeding: %+v", err)
+		_ = log.Errorf("GracefulMasterTakeover: noting an error, and for now proceeding: %+v", err)
 	}
 	if !recoveryAttempted {
 		return nil, nil, fmt.Errorf("GracefulMasterTakeover: unexpected error: recovery not attempted. This should not happen")
@@ -2232,7 +2232,7 @@ func GracefulMasterTakeover(clusterName string, designatedKey *inst.InstanceKey,
 	managedChannel := clusterMaster.ManagedChannelName
 	clusterMaster, err = inst.ChangeMasterToForChannel(&clusterMaster.Key, &designatedInstance.Key, promotedMasterCoordinates, false, gtidHint, managedChannel)
 	if !clusterMaster.SelfBinlogCoordinates.Equals(demotedMasterSelfBinlogCoordinates) {
-		log.Errorf("GracefulMasterTakeover: sanity problem. Demoted master's coordinates changed from %+v to %+v while supposed to have been frozen", *demotedMasterSelfBinlogCoordinates, clusterMaster.SelfBinlogCoordinates)
+		_ = log.Errorf("GracefulMasterTakeover: sanity problem. Demoted master's coordinates changed from %+v to %+v while supposed to have been frozen", *demotedMasterSelfBinlogCoordinates, clusterMaster.SelfBinlogCoordinates)
 	}
 	if !clusterMaster.HasReplicationCredentials && replicationCredentialsError == nil {
 		_, credentialsErr := inst.ChangeMasterCredentials(&clusterMaster.Key, replicationCreds)
@@ -2262,7 +2262,7 @@ func GracefulMasterTakeover(clusterName string, designatedKey *inst.InstanceKey,
 			topologyRecovery.SuccessorKey.Hostname, topologyRecovery.SuccessorKey.Port,
 			clusterMaster.Key.Hostname, clusterMaster.Key.Port,
 		); err != nil {
-			log.Errorf("ProxySQL post-graceful-takeover failed: %v", err)
+			_ = log.Errorf("ProxySQL post-graceful-takeover failed: %v", err)
 			AuditTopologyRecovery(topologyRecovery, fmt.Sprintf("ProxySQL post-graceful-takeover failed: %v", err))
 		}
 	}

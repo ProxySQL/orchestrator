@@ -43,7 +43,7 @@ func ReadPostgreSQLTopologyInstance(instanceKey *InstanceKey) (*Instance, error)
 	if err != nil {
 		return nil, log.Errore(err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	instance := NewInstance()
 	instance.Key = *instanceKey
@@ -221,7 +221,7 @@ func readPostgreSQLStandbyInfo(db *sql.DB, instance *Instance) error {
 		}
 	}
 	if !masterFound {
-		log.Warningf("PostgreSQL standby %s:%d: could not determine master host", instance.Key.Hostname, instance.Key.Port)
+		_ = log.Warningf("PostgreSQL standby %s:%d: could not determine master host", instance.Key.Hostname, instance.Key.Port)
 	}
 
 	instance.HasReplicationCredentials = true
@@ -264,7 +264,7 @@ func readPostgreSQLPrimaryInfo(db *sql.DB, instance *Instance) error {
 	if err != nil {
 		return log.Errore(err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	for rows.Next() {
 		var clientHostname, clientAddr sql.NullString

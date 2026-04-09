@@ -77,7 +77,7 @@ func generateShellScript(commandText string, env []string, arguments ...string) 
 	if err != nil {
 		return nil, "", log.Errorf("generateShellScript() failed to create TempFile: %v", err.Error())
 	}
-	tmpFile.Close()
+	_ = tmpFile.Close()
 	// write commandText to temporary file
 	if err := os.WriteFile(tmpFile.Name(), commandBytes, 0640); err != nil {
 		return nil, "", err

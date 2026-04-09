@@ -352,7 +352,7 @@ func Cli(command string, strict bool, instance string, destination string, owner
 					_ = log.Errore(e)
 				}
 				for _, replica := range repointedReplicas {
-					fmt.Println(fmt.Sprintf("%s<%s", replica.Key.DisplayString(), instanceKey.DisplayString()))
+					fmt.Printf("%s<%s\n", replica.Key.DisplayString(), instanceKey.DisplayString())
 				}
 			}
 		}
@@ -453,10 +453,10 @@ func Cli(command string, strict bool, instance string, destination string, owner
 			if promotedReplica == nil {
 				_ = log.Fatalf("Could not regroup replicas of %+v; error: %+v", *instanceKey, err)
 			}
-			fmt.Println(fmt.Sprintf("%s lost: %d, moved: %d",
-				promotedReplica.Key.DisplayString(), len(lostReplicas), len(movedReplicas)))
+			fmt.Printf("%s lost: %d, moved: %d\n",
+				promotedReplica.Key.DisplayString(), len(lostReplicas), len(movedReplicas))
 			if err != nil {
-				log.Fatale(err)
+				_ = log.Fatale(err)
 			}
 		}
 		// Pseudo-GTID
@@ -468,7 +468,7 @@ func Cli(command string, strict bool, instance string, destination string, owner
 			}
 			_, _, err := inst.MatchBelow(instanceKey, destinationKey, true)
 			if err != nil {
-				log.Fatale(err)
+				_ = log.Fatale(err)
 			}
 			fmt.Printf("%s<%s\n", instanceKey.DisplayString(), destinationKey.DisplayString())
 		}
@@ -477,7 +477,7 @@ func Cli(command string, strict bool, instance string, destination string, owner
 			instanceKey, _ = inst.FigureInstanceKey(instanceKey, thisInstanceKey)
 			instance, _, err := inst.MatchUp(instanceKey, true)
 			if err != nil {
-				log.Fatale(err)
+				_ = log.Fatale(err)
 			}
 			fmt.Printf("%s<%s\n", instanceKey.DisplayString(), instance.MasterKey.DisplayString())
 		}
@@ -815,7 +815,7 @@ func Cli(command string, strict bool, instance string, destination string, owner
 			instanceKey, _ = inst.FigureInstanceKey(instanceKey, thisInstanceKey)
 			var err error
 			if *config.RuntimeCLIFlags.BinlogFile == "" {
-				log.Fatal("expecting --binlog value")
+				_ = log.Fatal("expecting --binlog value")
 			}
 
 			_, err = inst.PurgeBinaryLogsTo(instanceKey, *config.RuntimeCLIFlags.BinlogFile, false)
@@ -841,7 +841,7 @@ func Cli(command string, strict bool, instance string, destination string, owner
 			if err != nil {
 				log.Fatale(err)
 			}
-			fmt.Println(fmt.Sprintf("%+v:%s", *coordinates, text))
+			fmt.Printf("%+v:%s\n", *coordinates, text)
 		}
 	case registerCliCommand("locate-gtid-errant", "Binary logs", `List binary logs containing errant GTIDs`):
 		{
@@ -861,65 +861,65 @@ func Cli(command string, strict bool, instance string, destination string, owner
 		{
 			instanceKey, _ = inst.FigureInstanceKey(instanceKey, thisInstanceKey)
 			if instanceKey == nil {
-				log.Fatalf("Unresolved instance")
+				_ = log.Fatalf("Unresolved instance")
 			}
 			instance, err := inst.ReadTopologyInstance(instanceKey)
 			if err != nil {
-				log.Fatale(err)
+				_ = log.Fatale(err)
 			}
 			if instance == nil {
-				log.Fatalf("Instance not found: %+v", *instanceKey)
+				_ = log.Fatalf("Instance not found: %+v", *instanceKey)
 			}
 			minCoordinates, err := inst.GetPreviousKnownRelayLogCoordinatesForInstance(instance)
 			if err != nil {
-				log.Fatalf("Error reading last known coordinates for %+v: %+v", instance.Key, err)
+				_ = log.Fatalf("Error reading last known coordinates for %+v: %+v", instance.Key, err)
 			}
 			binlogEvent, err := inst.GetLastExecutedEntryInRelayLogs(instance, minCoordinates, instance.RelaylogCoordinates)
 			if err != nil {
 				log.Fatale(err)
 			}
-			fmt.Println(fmt.Sprintf("%+v:%d", *binlogEvent, binlogEvent.NextEventPos))
+			fmt.Printf("%+v:%d\n", *binlogEvent, binlogEvent.NextEventPos)
 		}
 	case registerCliCommand("correlate-relaylog-pos", "Binary logs", `Given an instance (-i) and relaylog coordinates (--binlog=file:pos), find the correlated coordinates in another instance's relay logs (-d)`):
 		{
 			instanceKey, _ = inst.FigureInstanceKey(instanceKey, thisInstanceKey)
 			if instanceKey == nil {
-				log.Fatalf("Unresolved instance")
+				_ = log.Fatalf("Unresolved instance")
 			}
 			instance, err := inst.ReadTopologyInstance(instanceKey)
 			if err != nil {
-				log.Fatale(err)
+				_ = log.Fatale(err)
 			}
 			if instance == nil {
-				log.Fatalf("Instance not found: %+v", *instanceKey)
+				_ = log.Fatalf("Instance not found: %+v", *instanceKey)
 			}
 			if destinationKey == nil {
-				log.Fatal("Cannot deduce target instance:", destination)
+				_ = log.Fatal("Cannot deduce target instance:", destination)
 			}
 			otherInstance, err := inst.ReadTopologyInstance(destinationKey)
 			if err != nil {
-				log.Fatale(err)
+				_ = log.Fatale(err)
 			}
 			if otherInstance == nil {
-				log.Fatalf("Instance not found: %+v", *destinationKey)
+				_ = log.Fatalf("Instance not found: %+v", *destinationKey)
 			}
 
 			var relaylogCoordinates *inst.BinlogCoordinates
 			if *config.RuntimeCLIFlags.BinlogFile != "" {
 				if relaylogCoordinates, err = inst.ParseBinlogCoordinates(*config.RuntimeCLIFlags.BinlogFile); err != nil {
-					log.Fatalf("Expecing --binlog argument as file:pos")
+					_ = log.Fatalf("Expecing --binlog argument as file:pos")
 				}
 			}
 			instanceCoordinates, correlatedCoordinates, nextCoordinates, _, err := inst.CorrelateRelaylogCoordinates(instance, relaylogCoordinates, otherInstance)
 			if err != nil {
-				log.Fatale(err)
+				_ = log.Fatale(err)
 			}
-			fmt.Println(fmt.Sprintf("%+v;%+v;%+v", *instanceCoordinates, *correlatedCoordinates, *nextCoordinates))
+			fmt.Printf("%+v;%+v;%+v\n", *instanceCoordinates, *correlatedCoordinates, *nextCoordinates)
 		}
 	case registerCliCommand("find-binlog-entry", "Binary logs", `Get binlog file:pos of entry given by --pattern (exact full match, not a regular expression) in a given instance`):
 		{
 			if pattern == "" {
-				log.Fatal("No pattern given")
+				_ = log.Fatal("No pattern given")
 			}
 			instanceKey, _ = inst.FigureInstanceKey(instanceKey, thisInstanceKey)
 			if instanceKey == nil {

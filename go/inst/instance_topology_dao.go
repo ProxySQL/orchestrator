@@ -204,7 +204,7 @@ func FlushBinaryLogsTo(instanceKey *InstanceKey, logFile string) (*Instance, err
 // purgeBinaryLogsTo attempts to 'PURGE BINARY LOGS' until given binary log is reached
 func purgeBinaryLogsTo(instanceKey *InstanceKey, logFile string) (*Instance, error) {
 	if *config.RuntimeCLIFlags.Noop {
-		return nil, fmt.Errorf("noop: aborting purge-binary-logs operation on %+v; signalling error but nothing went wrong.", *instanceKey)
+		return nil, fmt.Errorf("noop: aborting purge-binary-logs operation on %+v; signalling error but nothing went wrong", *instanceKey)
 	}
 
 	_, err := ExecInstance(instanceKey, "purge binary logs to ?", logFile)
@@ -852,7 +852,7 @@ func ChangeMasterCredentials(instanceKey *InstanceKey, creds *ReplicationCredent
 	log.Debugf("ChangeMasterTo: will attempt changing master credentials on %+v", *instanceKey)
 
 	if *config.RuntimeCLIFlags.Noop {
-		return instance, fmt.Errorf("noop: aborting CHANGE MASTER TO operation on %+v; signalling error but nothing went wrong.", *instanceKey)
+		return instance, fmt.Errorf("noop: aborting CHANGE MASTER TO operation on %+v; signalling error but nothing went wrong", *instanceKey)
 	}
 
 	var query_params []string
@@ -909,7 +909,7 @@ func EnableMasterGetSourcePublicKey(instanceKey *InstanceKey) (*Instance, error)
 	log.Debugf("EnableMasterGetSourcePublicKey: Will attempt enabling GetSourcePublicKey replication on %+v", *instanceKey)
 
 	if *config.RuntimeCLIFlags.Noop {
-		return instance, fmt.Errorf("noop: aborting CHANGE REPLICATION SOURCE TO GET_SOURCE_PUBLIC_KEY=1 operation on %+v; signaling error but nothing went wrong.", *instanceKey)
+		return instance, fmt.Errorf("noop: aborting CHANGE REPLICATION SOURCE TO GET_SOURCE_PUBLIC_KEY=1 operation on %+v; signaling error but nothing went wrong", *instanceKey)
 	}
 	_, err = ExecInstance(instanceKey, instance.QSP.change_master_to_get_source_public_key())
 
@@ -998,7 +998,7 @@ func ChangeMasterToForChannel(instanceKey *InstanceKey, masterKey *InstanceKey, 
 	}
 
 	if *config.RuntimeCLIFlags.Noop {
-		return instance, fmt.Errorf("noop: aborting CHANGE MASTER TO operation on %+v; signalling error but nothing went wrong.", *instanceKey)
+		return instance, fmt.Errorf("noop: aborting CHANGE MASTER TO operation on %+v; signalling error but nothing went wrong", *instanceKey)
 	}
 
 	originalMasterKey := instance.MasterKey
@@ -1336,7 +1336,7 @@ func ReadReplicationCredentials(instanceKey *InstanceKey) (creds *ReplicationCre
 		if err == nil {
 			return creds, nil
 		}
-		log.Errore(err)
+		_ = log.Errore(err)
 	}
 	// Didn't get credentials from ReplicationCredentialsQuery, or ReplicationCredentialsQuery doesn't exist in the first place?
 	// We brute force our way through mysql.slave_master_info
@@ -1386,7 +1386,7 @@ func SetReadOnly(instanceKey *InstanceKey, readOnly bool) (*Instance, error) {
 			// MySQL 5.7.8 and Percona Server 5.6.21-70
 			// At this time orchestrator does not verify whether a server supports super_read_only or not.
 			// It makes a best effort to set it.
-			log.Errore(err)
+			_ = log.Errore(err)
 		}
 	}
 	instance, err = ReadTopologyInstance(instanceKey)

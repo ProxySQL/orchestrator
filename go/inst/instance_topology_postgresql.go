@@ -36,7 +36,7 @@ func PostgreSQLPromoteStandby(instanceKey *InstanceKey) (*Instance, error) {
 	if err != nil {
 		return nil, log.Errore(err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	// Verify the instance is actually in recovery (a standby)
 	var inRecovery bool
@@ -61,7 +61,7 @@ func PostgreSQLPromoteStandby(instanceKey *InstanceKey) (*Instance, error) {
 
 	for time.Now().Before(deadline) {
 		if err := db.QueryRow("SELECT pg_is_in_recovery()").Scan(&inRecovery); err != nil {
-			log.Warningf("PostgreSQLPromoteStandby: error checking recovery state on %+v: %v", *instanceKey, err)
+			_ = log.Warningf("PostgreSQLPromoteStandby: error checking recovery state on %+v: %v", *instanceKey, err)
 		} else if !inRecovery {
 			log.Infof("PostgreSQLPromoteStandby: %+v has exited recovery mode (promoted to primary)", *instanceKey)
 			// Re-read the instance to get updated state
@@ -85,7 +85,7 @@ func PostgreSQLReconfigureStandby(standbyKey *InstanceKey, newPrimaryKey *Instan
 	if err != nil {
 		return log.Errore(err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	// Verify the instance is a standby
 	var inRecovery bool

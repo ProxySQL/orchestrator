@@ -406,7 +406,7 @@ func Monitor() {
 
 		case <-heartbeat:
 			if IsLeader() {
-				go PublishCommand("heartbeat", "")
+				go func() { _, _ = PublishCommand("heartbeat", "") }()
 			}
 		case <-followerHealthTick:
 			if IsLeader() {

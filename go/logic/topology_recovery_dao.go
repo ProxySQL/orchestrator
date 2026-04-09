@@ -425,6 +425,9 @@ func AcknowledgeClusterRecoveries(clusterName string, owner string, comment stri
 	}
 	{
 		clusterInfo, err := inst.ReadClusterInfo(clusterName)
+		if err != nil {
+			return 0, err
+		}
 		whereClause := `cluster_alias = ? and cluster_alias != ''`
 		args := sqlutils.Args(clusterInfo.ClusterAlias)
 		clearAcknowledgedFailureDetections(whereClause, args)

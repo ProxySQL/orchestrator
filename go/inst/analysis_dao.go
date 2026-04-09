@@ -785,7 +785,7 @@ func GetReplicationAnalysis(clusterName string, hints *ReplicationAnalysisHints)
 	if hasPostgreSQLInstances(clusterName) {
 		pgResult, pgErr := GetPostgreSQLReplicationAnalysis(clusterName, hints)
 		if pgErr != nil {
-			log.Errore(pgErr)
+			_ = log.Errore(pgErr)
 		} else {
 			result = append(result, pgResult...)
 		}

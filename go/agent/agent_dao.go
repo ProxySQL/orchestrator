@@ -95,7 +95,7 @@ func readResponse(res *http.Response, err error) ([]byte, error) {
 	}
 
 	if res.Status == "500" {
-		return body, errors.New("Response Status 500")
+		return body, errors.New("response Status 500")
 	}
 
 	return body, nil
@@ -688,12 +688,12 @@ func executeSeed(seedId int64, targetHostname string, sourceHostname string) err
 
 	seedStateId, _ = submitSeedStateEntry(seedId, fmt.Sprintf("Looking up available snapshots on source %s", sourceHostname), "")
 	if len(sourceAgent.LogicalVolumes) == 0 {
-		return updateSeedStateEntry(seedStateId, errors.New("No logical volumes found on source host"))
+		return updateSeedStateEntry(seedStateId, errors.New("no logical volumes found on source host"))
 	}
 
 	seedStateId, _ = submitSeedStateEntry(seedId, fmt.Sprintf("Checking mount point on source %s", sourceHostname), "")
 	if sourceAgent.MountPoint.IsMounted {
-		return updateSeedStateEntry(seedStateId, errors.New("Volume already mounted on source host; please unmount"))
+		return updateSeedStateEntry(seedStateId, errors.New("volume already mounted on source host; please unmount"))
 	}
 
 	seedFromLogicalVolume := sourceAgent.LogicalVolumes[0]

@@ -354,7 +354,7 @@ func searchEventInRelaylog(instanceKey *InstanceKey, binlog string, searchEvent 
 			moreRowsExpected = true
 
 			if binlogCoordinates.LogPos == 0 {
-				readBinlogEvent(binlogEvent, m)
+				_ = readBinlogEvent(binlogEvent, m)
 				if binlogEvent.EqualsIgnoreCoordinates(searchEvent) {
 					// found it!
 					binlogCoordinates.LogPos = m.GetInt64("Pos")

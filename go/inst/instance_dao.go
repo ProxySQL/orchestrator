@@ -352,9 +352,9 @@ func (instance *Instance) checkMaxScale(db *sql.DB, latency *stopwatch.NamedStop
 			accessDeniedCounter.Inc(1)
 		}
 		if unrecoverableError(err) {
-			logReadTopologyInstanceError(&instance.Key, "", err)
+			_ = logReadTopologyInstanceError(&instance.Key, "", err)
 		} else {
-			logReadTopologyInstanceError(&instance.Key, "show variables like 'maxscale%'", err)
+			_ = logReadTopologyInstanceError(&instance.Key, "show variables like 'maxscale%'", err)
 		}
 	}
 
@@ -532,18 +532,18 @@ func ReadTopologyInstanceBufferable(instanceKey *InstanceKey, bufferWrites bool,
 
 		// Build a ChannelStatus for this row
 		channelStatus := ChannelStatus{
-			ChannelName:                 channelName,
-			MasterUUID:                  m.GetStringD(instance.QSP.master_uuid(), "No"),
-			HasReplicationCredentials:   (user != ""),
-			ReplicationIOThreadState:    ReplicationThreadStateFromStatus(m.GetString(instance.QSP.slave_io_running())),
-			ReplicationSQLThreadState:   ReplicationThreadStateFromStatus(m.GetString(instance.QSP.slave_sql_running())),
-			SQLDelay:                    m.GetUintD("SQL_Delay", 0),
-			UsingOracleGTID:             (m.GetIntD("Auto_Position", 0) == 1),
-			UsingMariaDBGTID:            (m.GetStringD("Using_Gtid", "No") != "No"),
-			HasReplicationFilters:       ((m.GetStringD("Replicate_Do_DB", "") != "") || (m.GetStringD("Replicate_Ignore_DB", "") != "") || (m.GetStringD("Replicate_Do_Table", "") != "") || (m.GetStringD("Replicate_Ignore_Table", "") != "") || (m.GetStringD("Replicate_Wild_Do_Table", "") != "") || (m.GetStringD("Replicate_Wild_Ignore_Table", "") != "")),
-			LastSQLError:                emptyQuotesRegexp.ReplaceAllString(strconv.QuoteToASCII(m.GetString("Last_SQL_Error")), ""),
-			LastIOError:                 emptyQuotesRegexp.ReplaceAllString(strconv.QuoteToASCII(m.GetString("Last_IO_Error")), ""),
-			SecondsBehindMaster:         m.GetNullInt64(instance.QSP.seconds_behind_master()),
+			ChannelName:               channelName,
+			MasterUUID:                m.GetStringD(instance.QSP.master_uuid(), "No"),
+			HasReplicationCredentials: (user != ""),
+			ReplicationIOThreadState:  ReplicationThreadStateFromStatus(m.GetString(instance.QSP.slave_io_running())),
+			ReplicationSQLThreadState: ReplicationThreadStateFromStatus(m.GetString(instance.QSP.slave_sql_running())),
+			SQLDelay:                  m.GetUintD("SQL_Delay", 0),
+			UsingOracleGTID:           (m.GetIntD("Auto_Position", 0) == 1),
+			UsingMariaDBGTID:          (m.GetStringD("Using_Gtid", "No") != "No"),
+			HasReplicationFilters:     ((m.GetStringD("Replicate_Do_DB", "") != "") || (m.GetStringD("Replicate_Ignore_DB", "") != "") || (m.GetStringD("Replicate_Do_Table", "") != "") || (m.GetStringD("Replicate_Ignore_Table", "") != "") || (m.GetStringD("Replicate_Wild_Do_Table", "") != "") || (m.GetStringD("Replicate_Wild_Ignore_Table", "") != "")),
+			LastSQLError:              emptyQuotesRegexp.ReplaceAllString(strconv.QuoteToASCII(m.GetString("Last_SQL_Error")), ""),
+			LastIOError:               emptyQuotesRegexp.ReplaceAllString(strconv.QuoteToASCII(m.GetString("Last_IO_Error")), ""),
+			SecondsBehindMaster:       m.GetNullInt64(instance.QSP.seconds_behind_master()),
 		}
 		channelStatus.ReplicationIOThreadRunning = channelStatus.ReplicationIOThreadState.IsRunning()
 		channelStatus.ReplicationSQLThreadRunning = channelStatus.ReplicationSQLThreadState.IsRunning()
@@ -2784,20 +2784,20 @@ func mkInsertOdku(table string, columns []string, values []string, nrRows int, i
 
 	var col = strings.Join(columns, ", ")
 	var odku bytes.Buffer
-	odku.WriteString(fmt.Sprintf("%s=VALUES(%s)", columns[0], columns[0]))
+	fmt.Fprintf(&odku, "%s=VALUES(%s)", columns[0], columns[0])
 	for _, c := range columns[1:] {
 		odku.WriteString(", ")
-		odku.WriteString(fmt.Sprintf("%s=VALUES(%s)", c, c))
+		fmt.Fprintf(&odku, "%s=VALUES(%s)", c, c)
 	}
 
-	q.WriteString(fmt.Sprintf(`INSERT %s INTO %s
+	fmt.Fprintf(&q, `INSERT %s INTO %s
                 (%s)
         VALUES
                 %s
         ON DUPLICATE KEY UPDATE
                 %s
         `,
-		ignore, table, col, val.String(), odku.String()))
+		ignore, table, col, val.String(), odku.String())
 
 	return q.String(), nil
 }

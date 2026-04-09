@@ -77,6 +77,6 @@ type SeedOperationState struct {
 }
 
 // Build an instance key for a given agent
-func (this *Agent) GetInstance() *inst.InstanceKey {
-	return &inst.InstanceKey{Hostname: this.Hostname, Port: int(this.MySQLPort)}
+func (a *Agent) GetInstance() *inst.InstanceKey {
+	return &inst.InstanceKey{Hostname: a.Hostname, Port: int(a.MySQLPort)}
 }
