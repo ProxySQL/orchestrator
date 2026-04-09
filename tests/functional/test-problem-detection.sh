@@ -22,6 +22,10 @@ echo "--- Test 1: Detect stopped replication ---"
 echo "Stopping replication on mysql2..."
 $COMPOSE exec -T mysql2 mysql -uroot -ptestpass -e "$STOP_SQL" 2>/dev/null
 
+# Force re-discovery so orchestrator refreshes instance state immediately
+curl -s --max-time 10 "$ORC_URL/api/discover/mysql2/3306" > /dev/null 2>&1
+sleep 2
+
 # Wait for orchestrator to detect the problem (poll up to 30s)
 echo "Waiting for orchestrator to detect stopped replication..."
 DETECTED=false
@@ -49,6 +53,10 @@ else
     fail "Orchestrator did not detect stopped replication on mysql2 within 30s"
 fi
 
+# Force another re-discovery to ensure instance data is fresh
+curl -s --max-time 10 "$ORC_URL/api/discover/mysql2/3306" > /dev/null 2>&1
+sleep 2
+
 # Verify the specific problem shows replication threads stopped
 REPL_STATE=$(curl -s --max-time 10 "$ORC_URL/api/instance/mysql2/3306" 2>/dev/null | python3 -c "
 import json, sys
@@ -71,6 +79,10 @@ echo "--- Test 1b: Clear stopped replication ---"
 # Restart replication
 echo "Restarting replication on mysql2..."
 $COMPOSE exec -T mysql2 mysql -uroot -ptestpass -e "$START_SQL" 2>/dev/null
+
+# Force re-discovery so orchestrator refreshes instance state
+curl -s --max-time 10 "$ORC_URL/api/discover/mysql2/3306" > /dev/null 2>&1
+sleep 2
 
 # Wait for orchestrator to see it clear
 echo "Waiting for problem to clear..."
@@ -108,6 +120,10 @@ echo "--- Test 2: Detect read_only mismatch (writable replica) ---"
 echo "Setting mysql2 read_only=0 (simulating writable replica)..."
 $COMPOSE exec -T mysql2 mysql -uroot -ptestpass -e "SET GLOBAL read_only=0" 2>/dev/null
 
+# Force re-discovery so orchestrator refreshes instance state
+curl -s --max-time 10 "$ORC_URL/api/discover/mysql2/3306" > /dev/null 2>&1
+sleep 2
+
 # Wait for orchestrator to detect the problem
 echo "Waiting for orchestrator to detect writable replica..."
 DETECTED=false
@@ -131,6 +147,10 @@ fi
 # Restore read_only
 echo "Restoring read_only=1 on mysql2..."
 $COMPOSE exec -T mysql2 mysql -uroot -ptestpass -e "SET GLOBAL read_only=1" 2>/dev/null
+
+# Force re-discovery
+curl -s --max-time 10 "$ORC_URL/api/discover/mysql2/3306" > /dev/null 2>&1
+sleep 2
 
 # Wait for it to clear
 CLEARED=false
@@ -162,6 +182,10 @@ $COMPOSE exec -T mysql3 mysql -uroot -ptestpass -e "
     SET GLOBAL read_only=1;
     SET GLOBAL super_read_only=1;
 " 2>/dev/null
+
+# Force re-discovery so orchestrator picks up the errant GTID
+curl -s --max-time 10 "$ORC_URL/api/discover/mysql3/3306" > /dev/null 2>&1
+sleep 2
 
 # Wait for orchestrator to detect errant GTID
 echo "Waiting for orchestrator to detect errant GTID..."
