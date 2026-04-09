@@ -17,7 +17,34 @@ COMPOSE_FILE="tests/functional/docker-compose.yml"
 echo ""
 echo "--- Phase 1: Cluster Formation & Leader Election ---"
 
-docker compose -f "$COMPOSE_FILE" up -d orchestrator-raft1 orchestrator-raft2 orchestrator-raft3
+# Start node 1 first to let it bootstrap the cluster before other nodes join.
+# Starting all 3 simultaneously causes each to call BootstrapCluster independently,
+# creating conflicting initial states and perpetual election cycles.
+echo "Starting first Raft node (bootstrap node)..."
+docker compose -f "$COMPOSE_FILE" up -d orchestrator-raft1
+
+# Wait for node 1 to be reachable (includes apt-get install time)
+echo "Waiting for bootstrap node to be ready (up to 90s)..."
+BOOTSTRAP_READY=false
+for i in $(seq 1 90); do
+    if curl -sf --max-time 5 "http://localhost:3100/api/raft-status" > /dev/null 2>&1; then
+        BOOTSTRAP_READY=true
+        echo "Bootstrap node ready after ${i}s"
+        break
+    fi
+    sleep 1
+done
+
+if ! $BOOTSTRAP_READY; then
+    fail "Bootstrap Raft node (orchestrator-raft1) not ready within 90s"
+    docker compose -f "$COMPOSE_FILE" logs orchestrator-raft1 2>/dev/null | tail -30
+    summary
+fi
+pass "Bootstrap Raft node started and ready"
+
+# Now start the remaining nodes — they will find the bootstrapped cluster
+echo "Starting remaining Raft nodes..."
+docker compose -f "$COMPOSE_FILE" up -d orchestrator-raft2 orchestrator-raft3
 
 # Wait for all 3 nodes to be reachable and for a leader to be elected
 echo "Waiting for Raft cluster to form and elect a leader (up to 90s)..."
