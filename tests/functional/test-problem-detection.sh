@@ -98,9 +98,10 @@ io = inst.get('ReplicationIOThreadRuning', False)
 print(f'{sql}:{io}')
 " 2>/dev/null || echo "False:False")
     SQL_RUNNING=$(echo "$REPL_STATE" | cut -d: -f1)
+    IO_RUNNING=$(echo "$REPL_STATE" | cut -d: -f2)
     if [ "$SQL_RUNNING" = "True" ]; then
         CLEARED=true
-        echo "Replication recovered after ${i}s (SQL=True, IO=$IO)"
+        echo "Replication recovered after ${i}s (SQL=True, IO=${IO_RUNNING})"
         break
     fi
     sleep 1
