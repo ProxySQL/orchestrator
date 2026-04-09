@@ -83,10 +83,29 @@ fi
 echo ""
 echo "--- Test 2: Move-up (mysql3 back under mysql1) ---"
 
+# Wait for replication to catch up after relocate before attempting move-up
+echo "Waiting for replication to catch up after relocate..."
+sleep 5
+# Re-seed discovery so orchestrator sees fresh lag values
+curl -s --max-time 10 "$ORC_URL/api/discover/mysql3/3306" > /dev/null 2>&1
+curl -s --max-time 10 "$ORC_URL/api/discover/mysql2/3306" > /dev/null 2>&1
+sleep 5
+
 # Use move-up to move mysql3 from under mysql2 back to mysql1
+# Retry up to 3 times to handle transient "lags too much" errors
 echo "Moving mysql3 up via API..."
-RESULT=$(curl -s --max-time 30 "$ORC_URL/api/move-up/mysql3/3306" 2>/dev/null)
-CODE=$(echo "$RESULT" | python3 -c "import json,sys; print(json.load(sys.stdin).get('Code',''))" 2>/dev/null || echo "")
+CODE=""
+RESULT=""
+for attempt in 1 2 3; do
+    RESULT=$(curl -s --max-time 30 "$ORC_URL/api/move-up/mysql3/3306" 2>/dev/null)
+    CODE=$(echo "$RESULT" | python3 -c "import json,sys; print(json.load(sys.stdin).get('Code',''))" 2>/dev/null || echo "")
+    if [ "$CODE" = "OK" ]; then
+        break
+    fi
+    echo "  Move-up attempt $attempt: $CODE — waiting for lag to clear..."
+    sleep 5
+    curl -s --max-time 10 "$ORC_URL/api/discover/mysql3/3306" > /dev/null 2>&1
+done
 
 if [ "$CODE" = "OK" ]; then
     pass "Move-up API returned OK"
