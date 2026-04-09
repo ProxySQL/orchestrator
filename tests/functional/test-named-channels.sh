@@ -108,4 +108,7 @@ else
     fail "Named channel 'extra' still present after cleanup"
 fi
 
+# Clean up test database on mysql2
+$COMPOSE exec -T mysql2 mysql -uroot -ptestpass -e "DROP DATABASE IF EXISTS extra_db;" 2>/dev/null
+
 summary
