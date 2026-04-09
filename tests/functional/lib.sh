@@ -13,7 +13,7 @@ pass() {
 
 fail() {
     echo "  ❌ FAIL: $1"
-    [ -n "$2" ] && echo "         $2"
+    [ -n "${2:-}" ] && echo "         $2"
     ((FAIL_COUNT++))
 }
 
