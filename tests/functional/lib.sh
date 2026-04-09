@@ -102,6 +102,63 @@ discover_topology() {
     return 1
 }
 
+# Detect MySQL major version (e.g., "5.7", "8.0", "8.4", "9.0")
+# Caches result in MYSQL_MAJOR_VERSION
+MYSQL_MAJOR_VERSION=""
+mysql_version() {
+    if [ -n "$MYSQL_MAJOR_VERSION" ]; then
+        echo "$MYSQL_MAJOR_VERSION"
+        return
+    fi
+    local FULL
+    FULL=$(docker compose -f tests/functional/docker-compose.yml exec -T mysql1 \
+        mysql -uroot -ptestpass -Nse "SELECT VERSION()" 2>/dev/null | tr -d '[:space:]')
+    MYSQL_MAJOR_VERSION=$(echo "$FULL" | sed -E 's/^([0-9]+\.[0-9]+).*/\1/')
+    echo "$MYSQL_MAJOR_VERSION"
+}
+
+# Check if MySQL version is 5.7 (returns 0 for 5.7, 1 otherwise)
+mysql_is_57() {
+    [ "$(mysql_version)" = "5.7" ]
+}
+
+# Return the correct CHANGE REPLICATION SOURCE / CHANGE MASTER command
+# Arguments: HOST PORT USER PASSWORD
+mysql_change_source_sql() {
+    local HOST="$1" PORT="$2" USER="$3" PASS="$4"
+    if mysql_is_57; then
+        echo "CHANGE MASTER TO MASTER_HOST='${HOST}', MASTER_PORT=${PORT}, MASTER_USER='${USER}', MASTER_PASSWORD='${PASS}', MASTER_AUTO_POSITION=1;"
+    else
+        echo "CHANGE REPLICATION SOURCE TO SOURCE_HOST='${HOST}', SOURCE_PORT=${PORT}, SOURCE_USER='${USER}', SOURCE_PASSWORD='${PASS}', SOURCE_AUTO_POSITION=1, GET_SOURCE_PUBLIC_KEY=1;"
+    fi
+}
+
+# Return the correct CHANGE REPLICATION SOURCE / CHANGE MASTER command with FOR CHANNEL
+# Arguments: HOST PORT USER PASSWORD CHANNEL
+mysql_change_source_channel_sql() {
+    local HOST="$1" PORT="$2" USER="$3" PASS="$4" CHANNEL="$5"
+    if mysql_is_57; then
+        echo "CHANGE MASTER TO MASTER_HOST='${HOST}', MASTER_PORT=${PORT}, MASTER_USER='${USER}', MASTER_PASSWORD='${PASS}', MASTER_AUTO_POSITION=1 FOR CHANNEL '${CHANNEL}';"
+    else
+        echo "CHANGE REPLICATION SOURCE TO SOURCE_HOST='${HOST}', SOURCE_PORT=${PORT}, SOURCE_USER='${USER}', SOURCE_PASSWORD='${PASS}', SOURCE_AUTO_POSITION=1, GET_SOURCE_PUBLIC_KEY=1 FOR CHANNEL '${CHANNEL}';"
+    fi
+}
+
+# Return the correct START REPLICA / START SLAVE command
+mysql_start_replica_sql() {
+    if mysql_is_57; then echo "START SLAVE;"; else echo "START REPLICA;"; fi
+}
+
+# Return the correct STOP REPLICA / STOP SLAVE command
+mysql_stop_replica_sql() {
+    if mysql_is_57; then echo "STOP SLAVE;"; else echo "STOP REPLICA;"; fi
+}
+
+# Return the correct RESET REPLICA ALL / RESET SLAVE ALL command
+mysql_reset_replica_all_sql() {
+    if mysql_is_57; then echo "RESET SLAVE ALL;"; else echo "RESET REPLICA ALL;"; fi
+}
+
 # Get ProxySQL servers for a hostgroup
 proxysql_servers() {
     local HG="$1"
@@ -120,6 +177,11 @@ mysql_read_only() {
 # Get MySQL replication source
 mysql_source_host() {
     local CONTAINER="$1"
-    docker compose -f tests/functional/docker-compose.yml exec -T "$CONTAINER" \
-        mysql -uroot -ptestpass -Nse "SHOW REPLICA STATUS\G" 2>/dev/null | grep "Source_Host" | awk '{print $2}'
+    if mysql_is_57; then
+        docker compose -f tests/functional/docker-compose.yml exec -T "$CONTAINER" \
+            mysql -uroot -ptestpass -Nse "SHOW SLAVE STATUS\G" 2>/dev/null | grep "Master_Host" | awk '{print $2}'
+    else
+        docker compose -f tests/functional/docker-compose.yml exec -T "$CONTAINER" \
+            mysql -uroot -ptestpass -Nse "SHOW REPLICA STATUS\G" 2>/dev/null | grep "Source_Host" | awk '{print $2}'
+    fi
 }

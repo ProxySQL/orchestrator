@@ -2,7 +2,7 @@ version: "3.8"
 
 services:
   mysql1:
-    image: mysql:8.4
+    image: ${MYSQL_IMAGE:-mysql:8.4}
     hostname: mysql1
     environment:
       MYSQL_ROOT_PASSWORD: testpass
@@ -23,7 +23,7 @@ services:
           - mysql1
 
   mysql2:
-    image: mysql:8.4
+    image: ${MYSQL_IMAGE:-mysql:8.4}
     hostname: mysql2
     environment:
       MYSQL_ROOT_PASSWORD: testpass
@@ -47,7 +47,7 @@ services:
           - mysql2
 
   mysql3:
-    image: mysql:8.4
+    image: ${MYSQL_IMAGE:-mysql:8.4}
     hostname: mysql3
     environment:
       MYSQL_ROOT_PASSWORD: testpass

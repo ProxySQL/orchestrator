@@ -75,13 +75,18 @@ fi
 echo ""
 echo "--- Restore topology for hard failover test ---"
 
-# Restore mysql1 as master
+# Restore mysql1 as master (version-aware commands)
+STOP_SQL=$(mysql_stop_replica_sql)
+RESET_SQL=$(mysql_reset_replica_all_sql)
+CHANGE_SQL=$(mysql_change_source_sql mysql1 3306 repl repl_pass)
+START_SQL=$(mysql_start_replica_sql)
+
 docker compose -f tests/functional/docker-compose.yml exec -T mysql1 \
-    mysql -uroot -ptestpass -e "STOP REPLICA; RESET REPLICA ALL; SET GLOBAL read_only=0;" 2>/dev/null
+    mysql -uroot -ptestpass -e "$STOP_SQL $RESET_SQL SET GLOBAL read_only=0;" 2>/dev/null
 docker compose -f tests/functional/docker-compose.yml exec -T mysql2 \
-    mysql -uroot -ptestpass -e "STOP REPLICA; CHANGE REPLICATION SOURCE TO SOURCE_HOST='mysql1', SOURCE_PORT=3306, SOURCE_USER='repl', SOURCE_PASSWORD='repl_pass', SOURCE_AUTO_POSITION=1; START REPLICA; SET GLOBAL read_only=1;" 2>/dev/null
+    mysql -uroot -ptestpass -e "$STOP_SQL $CHANGE_SQL $START_SQL SET GLOBAL read_only=1;" 2>/dev/null
 docker compose -f tests/functional/docker-compose.yml exec -T mysql3 \
-    mysql -uroot -ptestpass -e "STOP REPLICA; CHANGE REPLICATION SOURCE TO SOURCE_HOST='mysql1', SOURCE_PORT=3306, SOURCE_USER='repl', SOURCE_PASSWORD='repl_pass', SOURCE_AUTO_POSITION=1; START REPLICA; SET GLOBAL read_only=1;" 2>/dev/null
+    mysql -uroot -ptestpass -e "$STOP_SQL $CHANGE_SQL $START_SQL SET GLOBAL read_only=1;" 2>/dev/null
 
 # Reset ProxySQL
 docker compose -f tests/functional/docker-compose.yml exec -T proxysql \
