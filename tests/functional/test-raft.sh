@@ -25,16 +25,16 @@ LEADER=""
 for i in $(seq 1 90); do
     ALL_UP=true
     for port in "${RAFT_PORTS[@]}"; do
-        if ! curl -sf "http://localhost:${port}/api/raft-leader" > /dev/null 2>&1; then
+        if ! curl -sf --max-time 10 "http://localhost:${port}/api/raft-leader" > /dev/null 2>&1; then
             ALL_UP=false
             break
         fi
     done
     if $ALL_UP; then
         # Check if all nodes agree on a leader
-        LEADER1=$(curl -sf "http://localhost:3100/api/raft-leader" 2>/dev/null | python3 -c "import json,sys; print(json.load(sys.stdin))" 2>/dev/null || echo "")
-        LEADER2=$(curl -sf "http://localhost:3101/api/raft-leader" 2>/dev/null | python3 -c "import json,sys; print(json.load(sys.stdin))" 2>/dev/null || echo "")
-        LEADER3=$(curl -sf "http://localhost:3102/api/raft-leader" 2>/dev/null | python3 -c "import json,sys; print(json.load(sys.stdin))" 2>/dev/null || echo "")
+        LEADER1=$(curl -sf --max-time 10 "http://localhost:3100/api/raft-leader" 2>/dev/null | python3 -c "import json,sys; print(json.load(sys.stdin))" 2>/dev/null || echo "")
+        LEADER2=$(curl -sf --max-time 10 "http://localhost:3101/api/raft-leader" 2>/dev/null | python3 -c "import json,sys; print(json.load(sys.stdin))" 2>/dev/null || echo "")
+        LEADER3=$(curl -sf --max-time 10 "http://localhost:3102/api/raft-leader" 2>/dev/null | python3 -c "import json,sys; print(json.load(sys.stdin))" 2>/dev/null || echo "")
         if [ -n "$LEADER1" ] && [ "$LEADER1" = "$LEADER2" ] && [ "$LEADER2" = "$LEADER3" ]; then
             LEADER="$LEADER1"
             echo "Leader elected: $LEADER (after ${i}s)"
@@ -50,14 +50,14 @@ else
     fail "Raft leader not elected within 90s"
     # Print debug info
     for port in "${RAFT_PORTS[@]}"; do
-        echo "  Node :${port} raft-status: $(curl -sf http://localhost:${port}/api/raft-status 2>/dev/null || echo 'unreachable')"
+        echo "  Node :${port} raft-status: $(curl -sf --max-time 10 http://localhost:${port}/api/raft-status 2>/dev/null || echo 'unreachable')"
     done
 fi
 
 # Verify all nodes agree on the same leader
 LEADERS_AGREE=true
 for port in "${RAFT_PORTS[@]}"; do
-    NODE_LEADER=$(curl -sf "http://localhost:${port}/api/raft-leader" 2>/dev/null | python3 -c "import json,sys; print(json.load(sys.stdin))" 2>/dev/null || echo "")
+    NODE_LEADER=$(curl -sf --max-time 10 "http://localhost:${port}/api/raft-leader" 2>/dev/null | python3 -c "import json,sys; print(json.load(sys.stdin))" 2>/dev/null || echo "")
     if [ "$NODE_LEADER" != "$LEADER" ]; then
         LEADERS_AGREE=false
         break
@@ -72,7 +72,7 @@ fi
 # Verify exactly one node reports itself as Leader state
 LEADER_COUNT=0
 for port in "${RAFT_PORTS[@]}"; do
-    STATE=$(curl -sf "http://localhost:${port}/api/raft-state" 2>/dev/null | python3 -c "import json,sys; print(json.load(sys.stdin))" 2>/dev/null || echo "")
+    STATE=$(curl -sf --max-time 10 "http://localhost:${port}/api/raft-state" 2>/dev/null | python3 -c "import json,sys; print(json.load(sys.stdin))" 2>/dev/null || echo "")
     if [ "$STATE" = "Leader" ]; then
         ((LEADER_COUNT++))
     fi
@@ -93,7 +93,7 @@ echo "--- Phase 2: Leader Serves Topology ---"
 LEADER_PORT=""
 LEADER_INDEX=""
 for idx in 0 1 2; do
-    STATE=$(curl -sf "http://localhost:${RAFT_PORTS[$idx]}/api/raft-state" 2>/dev/null | python3 -c "import json,sys; print(json.load(sys.stdin))" 2>/dev/null || echo "")
+    STATE=$(curl -sf --max-time 10 "http://localhost:${RAFT_PORTS[$idx]}/api/raft-state" 2>/dev/null | python3 -c "import json,sys; print(json.load(sys.stdin))" 2>/dev/null || echo "")
     if [ "$STATE" = "Leader" ]; then
         LEADER_PORT="${RAFT_PORTS[$idx]}"
         LEADER_INDEX=$idx
@@ -108,15 +108,15 @@ else
 
     # Discover MySQL topology through the leader
     echo "Discovering MySQL topology through the leader..."
-    curl -sf "http://localhost:${LEADER_PORT}/api/discover/mysql1/3306" > /dev/null 2>&1
-    curl -sf "http://localhost:${LEADER_PORT}/api/discover/mysql2/3306" > /dev/null 2>&1
-    curl -sf "http://localhost:${LEADER_PORT}/api/discover/mysql3/3306" > /dev/null 2>&1
+    curl -sf --max-time 10 "http://localhost:${LEADER_PORT}/api/discover/mysql1/3306" > /dev/null 2>&1
+    curl -sf --max-time 10 "http://localhost:${LEADER_PORT}/api/discover/mysql2/3306" > /dev/null 2>&1
+    curl -sf --max-time 10 "http://localhost:${LEADER_PORT}/api/discover/mysql3/3306" > /dev/null 2>&1
 
     # Wait for topology discovery
     echo "Waiting for topology discovery (up to 60s)..."
     CLUSTER_FOUND=false
     for i in $(seq 1 60); do
-        CLUSTERS=$(curl -sf "http://localhost:${LEADER_PORT}/api/clusters" 2>/dev/null || echo "[]")
+        CLUSTERS=$(curl -sf --max-time 10 "http://localhost:${LEADER_PORT}/api/clusters" 2>/dev/null || echo "[]")
         COUNT=$(echo "$CLUSTERS" | python3 -c "import json,sys; c=json.load(sys.stdin); print(len(c))" 2>/dev/null || echo "0")
         if [ "$COUNT" -ge 1 ]; then
             echo "Cluster discovered after ${i}s"
@@ -125,9 +125,9 @@ else
         fi
         # Re-seed discovery periodically
         if [ "$((i % 10))" = "0" ]; then
-            curl -sf "http://localhost:${LEADER_PORT}/api/discover/mysql1/3306" > /dev/null 2>&1
-            curl -sf "http://localhost:${LEADER_PORT}/api/discover/mysql2/3306" > /dev/null 2>&1
-            curl -sf "http://localhost:${LEADER_PORT}/api/discover/mysql3/3306" > /dev/null 2>&1
+            curl -sf --max-time 10 "http://localhost:${LEADER_PORT}/api/discover/mysql1/3306" > /dev/null 2>&1
+            curl -sf --max-time 10 "http://localhost:${LEADER_PORT}/api/discover/mysql2/3306" > /dev/null 2>&1
+            curl -sf --max-time 10 "http://localhost:${LEADER_PORT}/api/discover/mysql3/3306" > /dev/null 2>&1
         fi
         sleep 1
     done
@@ -146,7 +146,7 @@ else
         fi
         FPORT="${RAFT_PORTS[$idx]}"
         # Followers may redirect or serve data directly; either is valid
-        FCLUSTERS=$(curl -sfL "http://localhost:${FPORT}/api/clusters" 2>/dev/null || echo "[]")
+        FCLUSTERS=$(curl -sf --max-time 10L "http://localhost:${FPORT}/api/clusters" 2>/dev/null || echo "[]")
         FCOUNT=$(echo "$FCLUSTERS" | python3 -c "import json,sys; c=json.load(sys.stdin); print(len(c))" 2>/dev/null || echo "0")
         if [ "$FCOUNT" -lt 1 ]; then
             FOLLOWER_HAS_DATA=false
@@ -193,8 +193,8 @@ else
     echo "Waiting for re-election (up to 60s)..."
     NEW_LEADER=""
     for i in $(seq 1 60); do
-        L1=$(curl -sf "http://localhost:${REMAINING_PORTS[0]}/api/raft-leader" 2>/dev/null | python3 -c "import json,sys; print(json.load(sys.stdin))" 2>/dev/null || echo "")
-        L2=$(curl -sf "http://localhost:${REMAINING_PORTS[1]}/api/raft-leader" 2>/dev/null | python3 -c "import json,sys; print(json.load(sys.stdin))" 2>/dev/null || echo "")
+        L1=$(curl -sf --max-time 10 "http://localhost:${REMAINING_PORTS[0]}/api/raft-leader" 2>/dev/null | python3 -c "import json,sys; print(json.load(sys.stdin))" 2>/dev/null || echo "")
+        L2=$(curl -sf --max-time 10 "http://localhost:${REMAINING_PORTS[1]}/api/raft-leader" 2>/dev/null | python3 -c "import json,sys; print(json.load(sys.stdin))" 2>/dev/null || echo "")
         if [ -n "$L1" ] && [ "$L1" = "$L2" ] && [ "$L1" != "$OLD_LEADER" ]; then
             NEW_LEADER="$L1"
             echo "New leader elected: $NEW_LEADER (after ${i}s)"
@@ -208,7 +208,7 @@ else
     else
         fail "No new leader elected within 60s"
         for port in "${REMAINING_PORTS[@]}"; do
-            echo "  Node :${port} status: $(curl -sf http://localhost:${port}/api/raft-status 2>/dev/null || echo 'unreachable')"
+            echo "  Node :${port} status: $(curl -sf --max-time 10 http://localhost:${port}/api/raft-status 2>/dev/null || echo 'unreachable')"
         done
     fi
 
@@ -223,14 +223,14 @@ else
     if [ -n "$NEW_LEADER" ]; then
         NEW_LEADER_PORT=""
         for idx in "${REMAINING_INDICES[@]}"; do
-            STATE=$(curl -sf "http://localhost:${RAFT_PORTS[$idx]}/api/raft-state" 2>/dev/null | python3 -c "import json,sys; print(json.load(sys.stdin))" 2>/dev/null || echo "")
+            STATE=$(curl -sf --max-time 10 "http://localhost:${RAFT_PORTS[$idx]}/api/raft-state" 2>/dev/null | python3 -c "import json,sys; print(json.load(sys.stdin))" 2>/dev/null || echo "")
             if [ "$STATE" = "Leader" ]; then
                 NEW_LEADER_PORT="${RAFT_PORTS[$idx]}"
                 break
             fi
         done
         if [ -n "$NEW_LEADER_PORT" ]; then
-            CLUSTERS=$(curl -sf "http://localhost:${NEW_LEADER_PORT}/api/clusters" 2>/dev/null || echo "[]")
+            CLUSTERS=$(curl -sf --max-time 10 "http://localhost:${NEW_LEADER_PORT}/api/clusters" 2>/dev/null || echo "[]")
             COUNT=$(echo "$CLUSTERS" | python3 -c "import json,sys; c=json.load(sys.stdin); print(len(c))" 2>/dev/null || echo "0")
             if [ "$COUNT" -ge 1 ]; then
                 pass "New leader serves cluster data via API"
@@ -254,7 +254,7 @@ else
     echo "Waiting for restarted node (:${RESTARTED_PORT}) to rejoin (up to 60s)..."
     REJOINED=false
     for i in $(seq 1 60); do
-        RLEADER=$(curl -sf "http://localhost:${RESTARTED_PORT}/api/raft-leader" 2>/dev/null | python3 -c "import json,sys; print(json.load(sys.stdin))" 2>/dev/null || echo "")
+        RLEADER=$(curl -sf --max-time 10 "http://localhost:${RESTARTED_PORT}/api/raft-leader" 2>/dev/null | python3 -c "import json,sys; print(json.load(sys.stdin))" 2>/dev/null || echo "")
         if [ -n "$RLEADER" ] && [ "$RLEADER" = "$NEW_LEADER" ]; then
             echo "Node rejoined after ${i}s"
             REJOINED=true
@@ -270,7 +270,7 @@ else
     fi
 
     # Verify the restarted node is a follower (not a new leader)
-    RSTATE=$(curl -sf "http://localhost:${RESTARTED_PORT}/api/raft-state" 2>/dev/null | python3 -c "import json,sys; print(json.load(sys.stdin))" 2>/dev/null || echo "")
+    RSTATE=$(curl -sf --max-time 10 "http://localhost:${RESTARTED_PORT}/api/raft-state" 2>/dev/null | python3 -c "import json,sys; print(json.load(sys.stdin))" 2>/dev/null || echo "")
     if [ "$RSTATE" = "Follower" ]; then
         pass "Restarted node is a Follower (stable leader)"
     elif [ "$RSTATE" = "Leader" ]; then
@@ -284,7 +284,7 @@ else
     ALL_AGREE=true
     CURRENT_LEADER=""
     for port in "${RAFT_PORTS[@]}"; do
-        NL=$(curl -sf "http://localhost:${port}/api/raft-leader" 2>/dev/null | python3 -c "import json,sys; print(json.load(sys.stdin))" 2>/dev/null || echo "")
+        NL=$(curl -sf --max-time 10 "http://localhost:${port}/api/raft-leader" 2>/dev/null | python3 -c "import json,sys; print(json.load(sys.stdin))" 2>/dev/null || echo "")
         if [ -z "$CURRENT_LEADER" ]; then
             CURRENT_LEADER="$NL"
         elif [ "$NL" != "$CURRENT_LEADER" ]; then
@@ -300,7 +300,7 @@ else
     # Verify cluster is healthy (all 3 nodes report healthy)
     HEALTHY_COUNT=0
     for port in "${RAFT_PORTS[@]}"; do
-        HEALTH=$(curl -sf "http://localhost:${port}/api/raft-health" 2>/dev/null || echo "")
+        HEALTH=$(curl -sf --max-time 10 "http://localhost:${port}/api/raft-health" 2>/dev/null || echo "")
         if echo "$HEALTH" | grep -q "healthy"; then
             ((HEALTHY_COUNT++))
         fi
