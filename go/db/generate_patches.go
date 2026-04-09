@@ -620,7 +620,7 @@ var generateSQLPatches = []string{
 	`
 		ALTER TABLE
 		database_instance
-			ADD COLUMN provider_type varchar(20) CHARACTER SET ascii NOT NULL DEFAULT 'mysql' AFTER replication_group_primary_port
+			ADD COLUMN provider_type varchar(20) NOT NULL DEFAULT 'mysql'
 	`,
 	// Multi-source replication (named channels) support
 	`
