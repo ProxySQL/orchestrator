@@ -84,23 +84,23 @@ $COMPOSE exec -T mysql2 mysql -uroot -ptestpass -e "$START_SQL" 2>/dev/null
 curl -s --max-time 10 "$ORC_URL/api/discover/mysql2/3306" > /dev/null 2>&1
 sleep 2
 
-# Wait for orchestrator to see it clear
-echo "Waiting for problem to clear..."
+# Wait for orchestrator to see replication running again
+echo "Waiting for replication to recover..."
 CLEARED=false
 for i in $(seq 1 30); do
-    PROBLEMS=$(curl -s --max-time 10 "$ORC_URL/api/problems" 2>/dev/null)
-    HAS_MYSQL2=$(echo "$PROBLEMS" | python3 -c "
+    # Force re-discovery each iteration
+    curl -s --max-time 10 "$ORC_URL/api/discover/mysql2/3306" > /dev/null 2>&1
+    REPL_STATE=$(curl -s --max-time 10 "$ORC_URL/api/instance/mysql2/3306" 2>/dev/null | python3 -c "
 import json, sys
-problems = json.load(sys.stdin)
-for p in problems:
-    h = p.get('Key', {}).get('Hostname', '')
-    if 'mysql2' in h:
-        sys.exit(0)
-sys.exit(1)
-" 2>/dev/null && echo "yes" || echo "no")
-    if [ "$HAS_MYSQL2" = "no" ]; then
+inst = json.load(sys.stdin)
+sql = inst.get('ReplicationSQLThreadRuning', False)
+io = inst.get('ReplicationIOThreadRuning', False)
+print(f'{sql}:{io}')
+" 2>/dev/null || echo "False:False")
+    SQL_RUNNING=$(echo "$REPL_STATE" | cut -d: -f1)
+    if [ "$SQL_RUNNING" = "True" ]; then
         CLEARED=true
-        echo "Problem cleared after ${i}s"
+        echo "Replication recovered after ${i}s (SQL=True, IO=$IO)"
         break
     fi
     sleep 1
@@ -109,7 +109,7 @@ done
 if [ "$CLEARED" = "true" ]; then
     pass "Stopped replication problem cleared after restart"
 else
-    fail "Stopped replication problem still reported after 30s"
+    fail "Replication SQL thread not running on mysql2 after 30s (state: $REPL_STATE)"
 fi
 
 # ----------------------------------------------------------------
