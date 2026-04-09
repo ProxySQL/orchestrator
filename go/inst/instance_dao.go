@@ -1587,8 +1587,10 @@ func readInstanceRow(m sqlutils.RowMap) *Instance {
 
 	instance.QSP = GetQueryStringProvider(instance.Version)
 
-	// Load multi-source replication channels from the backend
-	_ = readInstanceChannels(instance)
+	// NOTE: readInstanceChannels is NOT called here because readInstanceRow
+	// is invoked inside a db.QueryOrchestrator callback. Nesting another
+	// QueryOrchestrator call causes a deadlock with SQLite.
+	// Channels are loaded by the caller after the outer query completes.
 
 	return instance
 }
@@ -1634,6 +1636,11 @@ func readInstancesByCondition(condition string, args []interface{}, sort string)
 		})
 		if err != nil {
 			return instances, log.Errore(err)
+		}
+		// Load replication channels after the outer query completes
+		// (cannot nest QueryOrchestrator calls — causes SQLite deadlock)
+		for _, instance := range instances {
+			_ = readInstanceChannels(instance)
 		}
 		err = PopulateInstancesAgents(instances)
 		if err != nil {
