@@ -49,9 +49,9 @@ sleep 5
 wait_for_orchestrator || { echo "FATAL: Orchestrator not reachable"; exit 1; }
 
 # Re-seed discovery
-curl -s "$ORC_URL/api/discover/mysql1/3306" > /dev/null
-curl -s "$ORC_URL/api/discover/mysql2/3306" > /dev/null
-curl -s "$ORC_URL/api/discover/mysql3/3306" > /dev/null
+curl -s --max-time 10 "$ORC_URL/api/discover/mysql1/3306" > /dev/null
+curl -s --max-time 10 "$ORC_URL/api/discover/mysql2/3306" > /dev/null
+curl -s --max-time 10 "$ORC_URL/api/discover/mysql3/3306" > /dev/null
 sleep 10
 
 discover_topology "mysql1"
@@ -69,9 +69,9 @@ $COMPOSE exec -T mysql3 \
 sleep 5
 
 # Re-seed discovery so orchestrator picks up the new topology
-curl -s "$ORC_URL/api/discover/mysql1/3306" > /dev/null
-curl -s "$ORC_URL/api/discover/mysql2/3306" > /dev/null
-curl -s "$ORC_URL/api/discover/mysql3/3306" > /dev/null
+curl -s --max-time 10 "$ORC_URL/api/discover/mysql1/3306" > /dev/null
+curl -s --max-time 10 "$ORC_URL/api/discover/mysql2/3306" > /dev/null
+curl -s --max-time 10 "$ORC_URL/api/discover/mysql3/3306" > /dev/null
 sleep 15
 
 # Verify chain topology
@@ -95,7 +95,7 @@ $COMPOSE stop mysql2
 echo "Waiting for orchestrator to detect DeadIntermediateMaster and recover (max 90s)..."
 RECOVERED=false
 for i in $(seq 1 90); do
-    RECOVERIES=$(curl -s "$ORC_URL/api/v2/recoveries" 2>/dev/null)
+    RECOVERIES=$(curl -s --max-time 10 "$ORC_URL/api/v2/recoveries" 2>/dev/null)
     HAS_RECOVERY=$(echo "$RECOVERIES" | python3 -c "
 import json, sys
 d = json.load(sys.stdin)
@@ -121,7 +121,7 @@ if [ "$RECOVERED" = "true" ]; then
 else
     fail "DeadIntermediateMaster: no recovery detected within 90s"
     echo "  DEBUG: Recent recoveries:"
-    curl -s "$ORC_URL/api/v2/recoveries" 2>/dev/null | python3 -m json.tool 2>/dev/null | head -30
+    curl -s --max-time 10 "$ORC_URL/api/v2/recoveries" 2>/dev/null | python3 -m json.tool 2>/dev/null | head -30
 fi
 
 # Verify mysql3 now replicates from mysql1
@@ -152,9 +152,9 @@ $COMPOSE exec -T mysql3 \
     mysql -uroot -ptestpass -e "$STOP_SQL $CHANGE_TO_MYSQL1 $START_SQL" 2>/dev/null
 
 sleep 5
-curl -s "$ORC_URL/api/discover/mysql1/3306" > /dev/null
-curl -s "$ORC_URL/api/discover/mysql2/3306" > /dev/null
-curl -s "$ORC_URL/api/discover/mysql3/3306" > /dev/null
+curl -s --max-time 10 "$ORC_URL/api/discover/mysql1/3306" > /dev/null
+curl -s --max-time 10 "$ORC_URL/api/discover/mysql2/3306" > /dev/null
+curl -s --max-time 10 "$ORC_URL/api/discover/mysql3/3306" > /dev/null
 sleep 10
 
 pass "Test 1 cleanup: flat topology restored"
@@ -177,9 +177,9 @@ echo "Waiting for orchestrator to detect errant GTID (max 60s)..."
 ERRANT_DETECTED=false
 for i in $(seq 1 60); do
     # Force a refresh
-    curl -s "$ORC_URL/api/discover/mysql2/3306" > /dev/null 2>&1
+    curl -s --max-time 10 "$ORC_URL/api/discover/mysql2/3306" > /dev/null 2>&1
     sleep 2
-    GTID_ERRANT=$(curl -s "$ORC_URL/api/instance/mysql2/3306" 2>/dev/null | python3 -c "
+    GTID_ERRANT=$(curl -s --max-time 10 "$ORC_URL/api/instance/mysql2/3306" 2>/dev/null | python3 -c "
 import json, sys
 d = json.load(sys.stdin)
 errant = d.get('GtidErrant', '')
@@ -222,13 +222,13 @@ $COMPOSE exec -T mysql1 \
 sleep 5
 
 # Re-seed discovery
-curl -s "$ORC_URL/api/discover/mysql1/3306" > /dev/null
-curl -s "$ORC_URL/api/discover/mysql2/3306" > /dev/null
-curl -s "$ORC_URL/api/discover/mysql3/3306" > /dev/null
+curl -s --max-time 10 "$ORC_URL/api/discover/mysql1/3306" > /dev/null
+curl -s --max-time 10 "$ORC_URL/api/discover/mysql2/3306" > /dev/null
+curl -s --max-time 10 "$ORC_URL/api/discover/mysql3/3306" > /dev/null
 sleep 15
 
 # Verify co-master detected
-COMASTER_INFO=$(curl -s "$ORC_URL/api/instance/mysql1/3306" 2>/dev/null | python3 -c "
+COMASTER_INFO=$(curl -s --max-time 10 "$ORC_URL/api/instance/mysql1/3306" 2>/dev/null | python3 -c "
 import json, sys
 d = json.load(sys.stdin)
 is_comaster = d.get('IsCoMaster', False)
@@ -252,7 +252,7 @@ $COMPOSE stop mysql2
 echo "Waiting for orchestrator to detect DeadCoMaster and recover (max 90s)..."
 RECOVERED=false
 for i in $(seq 1 90); do
-    RECOVERIES=$(curl -s "$ORC_URL/api/v2/recoveries" 2>/dev/null)
+    RECOVERIES=$(curl -s --max-time 10 "$ORC_URL/api/v2/recoveries" 2>/dev/null)
     HAS_RECOVERY=$(echo "$RECOVERIES" | python3 -c "
 import json, sys
 d = json.load(sys.stdin)
@@ -278,7 +278,7 @@ if [ "$RECOVERED" = "true" ]; then
 else
     fail "DeadCoMaster: no recovery detected within 90s"
     echo "  DEBUG: Recent recoveries:"
-    curl -s "$ORC_URL/api/v2/recoveries" 2>/dev/null | python3 -m json.tool 2>/dev/null | head -30
+    curl -s --max-time 10 "$ORC_URL/api/v2/recoveries" 2>/dev/null | python3 -m json.tool 2>/dev/null | head -30
 fi
 
 # Cleanup: restart mysql2, restore flat topology
@@ -305,9 +305,9 @@ $COMPOSE exec -T mysql3 \
     mysql -uroot -ptestpass -e "$STOP_SQL $CHANGE_TO_MYSQL1 $START_SQL SET GLOBAL read_only=1; SET GLOBAL super_read_only=1;" 2>/dev/null
 
 sleep 5
-curl -s "$ORC_URL/api/discover/mysql1/3306" > /dev/null
-curl -s "$ORC_URL/api/discover/mysql2/3306" > /dev/null
-curl -s "$ORC_URL/api/discover/mysql3/3306" > /dev/null
+curl -s --max-time 10 "$ORC_URL/api/discover/mysql1/3306" > /dev/null
+curl -s --max-time 10 "$ORC_URL/api/discover/mysql2/3306" > /dev/null
+curl -s --max-time 10 "$ORC_URL/api/discover/mysql3/3306" > /dev/null
 sleep 5
 
 pass "Test 3 cleanup: flat topology restored"
