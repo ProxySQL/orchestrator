@@ -23,11 +23,21 @@ echo ""
 echo "--- Setup: Configure multi-source replication on mysql3 ---"
 
 # Create test database and table on mysql2 for the extra channel
+# Note: mysql2 is a replica with read_only=ON, but root has SUPER privilege
 $COMPOSE exec -T mysql2 mysql -uroot -ptestpass -e "
     CREATE DATABASE IF NOT EXISTS extra_db;
     CREATE TABLE IF NOT EXISTS extra_db.test (id INT PRIMARY KEY AUTO_INCREMENT, val VARCHAR(100));
     INSERT INTO extra_db.test (val) VALUES ('channel-test');
 " 2>/dev/null
+
+# Verify data exists on mysql2 before setting up channel
+DATA_ON_M2=$($COMPOSE exec -T mysql2 mysql -uroot -ptestpass -Nse \
+    "SELECT val FROM extra_db.test LIMIT 1" 2>/dev/null | tr -d '[:space:]')
+if [ "$DATA_ON_M2" = "channel-test" ]; then
+    echo "  Verified data on mysql2: $DATA_ON_M2"
+else
+    fail "Setup: test data not created on mysql2 (got: '$DATA_ON_M2')" "Check if writes are allowed on replica"
+fi
 
 # Add a named channel 'extra' on mysql3 replicating from mysql2
 CHANGE_SQL=$(mysql_change_source_channel_sql mysql2 3306 repl repl_pass extra)
@@ -49,15 +59,23 @@ else
     fail "Named channel 'extra' not running on mysql3 (status: $CHANNEL_STATUS)"
 fi
 
-# Verify data replicated through the extra channel
-sleep 2
-REPLICATED=$($COMPOSE exec -T mysql3 mysql -uroot -ptestpass -Nse \
-    "SELECT val FROM extra_db.test LIMIT 1" 2>/dev/null | tr -d '[:space:]')
+# Verify data replicated through the extra channel (poll up to 15s)
+echo "Waiting for data to replicate through named channel..."
+REPLICATED=""
+for i in $(seq 1 15); do
+    REPLICATED=$($COMPOSE exec -T mysql3 mysql -uroot -ptestpass -Nse \
+        "SELECT val FROM extra_db.test LIMIT 1" 2>/dev/null | tr -d '[:space:]')
+    if [ "$REPLICATED" = "channel-test" ]; then
+        break
+    fi
+    sleep 1
+done
 
 if [ "$REPLICATED" = "channel-test" ]; then
     pass "Data replicated through named channel 'extra'"
 else
-    fail "Data not replicated through named channel (got: $REPLICATED)"
+    fail "Data not replicated through named channel (got: '$REPLICATED')" \
+        "Channel ON but data missing - check GTID sets on mysql2 vs mysql3"
 fi
 
 # ----------------------------------------------------------------
@@ -107,5 +125,8 @@ if [ "$CHANNEL_AFTER" = "0" ]; then
 else
     fail "Named channel 'extra' still present after cleanup"
 fi
+
+# Clean up test database on mysql2
+$COMPOSE exec -T mysql2 mysql -uroot -ptestpass -e "DROP DATABASE IF EXISTS extra_db;" 2>/dev/null
 
 summary

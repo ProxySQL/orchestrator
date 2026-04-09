@@ -107,6 +107,15 @@ jobs:
     - name: Run smoke tests
       run: bash tests/functional/test-smoke.sh
 
+    - name: Run topology discovery validation
+      run: bash tests/functional/test-topology-discovery.sh
+
+    - name: Run problem detection tests
+      run: bash tests/functional/test-problem-detection.sh
+
+    - name: Run topology operations tests
+      run: bash tests/functional/test-topology-operations.sh
+
     - name: Run regression tests
       run: bash tests/functional/test-regression.sh
 
