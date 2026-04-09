@@ -10,9 +10,9 @@ on:
   workflow_dispatch:
 
 jobs:
-  functional:
+  build:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 10
 
     steps:
     - uses: actions/checkout@v4
@@ -23,12 +23,44 @@ jobs:
         go-version: '1.25.7'
         cache: true
 
-    - name: Build orchestrator (for CLI tests on host)
+    - name: Build orchestrator
       run: go build -o bin/orchestrator ./go/cmd/orchestrator
 
-    - name: Start test infrastructure (MySQL + ProxySQL + Orchestrator)
+    - name: Upload orchestrator binary
+      uses: actions/upload-artifact@v4
+      with:
+        name: orchestrator-binary
+        path: bin/orchestrator
+        retention-days: 1
+
+  functional-mysql:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: build
+
+    strategy:
+      fail-fast: false
+      matrix:
+        mysql_version: ['5.7', '8.0', '8.4', '9.0', '9.2', '9.5', '9.6']
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Download orchestrator binary
+      uses: actions/download-artifact@v4
+      with:
+        name: orchestrator-binary
+        path: bin
+
+    - name: Make binary executable
+      run: chmod +x bin/orchestrator
+
+    - name: Start test infrastructure (MySQL + ProxySQL)
       working-directory: tests/functional
+      env:
+        MYSQL_IMAGE: mysql:${{ matrix.mysql_version }}
       run: |
+        echo "Using MySQL image: $MYSQL_IMAGE"
         docker compose up -d mysql1 mysql2 mysql3 proxysql
         echo "Waiting for MySQL and ProxySQL to be healthy..."
         timeout 120 bash -c '
@@ -51,10 +83,14 @@ jobs:
         ' || { echo "Timeout"; docker compose ps; docker compose logs --tail=30; exit 1; }
 
     - name: Setup replication
+      env:
+        MYSQL_IMAGE: mysql:${{ matrix.mysql_version }}
       run: bash tests/functional/setup-replication.sh
 
     - name: Start orchestrator in Docker network
       working-directory: tests/functional
+      env:
+        MYSQL_IMAGE: mysql:${{ matrix.mysql_version }}
       run: |
         docker compose up -d orchestrator
         echo "Waiting for orchestrator to be ready..."
@@ -77,7 +113,62 @@ jobs:
     - name: Run failover tests
       run: bash tests/functional/test-failover.sh
 
-    # ---- PostgreSQL functional tests ----
+    - name: Run named channels tests
+      run: bash tests/functional/test-named-channels.sh
+
+    - name: Collect orchestrator logs
+      if: always()
+      working-directory: tests/functional
+      env:
+        MYSQL_IMAGE: mysql:${{ matrix.mysql_version }}
+      run: |
+        docker compose logs orchestrator > /tmp/orchestrator-test.log 2>&1 || true
+
+    - name: Upload orchestrator logs
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: orchestrator-test-logs-mysql-${{ matrix.mysql_version }}
+        path: /tmp/orchestrator-test.log
+
+    - name: Collect all docker logs on failure
+      if: failure()
+      working-directory: tests/functional
+      env:
+        MYSQL_IMAGE: mysql:${{ matrix.mysql_version }}
+      run: docker compose logs > /tmp/docker-compose-logs.txt 2>&1 || true
+
+    - name: Upload docker logs on failure
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: docker-compose-logs-mysql-${{ matrix.mysql_version }}
+        path: /tmp/docker-compose-logs.txt
+
+    - name: Cleanup
+      if: always()
+      working-directory: tests/functional
+      env:
+        MYSQL_IMAGE: mysql:${{ matrix.mysql_version }}
+      run: docker compose down -v --remove-orphans 2>/dev/null || true
+
+  functional-postgresql:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: build
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Download orchestrator binary
+      uses: actions/download-artifact@v4
+      with:
+        name: orchestrator-binary
+        path: bin
+
+    - name: Make binary executable
+      run: chmod +x bin/orchestrator
+
     - name: Start PostgreSQL containers
       working-directory: tests/functional
       run: |
@@ -145,17 +236,14 @@ jobs:
       if: always()
       working-directory: tests/functional
       run: |
-        docker compose logs orchestrator > /tmp/orchestrator-test.log 2>&1 || true
         docker compose logs orchestrator-pg > /tmp/orchestrator-pg-test.log 2>&1 || true
 
     - name: Upload orchestrator logs
       if: always()
       uses: actions/upload-artifact@v4
       with:
-        name: orchestrator-test-logs
-        path: |
-          /tmp/orchestrator-test.log
-          /tmp/orchestrator-pg-test.log
+        name: orchestrator-test-logs-postgresql
+        path: /tmp/orchestrator-pg-test.log
 
     - name: Collect all docker logs on failure
       if: failure()
@@ -166,7 +254,7 @@ jobs:
       if: failure()
       uses: actions/upload-artifact@v4
       with:
-        name: docker-compose-logs
+        name: docker-compose-logs-postgresql
         path: /tmp/docker-compose-logs.txt
 
     - name: Cleanup
