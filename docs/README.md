@@ -36,6 +36,7 @@
 - [Topology recovery](topology-recovery.md): recovery process, promotion and hooks.
 - [Key-Value stores](kv.md): master discovery for your apps
 - [ProxySQL hooks](proxysql-hooks.md): built-in ProxySQL failover integration
+- [Named replication channels](named-channels.md): multi-source replication with named channels
 
 #### Operation
 - [Observability](observability.md): Prometheus metrics and Kubernetes health endpoints

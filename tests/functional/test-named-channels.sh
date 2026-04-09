@@ -106,11 +106,8 @@ fi
 echo ""
 echo "--- Cleanup: Remove extra channel from mysql3 ---"
 
-if mysql_is_57; then
-    RESET_CHANNEL_SQL="STOP SLAVE FOR CHANNEL 'extra'; RESET SLAVE ALL FOR CHANNEL 'extra';"
-else
-    RESET_CHANNEL_SQL="STOP REPLICA FOR CHANNEL 'extra'; RESET REPLICA ALL FOR CHANNEL 'extra';"
-fi
+# Script already exits on MySQL 5.7, so only 8.0+ syntax needed here
+RESET_CHANNEL_SQL="STOP REPLICA FOR CHANNEL 'extra'; RESET REPLICA ALL FOR CHANNEL 'extra';"
 
 $COMPOSE exec -T mysql3 mysql -uroot -ptestpass -e "$RESET_CHANNEL_SQL" 2>/dev/null
 
