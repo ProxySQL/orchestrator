@@ -175,15 +175,14 @@ mysql_read_only() {
 }
 
 # Get MySQL replication source host
-# Uses tabular SHOW STATUS (column 2 = host) instead of \G which is
-# unreliable through docker exec pipes
+# Uses tab-separated SHOW STATUS — Source_Host is column 2
 mysql_source_host() {
     local CONTAINER="$1"
     if mysql_is_57; then
         docker compose -f tests/functional/docker-compose.yml exec -T "$CONTAINER" \
-            mysql -uroot -ptestpass -Nse "SHOW SLAVE STATUS" 2>/dev/null | awk '{print $2; exit}'
+            mysql -uroot -ptestpass -Nse "SHOW SLAVE STATUS" 2>/dev/null | awk -F'\t' '{print $2; exit}'
     else
         docker compose -f tests/functional/docker-compose.yml exec -T "$CONTAINER" \
-            mysql -uroot -ptestpass -Nse "SHOW REPLICA STATUS" 2>/dev/null | awk '{print $2; exit}'
+            mysql -uroot -ptestpass -Nse "SHOW REPLICA STATUS" 2>/dev/null | awk -F'\t' '{print $2; exit}'
     fi
 }
