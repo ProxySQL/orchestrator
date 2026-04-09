@@ -23,11 +23,13 @@ echo ""
 echo "--- Setup: Configure multi-source replication on mysql3 ---"
 
 # Create test database and table on mysql2 for the extra channel
-# Note: mysql2 is a replica with read_only=ON, but root has SUPER privilege
+# Temporarily disable read_only to allow writes on the replica
 $COMPOSE exec -T mysql2 mysql -uroot -ptestpass -e "
+    SET GLOBAL read_only=0;
     CREATE DATABASE IF NOT EXISTS extra_db;
     CREATE TABLE IF NOT EXISTS extra_db.test (id INT PRIMARY KEY AUTO_INCREMENT, val VARCHAR(100));
     INSERT INTO extra_db.test (val) VALUES ('channel-test');
+    SET GLOBAL read_only=1;
 " 2>/dev/null
 
 # Verify data exists on mysql2 before setting up channel

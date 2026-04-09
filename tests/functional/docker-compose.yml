@@ -97,7 +97,7 @@ services:
           - proxysql
 
   pgprimary:
-    image: postgres:17
+    image: ${PG_IMAGE:-postgres:17}
     hostname: pgprimary
     environment:
       POSTGRES_PASSWORD: testpass
@@ -118,7 +118,7 @@ services:
           - pgprimary
 
   pgstandby1:
-    image: postgres:17
+    image: ${PG_IMAGE:-postgres:17}
     hostname: pgstandby1
     environment:
       POSTGRES_PASSWORD: testpass

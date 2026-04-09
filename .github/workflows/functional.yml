@@ -122,6 +122,9 @@ jobs:
     - name: Run failover tests
       run: bash tests/functional/test-failover.sh
 
+    - name: Run advanced failover tests
+      run: bash tests/functional/test-failover-advanced.sh
+
     - name: Run named channels tests
       run: bash tests/functional/test-named-channels.sh
 
@@ -166,6 +169,11 @@ jobs:
     timeout-minutes: 30
     needs: build
 
+    strategy:
+      fail-fast: false
+      matrix:
+        pg_version: ['15', '16', '17']
+
     steps:
     - uses: actions/checkout@v4
 
@@ -180,7 +188,10 @@ jobs:
 
     - name: Start PostgreSQL containers
       working-directory: tests/functional
+      env:
+        PG_IMAGE: postgres:${{ matrix.pg_version }}
       run: |
+        echo "Using PostgreSQL image: $PG_IMAGE"
         docker compose up -d pgprimary
         echo "Waiting for pgprimary to be healthy..."
         timeout 120 bash -c '
@@ -224,6 +235,8 @@ jobs:
 
     - name: Start PostgreSQL orchestrator
       working-directory: tests/functional
+      env:
+        PG_IMAGE: postgres:${{ matrix.pg_version }}
       run: |
         docker compose up -d orchestrator-pg
         echo "Waiting for PostgreSQL orchestrator to be ready..."
@@ -244,6 +257,8 @@ jobs:
     - name: Collect orchestrator logs
       if: always()
       working-directory: tests/functional
+      env:
+        PG_IMAGE: postgres:${{ matrix.pg_version }}
       run: |
         docker compose logs orchestrator-pg > /tmp/orchestrator-pg-test.log 2>&1 || true
 
@@ -251,22 +266,26 @@ jobs:
       if: always()
       uses: actions/upload-artifact@v4
       with:
-        name: orchestrator-test-logs-postgresql
+        name: orchestrator-test-logs-pg-${{ matrix.pg_version }}
         path: /tmp/orchestrator-pg-test.log
 
     - name: Collect all docker logs on failure
       if: failure()
       working-directory: tests/functional
+      env:
+        PG_IMAGE: postgres:${{ matrix.pg_version }}
       run: docker compose logs > /tmp/docker-compose-logs.txt 2>&1 || true
 
     - name: Upload docker logs on failure
       if: failure()
       uses: actions/upload-artifact@v4
       with:
-        name: docker-compose-logs-postgresql
+        name: docker-compose-logs-pg-${{ matrix.pg_version }}
         path: /tmp/docker-compose-logs.txt
 
     - name: Cleanup
       if: always()
       working-directory: tests/functional
+      env:
+        PG_IMAGE: postgres:${{ matrix.pg_version }}
       run: docker compose down -v --remove-orphans 2>/dev/null || true
