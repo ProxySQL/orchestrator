@@ -46,6 +46,7 @@
 #### Developers
 - [Understanding CI](ci.md)
 - [Building and testing](build.md)
+- [Releasing and publishing packages](release.md)
 - [System test environment](ci-env.md)
 - [Docker](docker.md)
 - [Contributions](contributions.md)
