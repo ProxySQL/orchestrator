@@ -28,7 +28,7 @@ usage() {
   echo "-h Show this screen"
   echo "-t (linux|darwin) Target OS Default:(linux)"
   echo "-i (systemd|sysv) Target init system Default:(systemd)"
-  echo "-a (amd64|386) Arch Default:(amd64)"
+  echo "-a (amd64|386|arm64) Arch Default:(amd64)"
   echo "-d debug output"
   echo "-b build only, do not generate packages"
   echo "-N do not build; use existing ./build/bin/orchestrator binary"

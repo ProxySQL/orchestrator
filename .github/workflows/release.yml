@@ -11,7 +11,15 @@ permissions:
 
 jobs:
   build-and-release:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-latest
+            goarch: amd64
+          - runner: ubuntu-24.04-arm
+            goarch: arm64
+    runs-on: ${{ matrix.runner }}
 
     steps:
     - uses: actions/checkout@v4
@@ -22,27 +30,99 @@ jobs:
         go-version: '1.25.7'
         cache: true
 
-    - name: Build binary
-      run: go build -o bin/orchestrator ./go/cmd/orchestrator
+    - name: Install fpm and rpmbuild
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y ruby ruby-dev build-essential rpm
+        sudo gem install --no-document fpm
 
-    - name: Create tar.gz archive
+    - name: Build and package
       env:
         TAG_NAME: ${{ github.ref_name }}
-      run: tar czf "orchestrator-${TAG_NAME}-linux-amd64.tar.gz" -C bin orchestrator
+        GOARCH: ${{ matrix.goarch }}
+      run: |
+        # strip leading 'v' from tag for package versions
+        export RELEASE_VERSION="${TAG_NAME#v}"
+        export GOPATH="$(go env GOPATH)"
+        ./build.sh -a "$GOARCH"
+
+    - name: Collect artifacts
+      run: |
+        mkdir -p dist
+        shopt -s nullglob
+        cp /tmp/orchestrator-release/*.tar.gz dist/ 2>/dev/null || true
+        cp /tmp/orchestrator-release/*.deb    dist/ 2>/dev/null || true
+        cp /tmp/orchestrator-release/*.rpm    dist/ 2>/dev/null || true
+        ls -la dist/
 
     - name: Upload release assets
       uses: softprops/action-gh-release@v2
       with:
-        files: orchestrator-*.tar.gz
+        files: dist/*
         generate_release_notes: true
         draft: false
         prerelease: ${{ contains(github.ref_name, 'rc') }}
 
-  docker:
-    runs-on: ubuntu-latest
+  docker-build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-latest
+            platform: linux/amd64
+            arch: amd64
+          - runner: ubuntu-24.04-arm
+            platform: linux/arm64
+            arch: arm64
+    runs-on: ${{ matrix.runner }}
 
     steps:
     - uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Login to GHCR
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Build and push by digest
+      id: build
+      uses: docker/build-push-action@v6
+      with:
+        context: .
+        file: docker/Dockerfile
+        platforms: ${{ matrix.platform }}
+        outputs: type=image,name=ghcr.io/proxysql/orchestrator,push-by-digest=true,name-canonical=true,push=true
+
+    - name: Export digest
+      env:
+        DIGEST: ${{ steps.build.outputs.digest }}
+      run: |
+        mkdir -p /tmp/digests
+        touch "/tmp/digests/${DIGEST#sha256:}"
+
+    - name: Upload digest
+      uses: actions/upload-artifact@v4
+      with:
+        name: digests-${{ matrix.arch }}
+        path: /tmp/digests/*
+        if-no-files-found: error
+        retention-days: 1
+
+  docker-merge:
+    needs: docker-build
+    runs-on: ubuntu-latest
+    steps:
+    - name: Download digests
+      uses: actions/download-artifact@v4
+      with:
+        pattern: digests-*
+        path: /tmp/digests
+        merge-multiple: true
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
@@ -64,12 +144,15 @@ jobs:
           type=semver,pattern={{major}}.{{minor}}
           type=raw,value=latest,enable=${{ !contains(github.ref_name, 'rc') }}
 
-    - name: Build and push
-      uses: docker/build-push-action@v6
-      with:
-        push: true
-        context: .
-        file: docker/Dockerfile
-        platforms: linux/amd64
-        tags: ${{ steps.meta.outputs.tags }}
-        labels: ${{ steps.meta.outputs.labels }}
+    - name: Create manifest list and push
+      working-directory: /tmp/digests
+      run: |
+        docker buildx imagetools create \
+          $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+          $(printf 'ghcr.io/proxysql/orchestrator@sha256:%s ' *)
+
+    - name: Inspect image
+      env:
+        VERSION: ${{ steps.meta.outputs.version }}
+      run: |
+        docker buildx imagetools inspect "ghcr.io/proxysql/orchestrator:${VERSION}"
