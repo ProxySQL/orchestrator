@@ -55,9 +55,18 @@ jobs:
     - name: Make binary executable
       run: chmod +x bin/orchestrator
 
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
     - name: Build orchestrator runtime image
-      working-directory: tests/functional
-      run: docker build -t orchestrator-runtime:latest -f orchestrator-runtime.Dockerfile .
+      uses: docker/build-push-action@v6
+      with:
+        context: tests/functional
+        file: tests/functional/orchestrator-runtime.Dockerfile
+        tags: orchestrator-runtime:latest
+        load: true
+        cache-from: type=gha,scope=orchestrator-runtime
+        cache-to: type=gha,mode=max,scope=orchestrator-runtime
 
     - name: Start test infrastructure (MySQL + ProxySQL)
       working-directory: tests/functional
@@ -190,9 +199,18 @@ jobs:
     - name: Make binary executable
       run: chmod +x bin/orchestrator
 
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
     - name: Build orchestrator runtime image
-      working-directory: tests/functional
-      run: docker build -t orchestrator-runtime:latest -f orchestrator-runtime.Dockerfile .
+      uses: docker/build-push-action@v6
+      with:
+        context: tests/functional
+        file: tests/functional/orchestrator-runtime.Dockerfile
+        tags: orchestrator-runtime:latest
+        load: true
+        cache-from: type=gha,scope=orchestrator-runtime
+        cache-to: type=gha,mode=max,scope=orchestrator-runtime
 
     - name: Start PostgreSQL containers
       working-directory: tests/functional
@@ -315,9 +333,18 @@ jobs:
     - name: Make binary executable
       run: chmod +x bin/orchestrator
 
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
     - name: Build orchestrator runtime image
-      working-directory: tests/functional
-      run: docker build -t orchestrator-runtime:latest -f orchestrator-runtime.Dockerfile .
+      uses: docker/build-push-action@v6
+      with:
+        context: tests/functional
+        file: tests/functional/orchestrator-runtime.Dockerfile
+        tags: orchestrator-runtime:latest
+        load: true
+        cache-from: type=gha,scope=orchestrator-runtime
+        cache-to: type=gha,mode=max,scope=orchestrator-runtime
 
     - name: Start MySQL infrastructure
       working-directory: tests/functional
