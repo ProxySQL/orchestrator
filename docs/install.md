@@ -5,6 +5,16 @@ For production deployments, see [Orchestrator deployment](deployment.md). The fo
 The following assumes you will be using the same machine for both the `orchestrator` binary and the MySQL backend.
 If not, replace `127.0.0.1` with appropriate host name. Replace `orch_backend_password` with your own super secret password.
 
+#### Which package do I need?
+
+Each release publishes three package variants (as `.deb`, `.rpm`, and `.tar.gz`, for both `amd64` and `arm64`):
+
+- **`orchestrator`** — the full server install. Contains the `orchestrator` binary, the web UI resources, sample config files, and the systemd unit. This is what you want on the host(s) that will run the `orchestrator` service with the HTTP API and web interface.
+- **`orchestrator-cli`** — the `orchestrator` binary only. Pick this when you want to run `orchestrator` from the command line (CLI mode) or as an HTTP API server without the web UI, and you do not need the sample configs or systemd unit.
+- **`orchestrator-client`** — a thin bash wrapper around the HTTP API (see [orchestrator-client](orchestrator-client.md)). It is a single shell script that depends on `jq`; install it on ops/app boxes that need to talk to an already-running `orchestrator` service without shipping the Go binary. Because it is shell-only, the package is only a few KB — that is expected.
+
+If you are unsure, install `orchestrator`.
+
 #### Extract orchestrator binary and files
 
 - Extract from tarball
