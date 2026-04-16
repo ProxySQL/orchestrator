@@ -56,6 +56,9 @@ jobs:
         path: bin/orchestrator
 
   lint:
+    # only-new-issues needs a PR base; on push/schedule every pre-existing issue
+    # is reported as "new", so only run where the diff-vs-base comparison works.
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
 
     runs-on: ubuntu-latest
 

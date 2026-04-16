@@ -144,7 +144,7 @@ services:
           - pgstandby1
 
   orchestrator:
-    image: ubuntu:24.04
+    image: orchestrator-runtime:latest
     hostname: orchestrator
     volumes:
       - ../../bin/orchestrator:/usr/local/bin/orchestrator:ro
@@ -152,7 +152,6 @@ services:
       - ./orchestrator-test.conf.json:/orchestrator/orchestrator.conf.json:ro
     command: >
       bash -c "
-        apt-get update -qq && apt-get install -y -qq curl sqlite3 > /dev/null 2>&1 &&
         rm -f /tmp/orchestrator-test.sqlite3 &&
         cd /orchestrator &&
         orchestrator -config orchestrator.conf.json http
@@ -175,7 +174,7 @@ services:
           - orchestrator
 
   orchestrator-pg:
-    image: ubuntu:24.04
+    image: orchestrator-runtime:latest
     hostname: orchestrator-pg
     volumes:
       - ../../bin/orchestrator:/usr/local/bin/orchestrator:ro
@@ -183,7 +182,6 @@ services:
       - ./orchestrator-pg-test.conf.json:/orchestrator/orchestrator.conf.json:ro
     command: >
       bash -c "
-        apt-get update -qq && apt-get install -y -qq curl sqlite3 > /dev/null 2>&1 &&
         rm -f /tmp/orchestrator-pg-test.sqlite3 &&
         cd /orchestrator &&
         orchestrator -config orchestrator.conf.json http
@@ -206,7 +204,7 @@ services:
           - orchestrator-pg
 
   orchestrator-raft1:
-    image: ubuntu:24.04
+    image: orchestrator-runtime:latest
     hostname: orchestrator-raft1
     volumes:
       - ../../bin/orchestrator:/usr/local/bin/orchestrator:ro
@@ -214,7 +212,6 @@ services:
       - ./orchestrator-raft1.conf.json:/orchestrator/orchestrator.conf.json:ro
     command: >
       bash -c "
-        apt-get update -qq && apt-get install -y -qq curl sqlite3 > /dev/null 2>&1 &&
         mkdir -p /tmp/raft1 &&
         cd /orchestrator &&
         orchestrator -config orchestrator.conf.json http
@@ -231,7 +228,7 @@ services:
           - orchestrator-raft1
 
   orchestrator-raft2:
-    image: ubuntu:24.04
+    image: orchestrator-runtime:latest
     hostname: orchestrator-raft2
     volumes:
       - ../../bin/orchestrator:/usr/local/bin/orchestrator:ro
@@ -239,7 +236,6 @@ services:
       - ./orchestrator-raft2.conf.json:/orchestrator/orchestrator.conf.json:ro
     command: >
       bash -c "
-        apt-get update -qq && apt-get install -y -qq curl sqlite3 > /dev/null 2>&1 &&
         mkdir -p /tmp/raft2 &&
         cd /orchestrator &&
         orchestrator -config orchestrator.conf.json http
@@ -256,7 +252,7 @@ services:
           - orchestrator-raft2
 
   orchestrator-raft3:
-    image: ubuntu:24.04
+    image: orchestrator-runtime:latest
     hostname: orchestrator-raft3
     volumes:
       - ../../bin/orchestrator:/usr/local/bin/orchestrator:ro
@@ -264,7 +260,6 @@ services:
       - ./orchestrator-raft3.conf.json:/orchestrator/orchestrator.conf.json:ro
     command: >
       bash -c "
-        apt-get update -qq && apt-get install -y -qq curl sqlite3 > /dev/null 2>&1 &&
         mkdir -p /tmp/raft3 &&
         cd /orchestrator &&
         orchestrator -config orchestrator.conf.json http

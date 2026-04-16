@@ -55,6 +55,10 @@ jobs:
     - name: Make binary executable
       run: chmod +x bin/orchestrator
 
+    - name: Build orchestrator runtime image
+      working-directory: tests/functional
+      run: docker build -t orchestrator-runtime:latest -f orchestrator-runtime.Dockerfile .
+
     - name: Start test infrastructure (MySQL + ProxySQL)
       working-directory: tests/functional
       env:
@@ -186,6 +190,10 @@ jobs:
     - name: Make binary executable
       run: chmod +x bin/orchestrator
 
+    - name: Build orchestrator runtime image
+      working-directory: tests/functional
+      run: docker build -t orchestrator-runtime:latest -f orchestrator-runtime.Dockerfile .
+
     - name: Start PostgreSQL containers
       working-directory: tests/functional
       env:
@@ -306,6 +314,10 @@ jobs:
 
     - name: Make binary executable
       run: chmod +x bin/orchestrator
+
+    - name: Build orchestrator runtime image
+      working-directory: tests/functional
+      run: docker build -t orchestrator-runtime:latest -f orchestrator-runtime.Dockerfile .
 
     - name: Start MySQL infrastructure
       working-directory: tests/functional
