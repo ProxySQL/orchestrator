@@ -43,6 +43,7 @@ jobs:
       run: |
         # strip leading 'v' from tag for package versions
         export RELEASE_VERSION="${TAG_NAME#v}"
+        export GOPATH="$(go env GOPATH)"
         ./build.sh -a "$GOARCH"
 
     - name: Collect artifacts
