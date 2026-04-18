@@ -253,3 +253,41 @@ func PostgreSQLGetCurrentWALLSN(instanceKey *InstanceKey) (string, error) {
 	log.Infof("PostgreSQLGetCurrentWALLSN: %+v current LSN is %s", *instanceKey, lsn)
 	return lsn, nil
 }
+
+// PostgreSQLWaitForStandbyLSN polls a PostgreSQL standby until its replay LSN
+// reaches or exceeds the target LSN, or the timeout expires.
+func PostgreSQLWaitForStandbyLSN(standbyKey *InstanceKey, targetLSN string, timeout time.Duration) error {
+	if standbyKey == nil {
+		return fmt.Errorf("PostgreSQLWaitForStandbyLSN: nil standbyKey")
+	}
+	if targetLSN == "" {
+		return fmt.Errorf("PostgreSQLWaitForStandbyLSN: empty targetLSN")
+	}
+
+	db, err := openPostgreSQLTopology(*standbyKey)
+	if err != nil {
+		return log.Errore(err)
+	}
+	defer func() { _ = db.Close() }()
+
+	log.Infof("PostgreSQLWaitForStandbyLSN: waiting for %+v to reach LSN %s (timeout %v)", *standbyKey, targetLSN, timeout)
+
+	pollInterval := 500 * time.Millisecond
+	deadline := time.Now().Add(timeout)
+
+	for time.Now().Before(deadline) {
+		var reached bool
+		err := db.QueryRow(
+			"SELECT pg_last_wal_replay_lsn() >= $1::pg_lsn", targetLSN,
+		).Scan(&reached)
+		if err != nil {
+			_ = log.Warningf("PostgreSQLWaitForStandbyLSN: error polling %+v: %v", *standbyKey, err)
+		} else if reached {
+			log.Infof("PostgreSQLWaitForStandbyLSN: %+v reached target LSN %s", *standbyKey, targetLSN)
+			return nil
+		}
+		time.Sleep(pollInterval)
+	}
+
+	return fmt.Errorf("PostgreSQLWaitForStandbyLSN: %+v did not reach LSN %s within %v", *standbyKey, targetLSN, timeout)
+}

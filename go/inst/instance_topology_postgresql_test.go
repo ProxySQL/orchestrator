@@ -18,6 +18,7 @@ package inst
 
 import (
 	"testing"
+	"time"
 )
 
 func TestPostgreSQLSetReadOnlyNilKey(t *testing.T) {
@@ -31,5 +32,20 @@ func TestPostgreSQLGetCurrentWALLSNNilKey(t *testing.T) {
 	_, err := PostgreSQLGetCurrentWALLSN(nil)
 	if err == nil {
 		t.Fatal("expected error for nil instanceKey")
+	}
+}
+
+func TestPostgreSQLWaitForStandbyLSNNilKey(t *testing.T) {
+	err := PostgreSQLWaitForStandbyLSN(nil, "0/0", 1*time.Second)
+	if err == nil {
+		t.Fatal("expected error for nil instanceKey")
+	}
+}
+
+func TestPostgreSQLWaitForStandbyLSNEmptyLSN(t *testing.T) {
+	key := &InstanceKey{Hostname: "localhost", Port: 5432}
+	err := PostgreSQLWaitForStandbyLSN(key, "", 1*time.Second)
+	if err == nil {
+		t.Fatal("expected error for empty targetLSN")
 	}
 }
