@@ -2121,6 +2121,12 @@ func GracefulMasterTakeover(clusterName string, designatedKey *inst.InstanceKey,
 	}
 	clusterMaster := clusterMasters[0]
 
+	// PostgreSQL: dispatch to PostgreSQL-specific implementation
+	if clusterMaster.ProviderType == "postgresql" {
+		topologyRecovery, err := PostgreSQLGracefulPrimarySwitchover(clusterName, designatedKey, auto)
+		return topologyRecovery, nil, err
+	}
+
 	clusterMasterDirectReplicas, err := inst.ReadReplicaInstances(&clusterMaster.Key)
 	if err != nil {
 		return nil, nil, log.Errore(err)

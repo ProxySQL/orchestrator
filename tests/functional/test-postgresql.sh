@@ -117,7 +117,214 @@ test_body_contains "/api/clusters contains PG cluster" "$ORC_URL/api/clusters" "
 
 # ----------------------------------------------------------------
 echo ""
-echo "--- Failover test: kill pgprimary ---"
+echo "--- Graceful primary switchover tests ---"
+
+# Identify current primary before switchover
+CURRENT_PRIMARY=$(curl -s --max-time 10 "$ORC_URL/api/cluster/$PG_CLUSTER" 2>/dev/null | python3 -c "
+import json, sys
+instances = json.load(sys.stdin)
+for inst in instances:
+    if not inst.get('ReadOnly', True):
+        print(inst['Key']['Hostname'] + ':' + str(inst['Key']['Port']))
+        sys.exit(0)
+print('')
+" 2>/dev/null || echo "")
+
+if [ -z "$CURRENT_PRIMARY" ]; then
+    fail "Cannot identify current PostgreSQL primary for graceful switchover"
+else
+    echo "Current primary: $CURRENT_PRIMARY"
+
+    # Execute graceful-master-takeover-auto via API
+    echo "Executing graceful-master-takeover-auto on cluster $PG_CLUSTER..."
+    TAKEOVER_RESULT=$(curl -s --max-time 60 "$ORC_URL/api/graceful-master-takeover-auto/$PG_CLUSTER" 2>/dev/null)
+    TAKEOVER_CODE=$(echo "$TAKEOVER_RESULT" | python3 -c "import json,sys; print(json.load(sys.stdin).get('Code','ERROR'))" 2>/dev/null || echo "ERROR")
+
+    if [ "$TAKEOVER_CODE" = "OK" ]; then
+        pass "Graceful master takeover API returned OK"
+    else
+        fail "Graceful master takeover API returned: $TAKEOVER_CODE — $TAKEOVER_RESULT"
+    fi
+
+    # Wait for topology to settle and re-discover
+    sleep 10
+    curl -s --max-time 10 "$ORC_URL/api/discover/172.30.0.20/5432" > /dev/null 2>&1
+    curl -s --max-time 10 "$ORC_URL/api/discover/172.30.0.21/5432" > /dev/null 2>&1
+    sleep 5
+
+    # Verify primary has changed
+    NEW_PRIMARY=$(curl -s --max-time 10 "$ORC_URL/api/cluster/$PG_CLUSTER" 2>/dev/null | python3 -c "
+import json, sys
+instances = json.load(sys.stdin)
+for inst in instances:
+    if not inst.get('ReadOnly', True):
+        print(inst['Key']['Hostname'] + ':' + str(inst['Key']['Port']))
+        sys.exit(0)
+print('')
+" 2>/dev/null || echo "")
+
+    if [ -n "$NEW_PRIMARY" ] && [ "$NEW_PRIMARY" != "$CURRENT_PRIMARY" ]; then
+        pass "Primary switched from $CURRENT_PRIMARY to $NEW_PRIMARY"
+    else
+        fail "Primary did not change: was $CURRENT_PRIMARY, now ${NEW_PRIMARY:-unknown}"
+    fi
+
+    # Verify new primary is actually writable (not just flagged read_only=false)
+    if $COMPOSE exec -T pgstandby1 psql -U postgres -v ON_ERROR_STOP=1 -tAc \
+        "CREATE TABLE IF NOT EXISTS orc_switchover_probe (id int); INSERT INTO orc_switchover_probe VALUES (1);" >/dev/null 2>&1; then
+        pass "New primary (pgstandby1) accepts writes"
+    else
+        fail "New primary (pgstandby1) does not accept writes"
+    fi
+
+    # Verify demoted primary has primary_conninfo pointing at the new primary
+    DEMOTED_CONNINFO=$($COMPOSE exec -T pgprimary psql -U postgres -tAc \
+        "SELECT setting FROM pg_settings WHERE name='primary_conninfo';" 2>/dev/null | tr -d '\r')
+    if echo "$DEMOTED_CONNINFO" | grep -q "172.30.0.21"; then
+        pass "Demoted primary has primary_conninfo pointing at new primary"
+    else
+        fail "Demoted primary primary_conninfo missing new primary IP (got: '$DEMOTED_CONNINFO')"
+    fi
+fi
+
+# ----------------------------------------------------------------
+echo ""
+echo "--- Graceful switchover negative cases ---"
+
+# Negative case 1: bogus cluster name
+BOGUS_RESULT=$(curl -s --max-time 30 "$ORC_URL/api/graceful-master-takeover-auto/no-such-cluster-xyz" 2>/dev/null)
+BOGUS_CODE=$(echo "$BOGUS_RESULT" | python3 -c "import json,sys; print(json.load(sys.stdin).get('Code','ERROR'))" 2>/dev/null || echo "ERROR")
+if [ "$BOGUS_CODE" != "OK" ]; then
+    pass "graceful-master-takeover-auto on bogus cluster rejected (Code=$BOGUS_CODE)"
+else
+    fail "graceful-master-takeover-auto on bogus cluster unexpectedly returned OK"
+fi
+
+# Negative case 2: bogus designated host (PG_CLUSTER is valid, target is not)
+BADHOST_RESULT=$(curl -s --max-time 30 "$ORC_URL/api/graceful-master-takeover/$PG_CLUSTER/no.such.host.invalid/5432" 2>/dev/null)
+BADHOST_CODE=$(echo "$BADHOST_RESULT" | python3 -c "import json,sys; print(json.load(sys.stdin).get('Code','ERROR'))" 2>/dev/null || echo "ERROR")
+if [ "$BADHOST_CODE" != "OK" ]; then
+    pass "graceful-master-takeover with bogus designated host rejected (Code=$BADHOST_CODE)"
+else
+    fail "graceful-master-takeover with bogus designated host unexpectedly returned OK"
+fi
+
+# ----------------------------------------------------------------
+echo ""
+echo "--- Graceful switchover round-trip (switch back) ---"
+# After the first switchover, pgprimary has primary_conninfo set but is still
+# running as a (read-only) primary — it needs standby.signal + restart to
+# actually stream WAL from the new primary. Simulate what a
+# PostGracefulTakeoverProcesses hook would do.
+
+if [ -n "${NEW_PRIMARY:-}" ] && [ "${NEW_PRIMARY:-}" != "${CURRENT_PRIMARY:-}" ]; then
+    echo "Converting demoted pgprimary into a live standby of pgstandby1..."
+    $COMPOSE exec -T pgprimary bash -c 'touch /var/lib/postgresql/data/standby.signal && chown postgres:postgres /var/lib/postgresql/data/standby.signal' || true
+    $COMPOSE restart pgprimary
+    echo "Waiting for pgprimary to become a healthy standby..."
+    STANDBY_READY=false
+    for i in $(seq 1 60); do
+        IN_RECOVERY=$($COMPOSE exec -T pgprimary psql -U postgres -tAc "SELECT pg_is_in_recovery();" 2>/dev/null | tr -d '[:space:]')
+        if [ "$IN_RECOVERY" = "t" ]; then
+            STANDBY_READY=true
+            echo "pgprimary is in recovery (standby mode) after ${i}s"
+            break
+        fi
+        sleep 1
+    done
+
+    if [ "$STANDBY_READY" != "true" ]; then
+        fail "pgprimary did not enter standby/recovery mode after restart"
+    else
+        pass "pgprimary restarted as a standby"
+
+        # Let orchestrator re-discover the flipped topology
+        sleep 5
+        curl -s --max-time 10 "$ORC_URL/api/discover/172.30.0.20/5432" > /dev/null 2>&1
+        curl -s --max-time 10 "$ORC_URL/api/discover/172.30.0.21/5432" > /dev/null 2>&1
+        sleep 8
+
+        # Verify orchestrator sees pgstandby1 as primary and pgprimary as standby
+        TOPOLOGY_OK=false
+        for i in $(seq 1 30); do
+            PRIMARY_HOST=$(curl -s --max-time 10 "$ORC_URL/api/cluster/$PG_CLUSTER" 2>/dev/null | python3 -c "
+import json, sys
+for inst in json.load(sys.stdin):
+    if not inst.get('ReadOnly', True):
+        print(inst['Key']['Hostname'])
+        sys.exit(0)
+" 2>/dev/null || echo "")
+            if [ "$PRIMARY_HOST" = "172.30.0.21" ] || [ "$PRIMARY_HOST" = "pgstandby1" ]; then
+                TOPOLOGY_OK=true
+                break
+            fi
+            sleep 1
+        done
+
+        if [ "$TOPOLOGY_OK" = "true" ]; then
+            pass "Orchestrator sees pgstandby1 as primary after round-trip setup"
+        else
+            fail "Orchestrator does not see pgstandby1 as primary (got: ${PRIMARY_HOST:-unknown})"
+        fi
+
+        # Now switch back: pgstandby1 → pgprimary
+        if [ "$TOPOLOGY_OK" = "true" ]; then
+            echo "Executing graceful-master-takeover-auto to switch back..."
+            BACK_RESULT=$(curl -s --max-time 60 "$ORC_URL/api/graceful-master-takeover-auto/$PG_CLUSTER" 2>/dev/null)
+            BACK_CODE=$(echo "$BACK_RESULT" | python3 -c "import json,sys; print(json.load(sys.stdin).get('Code','ERROR'))" 2>/dev/null || echo "ERROR")
+
+            if [ "$BACK_CODE" = "OK" ]; then
+                pass "Round-trip graceful takeover API returned OK"
+            else
+                fail "Round-trip graceful takeover returned: $BACK_CODE — $BACK_RESULT"
+            fi
+
+            sleep 10
+            curl -s --max-time 10 "$ORC_URL/api/discover/172.30.0.20/5432" > /dev/null 2>&1
+            curl -s --max-time 10 "$ORC_URL/api/discover/172.30.0.21/5432" > /dev/null 2>&1
+            sleep 5
+
+            FINAL_PRIMARY=$(curl -s --max-time 10 "$ORC_URL/api/cluster/$PG_CLUSTER" 2>/dev/null | python3 -c "
+import json, sys
+for inst in json.load(sys.stdin):
+    if not inst.get('ReadOnly', True):
+        print(inst['Key']['Hostname'])
+        sys.exit(0)
+" 2>/dev/null || echo "")
+
+            if [ "$FINAL_PRIMARY" = "172.30.0.20" ] || [ "$FINAL_PRIMARY" = "pgprimary" ]; then
+                pass "Round-trip complete: pgprimary is primary again"
+            else
+                fail "Round-trip incomplete: primary is '$FINAL_PRIMARY' (expected pgprimary)"
+            fi
+
+            # After round-trip, pgstandby1 is the demoted primary — reactivate
+            # it as a live standby so the downstream failover-kill test has a
+            # replica to promote.
+            echo "Reactivating pgstandby1 as a live standby of pgprimary..."
+            $COMPOSE exec -T pgstandby1 bash -c 'touch /var/lib/postgresql/data/standby.signal && chown postgres:postgres /var/lib/postgresql/data/standby.signal' || true
+            $COMPOSE restart pgstandby1
+            for i in $(seq 1 60); do
+                IN_RECOVERY=$($COMPOSE exec -T pgstandby1 psql -U postgres -tAc "SELECT pg_is_in_recovery();" 2>/dev/null | tr -d '[:space:]')
+                if [ "$IN_RECOVERY" = "t" ]; then
+                    echo "pgstandby1 is streaming as a standby after ${i}s"
+                    break
+                fi
+                sleep 1
+            done
+            sleep 5
+            curl -s --max-time 10 "$ORC_URL/api/discover/172.30.0.20/5432" > /dev/null 2>&1
+            curl -s --max-time 10 "$ORC_URL/api/discover/172.30.0.21/5432" > /dev/null 2>&1
+            sleep 5
+        fi
+    fi
+else
+    skip "Round-trip test skipped — first switchover did not complete"
+fi
+
+# ----------------------------------------------------------------
+echo ""
+echo "--- Failover test: kill current primary ---"
 # Static IPs are assigned in docker-compose.yml so the standby remains reachable
 # even when the primary container stops.
 
