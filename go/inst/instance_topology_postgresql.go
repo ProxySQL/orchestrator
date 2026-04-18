@@ -179,3 +179,55 @@ func PostgreSQLGetBestStandbyForPromotion(replicas [](*Instance), candidateKey *
 	}
 	return bestStandby, nil
 }
+
+// PostgreSQLSetReadOnly sets or unsets read-only mode on a PostgreSQL instance
+// by updating default_transaction_read_only via ALTER SYSTEM and reloading.
+// When setting read-only, it also terminates existing non-replication connections
+// to prevent stray writes during graceful switchover.
+func PostgreSQLSetReadOnly(instanceKey *InstanceKey, readOnly bool) (*Instance, error) {
+	if instanceKey == nil {
+		return nil, fmt.Errorf("PostgreSQLSetReadOnly: nil instanceKey")
+	}
+
+	db, err := openPostgreSQLTopology(*instanceKey)
+	if err != nil {
+		return nil, log.Errore(err)
+	}
+	defer func() { _ = db.Close() }()
+
+	readOnlyValue := "off"
+	if readOnly {
+		readOnlyValue = "on"
+	}
+
+	log.Infof("PostgreSQLSetReadOnly: setting default_transaction_read_only = %s on %+v", readOnlyValue, *instanceKey)
+
+	if _, err := db.Exec(fmt.Sprintf("ALTER SYSTEM SET default_transaction_read_only = %s", readOnlyValue)); err != nil {
+		return nil, log.Errore(fmt.Errorf("PostgreSQLSetReadOnly: ALTER SYSTEM failed on %+v: %v", *instanceKey, err))
+	}
+
+	if _, err := db.Exec("SELECT pg_reload_conf()"); err != nil {
+		return nil, log.Errore(fmt.Errorf("PostgreSQLSetReadOnly: pg_reload_conf() failed on %+v: %v", *instanceKey, err))
+	}
+
+	if readOnly {
+		// Terminate existing non-replication, non-orchestrator connections to close
+		// the write window. Replication backends (walsender) and our own connection
+		// are excluded.
+		log.Infof("PostgreSQLSetReadOnly: terminating non-replication backends on %+v", *instanceKey)
+		_, err := db.Exec(`
+			SELECT pg_terminate_backend(pid)
+			FROM pg_stat_activity
+			WHERE pid <> pg_backend_pid()
+			  AND backend_type NOT IN ('walsender', 'walreceiver', 'autovacuum worker', 'logical replication launcher')
+			  AND backend_type <> 'background worker'
+			  AND datname IS NOT NULL
+		`)
+		if err != nil {
+			// Non-fatal: log warning but continue — read-only is already set
+			_ = log.Warningf("PostgreSQLSetReadOnly: error terminating backends on %+v: %v", *instanceKey, err)
+		}
+	}
+
+	return ReadPostgreSQLTopologyInstance(instanceKey)
+}
