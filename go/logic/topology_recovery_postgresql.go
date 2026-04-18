@@ -18,7 +18,9 @@ package logic
 
 import (
 	"fmt"
+	"time"
 
+	"github.com/proxysql/golib/log"
 	"github.com/proxysql/orchestrator/go/config"
 	"github.com/proxysql/orchestrator/go/inst"
 )
@@ -107,4 +109,149 @@ func checkAndRecoverDeadPrimary(analysisEntry inst.ReplicationAnalysis, candidat
 	}
 
 	return true, topologyRecovery, err
+}
+
+// PostgreSQLGracefulPrimarySwitchover performs a planned switchover of a
+// PostgreSQL primary to a designated standby. It sets the primary read-only,
+// waits for the standby to catch up, promotes the standby, reconfigures
+// remaining standbys, and configures the demoted primary for repositioning.
+func PostgreSQLGracefulPrimarySwitchover(clusterName string, designatedKey *inst.InstanceKey, auto bool) (topologyRecovery *TopologyRecovery, err error) {
+	// --- Validate: read primary and standbys ---
+	clusterMasters, err := inst.ReadClusterMaster(clusterName)
+	if err != nil {
+		return nil, fmt.Errorf("PostgreSQLGracefulPrimarySwitchover: cannot deduce cluster primary for %+v: %v", clusterName, err)
+	}
+	if len(clusterMasters) != 1 {
+		return nil, fmt.Errorf("PostgreSQLGracefulPrimarySwitchover: found %d potential primaries for %+v, expected 1", len(clusterMasters), clusterName)
+	}
+	clusterPrimary := clusterMasters[0]
+
+	standbys, err := inst.ReadReplicaInstances(&clusterPrimary.Key)
+	if err != nil {
+		return nil, fmt.Errorf("PostgreSQLGracefulPrimarySwitchover: error reading standbys: %v", err)
+	}
+	if len(standbys) == 0 {
+		return nil, fmt.Errorf("PostgreSQLGracefulPrimarySwitchover: primary %+v has no standbys", clusterPrimary.Key)
+	}
+
+	// --- Determine designated standby ---
+	var designatedStandby *inst.Instance
+	if designatedKey != nil && designatedKey.IsValid() {
+		// User specified a standby — verify it's a direct replica
+		for _, s := range standbys {
+			if s.Key.Equals(designatedKey) {
+				designatedStandby = s
+				break
+			}
+		}
+		if designatedStandby == nil {
+			return nil, fmt.Errorf("PostgreSQLGracefulPrimarySwitchover: designated instance %+v is not a standby of %+v", *designatedKey, clusterPrimary.Key)
+		}
+	} else if len(standbys) == 1 {
+		designatedStandby = standbys[0]
+	} else if auto {
+		designatedStandby, err = inst.PostgreSQLGetBestStandbyForPromotion(standbys, nil)
+		if err != nil {
+			return nil, fmt.Errorf("PostgreSQLGracefulPrimarySwitchover: cannot auto-select standby: %v", err)
+		}
+	} else {
+		return nil, fmt.Errorf("PostgreSQLGracefulPrimarySwitchover: multiple standbys and no designated instance specified (use auto or specify -d)")
+	}
+
+	if designatedStandby.IsDowntimed {
+		return nil, fmt.Errorf("PostgreSQLGracefulPrimarySwitchover: designated standby %+v is downtimed", designatedStandby.Key)
+	}
+	if !designatedStandby.IsLastCheckValid {
+		return nil, fmt.Errorf("PostgreSQLGracefulPrimarySwitchover: designated standby %+v has invalid last check", designatedStandby.Key)
+	}
+	if !designatedStandby.HasReasonableMaintenanceReplicationLag() {
+		return nil, fmt.Errorf("PostgreSQLGracefulPrimarySwitchover: designated standby %+v has excessive replication lag", designatedStandby.Key)
+	}
+
+	log.Infof("PostgreSQLGracefulPrimarySwitchover: will demote %+v and promote %+v", clusterPrimary.Key, designatedStandby.Key)
+
+	// --- Register recovery and build analysis entry ---
+	analysisEntry, err := forceAnalysisEntry(clusterName, inst.DeadPrimary, inst.GracefulMasterTakeoverCommandHint, &clusterPrimary.Key)
+	if err != nil {
+		return nil, err
+	}
+
+	// --- Execute PreGracefulTakeoverProcesses ---
+	preGracefulTakeoverTopologyRecovery := &TopologyRecovery{
+		SuccessorKey:  &designatedStandby.Key,
+		AnalysisEntry: analysisEntry,
+	}
+	if err := executeProcesses(config.Config.PreGracefulTakeoverProcesses, "PreGracefulTakeoverProcesses", preGracefulTakeoverTopologyRecovery, true); err != nil {
+		return nil, fmt.Errorf("PostgreSQLGracefulPrimarySwitchover: PreGracefulTakeoverProcesses failed: %v", err)
+	}
+
+	// --- Set primary read-only ---
+	log.Infof("PostgreSQLGracefulPrimarySwitchover: setting %+v read-only", clusterPrimary.Key)
+	if _, err := inst.PostgreSQLSetReadOnly(&clusterPrimary.Key, true); err != nil {
+		return nil, fmt.Errorf("PostgreSQLGracefulPrimarySwitchover: failed to set read-only on %+v: %v", clusterPrimary.Key, err)
+	}
+
+	// --- Capture target LSN ---
+	targetLSN, err := inst.PostgreSQLGetCurrentWALLSN(&clusterPrimary.Key)
+	if err != nil {
+		// Undo read-only before aborting
+		_, _ = inst.PostgreSQLSetReadOnly(&clusterPrimary.Key, false)
+		return nil, fmt.Errorf("PostgreSQLGracefulPrimarySwitchover: failed to get WAL LSN from %+v: %v", clusterPrimary.Key, err)
+	}
+	log.Infof("PostgreSQLGracefulPrimarySwitchover: target LSN is %s", targetLSN)
+
+	// --- Wait for standby to catch up ---
+	catchUpTimeout := time.Duration(config.Config.ReasonableMaintenanceReplicationLagSeconds) * time.Second
+	if err := inst.PostgreSQLWaitForStandbyLSN(&designatedStandby.Key, targetLSN, catchUpTimeout); err != nil {
+		// Undo read-only before aborting
+		_, _ = inst.PostgreSQLSetReadOnly(&clusterPrimary.Key, false)
+		return nil, fmt.Errorf("PostgreSQLGracefulPrimarySwitchover: standby catch-up failed: %v", err)
+	}
+
+	// --- Promote designated standby ---
+	promotedInstance, err := inst.PostgreSQLPromoteStandby(&designatedStandby.Key)
+	if err != nil {
+		// Undo read-only before aborting
+		_, _ = inst.PostgreSQLSetReadOnly(&clusterPrimary.Key, false)
+		return nil, fmt.Errorf("PostgreSQLGracefulPrimarySwitchover: promotion of %+v failed: %v", designatedStandby.Key, err)
+	}
+	log.Infof("PostgreSQLGracefulPrimarySwitchover: promoted %+v to primary", promotedInstance.Key)
+
+	// --- Register recovery ---
+	topologyRecovery, err = AttemptRecoveryRegistration(&analysisEntry, false, false)
+	if err != nil || topologyRecovery == nil {
+		_ = log.Warningf("PostgreSQLGracefulPrimarySwitchover: error registering recovery: %v", err)
+		// Continue — promotion already happened
+		topologyRecovery = &TopologyRecovery{
+			AnalysisEntry: analysisEntry,
+		}
+	}
+	topologyRecovery.SuccessorKey = &promotedInstance.Key
+
+	// --- Reconfigure remaining standbys ---
+	for _, standby := range standbys {
+		if standby.Key.Equals(&promotedInstance.Key) {
+			continue
+		}
+		AuditTopologyRecovery(topologyRecovery, fmt.Sprintf("reconfiguring standby %+v to replicate from new primary %+v", standby.Key, promotedInstance.Key))
+		if err := inst.PostgreSQLReconfigureStandby(&standby.Key, &promotedInstance.Key); err != nil {
+			AuditTopologyRecovery(topologyRecovery, fmt.Sprintf("error reconfiguring standby %+v: %v (continuing)", standby.Key, err))
+			topologyRecovery.LostReplicas.AddKey(standby.Key)
+		}
+	}
+
+	// --- Configure demoted primary for repositioning ---
+	AuditTopologyRecovery(topologyRecovery, fmt.Sprintf("configuring demoted primary %+v to replicate from %+v", clusterPrimary.Key, promotedInstance.Key))
+	if err := inst.PostgreSQLRepositionAsStandby(&clusterPrimary.Key, &promotedInstance.Key); err != nil {
+		AuditTopologyRecovery(topologyRecovery, fmt.Sprintf("error configuring demoted primary %+v: %v", clusterPrimary.Key, err))
+	}
+
+	// --- Resolve recovery ---
+	resolveRecovery(topologyRecovery, promotedInstance)
+
+	// --- Execute PostGracefulTakeoverProcesses ---
+	executeProcesses(config.Config.PostGracefulTakeoverProcesses, "PostGracefulTakeoverProcesses", topologyRecovery, false)
+
+	AuditTopologyRecovery(topologyRecovery, fmt.Sprintf("PostgreSQLGracefulPrimarySwitchover: completed. New primary: %+v", promotedInstance.Key))
+	return topologyRecovery, nil
 }
