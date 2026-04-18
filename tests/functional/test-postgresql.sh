@@ -117,6 +117,61 @@ test_body_contains "/api/clusters contains PG cluster" "$ORC_URL/api/clusters" "
 
 # ----------------------------------------------------------------
 echo ""
+echo "--- Graceful primary switchover tests ---"
+
+# Identify current primary before switchover
+CURRENT_PRIMARY=$(curl -s --max-time 10 "$ORC_URL/api/cluster/$PG_CLUSTER" 2>/dev/null | python3 -c "
+import json, sys
+instances = json.load(sys.stdin)
+for inst in instances:
+    if not inst.get('ReadOnly', True):
+        print(inst['Key']['Hostname'] + ':' + str(inst['Key']['Port']))
+        sys.exit(0)
+print('')
+" 2>/dev/null || echo "")
+
+if [ -z "$CURRENT_PRIMARY" ]; then
+    fail "Cannot identify current PostgreSQL primary for graceful switchover"
+else
+    echo "Current primary: $CURRENT_PRIMARY"
+
+    # Execute graceful-master-takeover-auto via API
+    echo "Executing graceful-master-takeover-auto on cluster $PG_CLUSTER..."
+    TAKEOVER_RESULT=$(curl -s --max-time 60 "$ORC_URL/api/graceful-master-takeover-auto/$PG_CLUSTER" 2>/dev/null)
+    TAKEOVER_CODE=$(echo "$TAKEOVER_RESULT" | python3 -c "import json,sys; print(json.load(sys.stdin).get('Code','ERROR'))" 2>/dev/null || echo "ERROR")
+
+    if [ "$TAKEOVER_CODE" = "OK" ]; then
+        pass "Graceful master takeover API returned OK"
+    else
+        fail "Graceful master takeover API returned: $TAKEOVER_CODE — $TAKEOVER_RESULT"
+    fi
+
+    # Wait for topology to settle and re-discover
+    sleep 10
+    curl -s --max-time 10 "$ORC_URL/api/discover/172.30.0.20/5432" > /dev/null 2>&1
+    curl -s --max-time 10 "$ORC_URL/api/discover/172.30.0.21/5432" > /dev/null 2>&1
+    sleep 5
+
+    # Verify primary has changed
+    NEW_PRIMARY=$(curl -s --max-time 10 "$ORC_URL/api/cluster/$PG_CLUSTER" 2>/dev/null | python3 -c "
+import json, sys
+instances = json.load(sys.stdin)
+for inst in instances:
+    if not inst.get('ReadOnly', True):
+        print(inst['Key']['Hostname'] + ':' + str(inst['Key']['Port']))
+        sys.exit(0)
+print('')
+" 2>/dev/null || echo "")
+
+    if [ -n "$NEW_PRIMARY" ] && [ "$NEW_PRIMARY" != "$CURRENT_PRIMARY" ]; then
+        pass "Primary switched from $CURRENT_PRIMARY to $NEW_PRIMARY"
+    else
+        fail "Primary did not change: was $CURRENT_PRIMARY, now ${NEW_PRIMARY:-unknown}"
+    fi
+fi
+
+# ----------------------------------------------------------------
+echo ""
 echo "--- Failover test: kill pgprimary ---"
 # Static IPs are assigned in docker-compose.yml so the standby remains reachable
 # even when the primary container stops.
