@@ -26,3 +26,10 @@ func TestPostgreSQLSetReadOnlyNilKey(t *testing.T) {
 		t.Fatal("expected error for nil instanceKey")
 	}
 }
+
+func TestPostgreSQLGetCurrentWALLSNNilKey(t *testing.T) {
+	_, err := PostgreSQLGetCurrentWALLSN(nil)
+	if err == nil {
+		t.Fatal("expected error for nil instanceKey")
+	}
+}

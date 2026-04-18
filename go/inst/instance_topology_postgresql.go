@@ -231,3 +231,25 @@ func PostgreSQLSetReadOnly(instanceKey *InstanceKey, readOnly bool) (*Instance, 
 
 	return ReadPostgreSQLTopologyInstance(instanceKey)
 }
+
+// PostgreSQLGetCurrentWALLSN returns the current WAL write position (LSN)
+// of a PostgreSQL primary instance.
+func PostgreSQLGetCurrentWALLSN(instanceKey *InstanceKey) (string, error) {
+	if instanceKey == nil {
+		return "", fmt.Errorf("PostgreSQLGetCurrentWALLSN: nil instanceKey")
+	}
+
+	db, err := openPostgreSQLTopology(*instanceKey)
+	if err != nil {
+		return "", log.Errore(err)
+	}
+	defer func() { _ = db.Close() }()
+
+	var lsn string
+	if err := db.QueryRow("SELECT pg_current_wal_lsn()::text").Scan(&lsn); err != nil {
+		return "", log.Errore(fmt.Errorf("PostgreSQLGetCurrentWALLSN: failed on %+v: %v", *instanceKey, err))
+	}
+
+	log.Infof("PostgreSQLGetCurrentWALLSN: %+v current LSN is %s", *instanceKey, lsn)
+	return lsn, nil
+}
