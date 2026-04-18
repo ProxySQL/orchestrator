@@ -291,3 +291,41 @@ func PostgreSQLWaitForStandbyLSN(standbyKey *InstanceKey, targetLSN string, time
 
 	return fmt.Errorf("PostgreSQLWaitForStandbyLSN: %+v did not reach LSN %s within %v", *standbyKey, targetLSN, timeout)
 }
+
+// PostgreSQLRepositionAsStandby configures a (demoted) PostgreSQL primary to
+// replicate from a new primary by updating primary_conninfo via ALTER SYSTEM.
+// The actual restart and standby.signal creation is the operator's
+// responsibility, typically via PostGracefulTakeoverProcesses hooks.
+func PostgreSQLRepositionAsStandby(instanceKey *InstanceKey, newPrimaryKey *InstanceKey) error {
+	if instanceKey == nil || newPrimaryKey == nil {
+		return fmt.Errorf("PostgreSQLRepositionAsStandby: nil key provided")
+	}
+
+	db, err := openPostgreSQLTopology(*instanceKey)
+	if err != nil {
+		return log.Errore(err)
+	}
+	defer func() { _ = db.Close() }()
+
+	newConnInfo := fmt.Sprintf(
+		"host=%s port=%d user=%s password=%s sslmode=%s application_name=orchestrator",
+		newPrimaryKey.Hostname,
+		newPrimaryKey.Port,
+		config.Config.PostgreSQLTopologyUser,
+		config.Config.PostgreSQLTopologyPassword,
+		config.Config.PostgreSQLSSLMode,
+	)
+
+	log.Infof("PostgreSQLRepositionAsStandby: configuring %+v to replicate from %+v", *instanceKey, *newPrimaryKey)
+
+	if _, err := db.Exec(fmt.Sprintf("ALTER SYSTEM SET primary_conninfo = '%s'", newConnInfo)); err != nil {
+		return log.Errore(fmt.Errorf("PostgreSQLRepositionAsStandby: ALTER SYSTEM failed on %+v: %v", *instanceKey, err))
+	}
+
+	if _, err := db.Exec("SELECT pg_reload_conf()"); err != nil {
+		return log.Errore(fmt.Errorf("PostgreSQLRepositionAsStandby: pg_reload_conf() failed on %+v: %v", *instanceKey, err))
+	}
+
+	log.Infof("PostgreSQLRepositionAsStandby: %+v configured. Operator must restart with standby.signal to complete demotion.", *instanceKey)
+	return nil
+}

@@ -49,3 +49,13 @@ func TestPostgreSQLWaitForStandbyLSNEmptyLSN(t *testing.T) {
 		t.Fatal("expected error for empty targetLSN")
 	}
 }
+
+func TestPostgreSQLRepositionAsStandbyNilKeys(t *testing.T) {
+	key := &InstanceKey{Hostname: "localhost", Port: 5432}
+	if err := PostgreSQLRepositionAsStandby(nil, key); err == nil {
+		t.Fatal("expected error for nil instanceKey")
+	}
+	if err := PostgreSQLRepositionAsStandby(key, nil); err == nil {
+		t.Fatal("expected error for nil newPrimaryKey")
+	}
+}
