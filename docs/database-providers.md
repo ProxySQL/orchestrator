@@ -180,8 +180,14 @@ GRANT pg_monitor TO orchestrator;
 - **`client_port` from `pg_stat_replication`** is an ephemeral port, not the
   PostgreSQL listen port. Orchestrator uses `DefaultInstancePort` for standby
   discovery, so all instances must listen on the same port.
-- **Graceful master takeover** (planned switchover) is not yet implemented for
-  PostgreSQL. Only unplanned failover (dead primary) is supported.
+- **Graceful master takeover** (planned switchover) is supported for PostgreSQL.
+  The same CLI commands and API endpoints (`graceful-master-takeover`,
+  `graceful-master-takeover-auto`) work for PostgreSQL clusters. The switchover
+  sets the primary read-only, waits for the designated standby to catch up via
+  WAL LSN, promotes the standby, reconfigures remaining standbys, and configures
+  the demoted primary's `primary_conninfo`. The demoted primary requires an
+  operator-managed restart with `standby.signal` — use
+  `PostGracefulTakeoverProcesses` hooks to automate this step.
 
 ## Implementing a New Provider
 

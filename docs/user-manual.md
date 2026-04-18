@@ -696,7 +696,10 @@ When `ProviderType` is `"postgresql"`, orchestrator performs PostgreSQL-specific
 - Promotion is a single `pg_promote()` call rather than a sequence of `STOP SLAVE` / `RESET SLAVE` / `CHANGE MASTER`.
 - Standby reconfiguration uses `ALTER SYSTEM` instead of `CHANGE MASTER TO`.
 - Standbys that fail to reconfigure are added to `LostReplicas` but do not block the recovery.
-- Graceful master takeover is not yet supported for PostgreSQL.
+- Graceful master takeover is supported for PostgreSQL. Use `graceful-master-takeover`
+  or `graceful-master-takeover-auto` CLI commands, or the equivalent API endpoints.
+  The demoted primary requires an operator-managed restart with `standby.signal` —
+  configure this via `PostGracefulTakeoverProcesses` hooks.
 
 ---
 
