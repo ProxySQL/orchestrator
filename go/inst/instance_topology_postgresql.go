@@ -18,6 +18,7 @@ package inst
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/proxysql/golib/log"
@@ -109,7 +110,9 @@ func PostgreSQLReconfigureStandby(standbyKey *InstanceKey, newPrimaryKey *Instan
 	log.Infof("PostgreSQLReconfigureStandby: reconfiguring %+v to replicate from %+v", *standbyKey, *newPrimaryKey)
 
 	// Update primary_conninfo using ALTER SYSTEM
-	_, err = db.Exec(fmt.Sprintf("ALTER SYSTEM SET primary_conninfo = '%s'", newConnInfo))
+	// Escape single quotes to prevent SQL breakage from passwords containing quotes
+	escapedConnInfo := strings.ReplaceAll(newConnInfo, "'", "''")
+	_, err = db.Exec(fmt.Sprintf("ALTER SYSTEM SET primary_conninfo = '%s'", escapedConnInfo))
 	if err != nil {
 		return log.Errore(fmt.Errorf("PostgreSQLReconfigureStandby: ALTER SYSTEM failed on %+v: %v", *standbyKey, err))
 	}
@@ -318,7 +321,9 @@ func PostgreSQLRepositionAsStandby(instanceKey *InstanceKey, newPrimaryKey *Inst
 
 	log.Infof("PostgreSQLRepositionAsStandby: configuring %+v to replicate from %+v", *instanceKey, *newPrimaryKey)
 
-	if _, err := db.Exec(fmt.Sprintf("ALTER SYSTEM SET primary_conninfo = '%s'", newConnInfo)); err != nil {
+	// Escape single quotes to prevent SQL breakage from passwords containing quotes
+	escapedConnInfo := strings.ReplaceAll(newConnInfo, "'", "''")
+	if _, err := db.Exec(fmt.Sprintf("ALTER SYSTEM SET primary_conninfo = '%s'", escapedConnInfo)); err != nil {
 		return log.Errore(fmt.Errorf("PostgreSQLRepositionAsStandby: ALTER SYSTEM failed on %+v: %v", *instanceKey, err))
 	}
 

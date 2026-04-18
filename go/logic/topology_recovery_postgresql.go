@@ -176,12 +176,16 @@ func PostgreSQLGracefulPrimarySwitchover(clusterName string, designatedKey *inst
 		return nil, err
 	}
 
-	// --- Execute PreGracefulTakeoverProcesses ---
-	preGracefulTakeoverTopologyRecovery := &TopologyRecovery{
-		SuccessorKey:  &designatedStandby.Key,
-		AnalysisEntry: analysisEntry,
+	// --- Register recovery to prevent concurrent switchover attempts ---
+	topologyRecovery, err = AttemptRecoveryRegistration(&analysisEntry, false, false)
+	if topologyRecovery == nil {
+		AuditTopologyRecovery(topologyRecovery, fmt.Sprintf("found an active or recent recovery on %+v. Will not issue another graceful switchover.", clusterName))
+		return nil, fmt.Errorf("PostgreSQLGracefulPrimarySwitchover: active or recent recovery exists for %+v, aborting", clusterName)
 	}
-	if err := executeProcesses(config.Config.PreGracefulTakeoverProcesses, "PreGracefulTakeoverProcesses", preGracefulTakeoverTopologyRecovery, true); err != nil {
+	topologyRecovery.SuccessorKey = &designatedStandby.Key
+
+	// --- Execute PreGracefulTakeoverProcesses ---
+	if err := executeProcesses(config.Config.PreGracefulTakeoverProcesses, "PreGracefulTakeoverProcesses", topologyRecovery, true); err != nil {
 		return nil, fmt.Errorf("PostgreSQLGracefulPrimarySwitchover: PreGracefulTakeoverProcesses failed: %v", err)
 	}
 
@@ -201,7 +205,9 @@ func PostgreSQLGracefulPrimarySwitchover(clusterName string, designatedKey *inst
 	log.Infof("PostgreSQLGracefulPrimarySwitchover: target LSN is %s", targetLSN)
 
 	// --- Wait for standby to catch up ---
-	catchUpTimeout := time.Duration(config.Config.ReasonableMaintenanceReplicationLagSeconds) * time.Second
+	// Use 3x the maintenance lag threshold since the primary is already read-only
+	// and waiting longer only extends the maintenance window, not data risk.
+	catchUpTimeout := 3 * time.Duration(config.Config.ReasonableMaintenanceReplicationLagSeconds) * time.Second
 	if err := inst.PostgreSQLWaitForStandbyLSN(&designatedStandby.Key, targetLSN, catchUpTimeout); err != nil {
 		// Undo read-only before aborting
 		_, _ = inst.PostgreSQLSetReadOnly(&clusterPrimary.Key, false)
@@ -216,16 +222,6 @@ func PostgreSQLGracefulPrimarySwitchover(clusterName string, designatedKey *inst
 		return nil, fmt.Errorf("PostgreSQLGracefulPrimarySwitchover: promotion of %+v failed: %v", designatedStandby.Key, err)
 	}
 	log.Infof("PostgreSQLGracefulPrimarySwitchover: promoted %+v to primary", promotedInstance.Key)
-
-	// --- Register recovery ---
-	topologyRecovery, err = AttemptRecoveryRegistration(&analysisEntry, false, false)
-	if err != nil || topologyRecovery == nil {
-		_ = log.Warningf("PostgreSQLGracefulPrimarySwitchover: error registering recovery: %v", err)
-		// Continue — promotion already happened
-		topologyRecovery = &TopologyRecovery{
-			AnalysisEntry: analysisEntry,
-		}
-	}
 	topologyRecovery.SuccessorKey = &promotedInstance.Key
 
 	// --- Reconfigure remaining standbys ---
