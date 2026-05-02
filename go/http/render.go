@@ -17,6 +17,7 @@
 package http
 
 import (
+	"bytes"
 	"encoding/json"
 	"html/template"
 	"net/http"
@@ -35,50 +36,77 @@ func renderJSON(w http.ResponseWriter, status int, data interface{}) {
 	}
 }
 
-// templateCache caches parsed templates.
-var templateCache = struct {
+// templateDir is a var (not a const) so tests can point it at a temp dir.
+var templateDir = "resources"
+
+const layoutFile = "templates/layout"
+
+// innerTemplateCache caches parsed inner (non-layout) templates. Inner
+// templates have no per-request state so caching is safe. The layout, by
+// contrast, is re-parsed per request because its FuncMap closes over a
+// per-request buffer (see renderHTML).
+var innerTemplateCache = struct {
 	sync.RWMutex
 	m map[string]*template.Template
 }{m: make(map[string]*template.Template)}
 
-const templateDir = "resources"
-const layoutFile = "templates/layout"
-
-// getTemplate returns a cached template or parses and caches it.
-func getTemplate(name string) (*template.Template, error) {
-	templateCache.RLock()
-	if t, ok := templateCache.m[name]; ok {
-		templateCache.RUnlock()
+// getInnerTemplate returns a cached inner template or parses and caches it.
+func getInnerTemplate(name string) (*template.Template, error) {
+	innerTemplateCache.RLock()
+	if t, ok := innerTemplateCache.m[name]; ok {
+		innerTemplateCache.RUnlock()
 		return t, nil
 	}
-	templateCache.RUnlock()
+	innerTemplateCache.RUnlock()
 
-	layoutPath := filepath.Join(templateDir, layoutFile+".tmpl")
 	tmplPath := filepath.Join(templateDir, name+".tmpl")
-	t, err := template.ParseFiles(layoutPath, tmplPath)
+	t, err := template.ParseFiles(tmplPath)
 	if err != nil {
 		return nil, err
 	}
 
-	templateCache.Lock()
-	templateCache.m[name] = t
-	templateCache.Unlock()
+	innerTemplateCache.Lock()
+	innerTemplateCache.m[name] = t
+	innerTemplateCache.Unlock()
 	return t, nil
 }
 
-// renderHTML renders an HTML template with the given data.
-// The template name should be like "templates/clusters".
+// renderHTML renders an HTML template within the layout. The template name
+// should be like "templates/clusters". The layout
+// (resources/templates/layout.tmpl) uses {{yield}} to inject the inner
+// template's rendered output, supplied by the FuncMap below.
 func renderHTML(w http.ResponseWriter, status int, name string, data interface{}) {
-	t, err := getTemplate(name)
+	inner, err := getInnerTemplate(name)
 	if err != nil {
 		_ = log.Errorf("Error parsing template %s: %+v", name, err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
+
+	var innerBuf bytes.Buffer
+	if err := inner.Execute(&innerBuf, data); err != nil {
+		_ = log.Errorf("Error executing inner template %s: %+v", name, err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	layoutPath := filepath.Join(templateDir, layoutFile+".tmpl")
+	// The FuncMap must be registered on a template whose name matches the one
+	// ParseFiles assigns (the file's basename), otherwise Execute fails with
+	// "template ... is undefined".
+	layout, err := template.New(filepath.Base(layoutPath)).Funcs(template.FuncMap{
+		"yield": func() template.HTML { return template.HTML(innerBuf.String()) },
+	}).ParseFiles(layoutPath)
+	if err != nil {
+		_ = log.Errorf("Error parsing layout for %s: %+v", name, err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
 	w.Header().Set("Content-Type", "text/html; charset=UTF-8")
 	w.WriteHeader(status)
-	if err := t.Execute(w, data); err != nil {
-		_ = log.Errorf("Error executing template %s: %+v", name, err)
+	if err := layout.Execute(w, data); err != nil {
+		_ = log.Errorf("Error executing layout for %s: %+v", name, err)
 	}
 }
 
