@@ -20,7 +20,9 @@ import (
 	"encoding/json"
 	"html/template"
 	"net/http"
+	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	"github.com/proxysql/golib/log"
@@ -55,7 +57,27 @@ func getTemplate(name string) (*template.Template, error) {
 
 	layoutPath := filepath.Join(templateDir, layoutFile+".tmpl")
 	tmplPath := filepath.Join(templateDir, name+".tmpl")
-	t, err := template.ParseFiles(layoutPath, tmplPath)
+
+	layoutBytes, err := os.ReadFile(layoutPath)
+	if err != nil {
+		return nil, err
+	}
+
+	tmplBytes, err := os.ReadFile(tmplPath)
+	if err != nil {
+		return nil, err
+	}
+
+	layoutStr := strings.ReplaceAll(string(layoutBytes), "{{yield}}", `{{template "content" .}}`)
+	tmplStr := `{{define "content"}}` + string(tmplBytes) + `{{end}}`
+
+	t := template.New("layout")
+	t, err = t.Parse(layoutStr)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = t.Parse(tmplStr)
 	if err != nil {
 		return nil, err
 	}

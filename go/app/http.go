@@ -76,6 +76,7 @@ func standardHttp(continuousDiscovery bool) {
 	router := chi.NewRouter()
 
 	// Middleware
+	router.Use(chimiddleware.StripSlashes)
 	router.Use(chimiddleware.Logger)
 	router.Use(chimiddleware.Recoverer)
 	router.Use(chimiddleware.Compress(5))
@@ -171,6 +172,7 @@ func standardHttp(continuousDiscovery bool) {
 // agentsHttp starts serving agents HTTP or HTTPS API requests
 func agentsHttp() {
 	router := chi.NewRouter()
+	router.Use(chimiddleware.StripSlashes)
 	router.Use(chimiddleware.Compress(5))
 
 	if config.Config.AgentsUseMutualTLS {
