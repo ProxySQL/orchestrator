@@ -22,7 +22,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"strings"
 	"sync"
 
 	"github.com/proxysql/golib/log"
@@ -45,6 +44,7 @@ var templateCache = struct {
 
 const templateDir = "resources"
 const layoutFile = "templates/layout"
+const contentTemplateName = "content"
 
 // getTemplate returns a cached template or parses and caches it.
 func getTemplate(name string) (*template.Template, error) {
@@ -58,7 +58,7 @@ func getTemplate(name string) (*template.Template, error) {
 	layoutPath := filepath.Join(templateDir, layoutFile+".tmpl")
 	tmplPath := filepath.Join(templateDir, name+".tmpl")
 
-	layoutBytes, err := os.ReadFile(layoutPath)
+	t, err := template.ParseFiles(layoutPath)
 	if err != nil {
 		return nil, err
 	}
@@ -68,17 +68,7 @@ func getTemplate(name string) (*template.Template, error) {
 		return nil, err
 	}
 
-	layoutStr := strings.ReplaceAll(string(layoutBytes), "{{yield}}", `{{template "content" .}}`)
-	tmplStr := `{{define "content"}}` + string(tmplBytes) + `{{end}}`
-
-	t := template.New("layout")
-	t, err = t.Parse(layoutStr)
-	if err != nil {
-		return nil, err
-	}
-
-	_, err = t.Parse(tmplStr)
-	if err != nil {
+	if _, err := t.New(contentTemplateName).Parse(string(tmplBytes)); err != nil {
 		return nil, err
 	}
 
