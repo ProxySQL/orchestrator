@@ -28,14 +28,16 @@ body {
 }
 
 /* ── Navbar ─────────────────────────────────────────────────────────── */
-.navbar {
+/* Scope to <nav class="navbar"> so we don't paint inner toolbar <div class="navbar">
+   wrappers (e.g. the cluster sidebar) dark. */
+nav.navbar {
     background-color: var(--orc-navbar-bg) !important;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
     min-height: auto;
     margin-bottom: 0;
 }
 
-.navbar .navbar-brand {
+nav.navbar .navbar-brand {
     font-weight: 600;
     letter-spacing: 0.02em;
 }
@@ -912,6 +914,12 @@ button.close:hover {
 #cluster_sidebar ul {
     padding-left: 0;
     margin-bottom: 0;
+}
+
+/* Bootstrap 5's .nav is flex-row by default; the sidebar toolbar wants the
+   BS3-style vertical stack. */
+#cluster_sidebar ul.nav {
+    flex-direction: column;
 }
 
 #cluster_sidebar li > div > span {
