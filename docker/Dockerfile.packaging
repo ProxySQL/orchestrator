@@ -23,8 +23,8 @@ ENV GOPATH=/tmp/go
 
 RUN apt-get install -y curl rsync gcc g++ bash git tar rpm
 
-RUN mkdir -p $GOPATH/src/github.com/openark/orchestrator
-WORKDIR $GOPATH/src/github.com/openark/orchestrator
+RUN mkdir -p $GOPATH/src/github.com/proxysql/orchestrator
+WORKDIR $GOPATH/src/github.com/proxysql/orchestrator
 COPY . .
 ARG RELEASE_VERSION=
 ARG RELEASE_SUBVERSION=

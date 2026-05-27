@@ -48,7 +48,7 @@ go test ./go/inst/... -run TestBinlogCoordinates
 
 ## Architecture
 
-All Go source lives under `go/`. The module path is `github.com/openark/orchestrator`.
+All Go source lives under `go/`. The module path is `github.com/proxysql/orchestrator`.
 
 ### Key packages
 
