@@ -132,6 +132,14 @@ func init() {
 				ometrics.ActiveTopologyIssues.WithLabelValues(issueType).Set(float64(count))
 			}
 		}
+		if clusters, err := inst.ReadClustersInfo(""); err == nil {
+			ometrics.ClustersTotal.Set(float64(len(clusters)))
+			var instancesTotal uint
+			for _, c := range clusters {
+				instancesTotal += c.CountInstances
+			}
+			ometrics.InstancesTotal.Set(float64(instancesTotal))
+		}
 	})
 }
 
