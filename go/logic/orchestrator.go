@@ -91,6 +91,7 @@ func init() {
 
 	ometrics.OnMetricsTick(func() {
 		discoveryQueueLengthGauge.Update(int64(discoveryQueue.QueueLen()))
+		ometrics.DiscoveryQueueLength.Set(float64(discoveryQueue.QueueLen()))
 	})
 	ometrics.OnMetricsTick(func() {
 		if recentDiscoveryOperationKeys == nil {
@@ -113,6 +114,24 @@ func init() {
 	})
 	ometrics.OnMetricsTick(func() {
 		isRaftLeaderGauge.Update(atomic.LoadInt64(&isElectedNode))
+	})
+	ometrics.OnMetricsTick(func() {
+		if instances, err := inst.ReadDowntimedInstances(""); err == nil {
+			ometrics.DowntimedInstances.Set(float64(len(instances)))
+		}
+		if recoveries, err := ReadActiveRecoveries(); err == nil {
+			ometrics.ActiveRecoveries.Set(float64(len(recoveries)))
+		}
+		if analysis, err := inst.GetReplicationAnalysis("", &inst.ReplicationAnalysisHints{}); err == nil {
+			issuesCount := make(map[string]int)
+			for _, a := range analysis {
+				issuesCount[string(a.Analysis)]++
+			}
+			ometrics.ActiveTopologyIssues.Reset()
+			for issueType, count := range issuesCount {
+				ometrics.ActiveTopologyIssues.WithLabelValues(issueType).Set(float64(count))
+			}
+		}
 	})
 }
 
@@ -192,6 +211,7 @@ func handleDiscoveryRequests() {
 		_ = metrics.Register("discoveries.dead_instances_queue_length", deadInstancesDiscoveryQueueLengthGauge)
 		ometrics.OnMetricsTick(func() {
 			deadInstancesDiscoveryQueueLengthGauge.Update(int64(deadInstancesDiscoveryQueue.QueueLen()))
+			ometrics.DeadInstancesDiscoveryQueueLength.Set(float64(deadInstancesDiscoveryQueue.QueueLen()))
 		})
 
 		// create a pool of discovery workers

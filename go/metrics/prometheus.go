@@ -95,6 +95,53 @@ var (
 		}
 		return 0
 	})
+
+	DiscoveryQueueLength = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "orchestrator_discovery_queue_length",
+		Help: "Length of the discovery queue.",
+	})
+
+	DeadInstancesDiscoveryQueueLength = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "orchestrator_dead_instances_discovery_queue_length",
+		Help: "Length of the dead instances discovery queue.",
+	})
+
+	ActiveRecoveries = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "orchestrator_active_recoveries",
+		Help: "Number of active (in-progress) recoveries.",
+	})
+
+	DowntimedInstances = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "orchestrator_downtimed_instances_total",
+		Help: "Number of instances currently marked as downtimed.",
+	})
+
+	ActiveTopologyIssues = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "orchestrator_active_topology_issues",
+		Help: "Number of active topology issues, broken down by issue type.",
+	}, []string{"issue_type"})
+
+	RaftPeersTotal = prometheus.NewGaugeFunc(prometheus.GaugeOpts{
+		Name: "orchestrator_raft_peers_total",
+		Help: "Number of known raft peers.",
+	}, func() float64 {
+		if orcraft.IsRaftEnabled() {
+			if peers, err := orcraft.GetPeers(); err == nil {
+				return float64(len(peers))
+			}
+		}
+		return 0
+	})
+
+	RaftIsPartOfQuorum = prometheus.NewGaugeFunc(prometheus.GaugeOpts{
+		Name: "orchestrator_raft_is_part_of_quorum",
+		Help: "1 if the node is part of raft quorum, 0 otherwise.",
+	}, func() float64 {
+		if orcraft.IsRaftEnabled() && orcraft.IsPartOfQuorum() {
+			return 1
+		}
+		return 0
+	})
 )
 
 // InitPrometheus registers all Prometheus metrics. Should be called once at
@@ -115,5 +162,12 @@ func InitPrometheus() {
 		HealthIsLive,
 		RaftIsHealthy,
 		RaftIsLeader,
+		DiscoveryQueueLength,
+		DeadInstancesDiscoveryQueueLength,
+		ActiveRecoveries,
+		DowntimedInstances,
+		ActiveTopologyIssues,
+		RaftPeersTotal,
+		RaftIsPartOfQuorum,
 	)
 }
