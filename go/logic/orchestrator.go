@@ -298,6 +298,7 @@ func DiscoverInstance(instanceKey inst.InstanceKey) {
 	}
 
 	discoveriesCounter.Inc(1)
+	ometrics.DiscoveriesTotal.Inc()
 
 	// First we've ever heard of this instance. Continue investigation:
 	var err error
@@ -318,6 +319,7 @@ func DiscoverInstance(instanceKey inst.InstanceKey) {
 
 	if instance == nil {
 		failedDiscoveriesCounter.Inc(1)
+		ometrics.DiscoveryErrorsTotal.Inc()
 		_ = discoveryMetrics.Append(&discovery.Metric{
 			Timestamp:       time.Now(),
 			InstanceKey:     instanceKey,
