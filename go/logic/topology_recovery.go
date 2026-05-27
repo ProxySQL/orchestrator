@@ -1895,7 +1895,20 @@ func executeCheckAndRecoverFunction(analysisEntry inst.ReplicationAnalysis, cand
 	if isActionableRecovery || util.ClearToLog("executeCheckAndRecoverFunction: recovery", analysisEntry.AnalyzedInstanceKey.StringCode()) {
 		log.Infof("executeCheckAndRecoverFunction: proceeding with %+v recovery on %+v; isRecoverable?: %+v; skipProcesses: %+v", analysisEntry.Analysis, analysisEntry.AnalyzedInstanceKey, isActionableRecovery, skipProcesses)
 	}
+	startTime := time.Now()
 	recoveryAttempted, topologyRecovery, err = checkAndRecoverFunction(analysisEntry, candidateInstanceKey, forceInstanceRecovery, skipProcesses)
+
+	if recoveryAttempted && topologyRecovery != nil {
+		duration := time.Since(startTime).Seconds()
+		ometrics.RecoveryDurationSeconds.Observe(duration)
+
+		result := "success"
+		if !topologyRecovery.IsSuccessful {
+			result = "failed"
+		}
+		ometrics.RecoveriesTotal.WithLabelValues(string(analysisEntry.Analysis), result).Inc()
+	}
+
 	if !recoveryAttempted {
 		return recoveryAttempted, topologyRecovery, err
 	}
