@@ -2,7 +2,7 @@ function Cluster() {
   if (this == window)
     return new Cluster();
   var _this = this;
-  Function.addTo(_this, [repositionIntanceDiv]);
+  _this.repositionIntanceDiv = repositionIntanceDiv;
 
 
   var moveInstanceMethod = $.cookie("move-instance-method") || "smart";
@@ -182,7 +182,6 @@ function Cluster() {
       $(instanceEl).draggable(opts);
     }
 
-    var opts2 = Q.copy(opts);
     opts.cancel = "button,a";
     $(trailerEl).draggable(opts);
   }
@@ -254,8 +253,8 @@ function Cluster() {
         }
       });
       var numReplicasMessage = ((numReplicas == 1) ? "1 replica" : "" + numReplicas + " replicas");
-      trailerEl.getAppend(".instance-trailer-title").text(numReplicasMessage);
-      trailerEl.getAppend(".instance-trailer-content").text("Drag to move replicas");
+      $('<div class="instance-trailer-title"></div>').text(numReplicasMessage).appendTo(trailerEl);
+      $('<div class="instance-trailer-content"></div>').text("Drag to move replicas").appendTo(trailerEl);
     }
     if (isColorizeDC()) {
       var dcColor = dcColorsMap[node.DataCenter];
@@ -1235,7 +1234,8 @@ function Cluster() {
 
       instances.forEach(function(instance) {
         if (!instance.isAggregate) {
-          parentInstance.children.remove(instance);
+          var idx = parentInstance.children.indexOf(instance);
+          if (idx >= 0) parentInstance.children.splice(idx, 1);
           delete instancesMap[instance.id];
         }
       });
@@ -1550,13 +1550,12 @@ function Cluster() {
     var popoverElement = getInstanceDiv(instance.id);
 
     popoverElement.append('<h4 class="popover-footer"><div class="dropdown"></div></h4>');
-    popoverElement.find(".popover-footer .dropdown").append('<button type="button" class="btn btn-xs btn-default dropdown-toggle" id="recover_dropdown_' + instance.id + '" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true"><span class="glyphicon glyphicon-heart text-danger"></span> Recover <span class="caret"></span></button><ul class="dropdown-menu" aria-labelledby="recover_dropdown_' + instance.id + '"></ul>');
-    popoverElement.find(".popover-footer .dropdown").append('<ul class="dropdown-menu" aria-labelledby="recover_dropdown_' + instance.id + '"></ul>');
+    popoverElement.find(".popover-footer .dropdown").append('<button type="button" class="btn btn-sm btn-default dropdown-toggle" id="recover_dropdown_' + instance.id + '" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><span class="glyphicon glyphicon-heart text-danger"></span> Recover</button><ul class="dropdown-menu" aria-labelledby="recover_dropdown_' + instance.id + '"></ul>');
     var recoveryListing = popoverElement.find(".dropdown ul");
 
     if (instance.isMaster) {
-      recoveryListing.append('<li><a href="#" data-btn="force-master-failover" data-command="force-master-failover"><div class="glyphicon glyphicon-exclamation-sign text-danger"></div> <span class="text-danger">Force fail over <strong>now</strong> (even if normal handling would not fail over)</span></a></li>');
-      recoveryListing.append('<li role="separator" class="divider"></li>');
+      recoveryListing.append('<li><a class="dropdown-item" href="#" data-btn="force-master-failover" data-command="force-master-failover"><div class="glyphicon glyphicon-exclamation-sign text-danger"></div> <span class="text-danger">Force fail over <strong>now</strong> (even if normal handling would not fail over)</span></a></li>');
+      recoveryListing.append('<li><hr class="dropdown-divider"></li>');
 
       // Suggest successor
       if (instance.children) {
@@ -1577,14 +1576,14 @@ function Cluster() {
             return
           }
           recoveryListing.append(
-            '<li><a href="#" data-btn="recover-suggested-successor" data-command="recover-suggested-successor" data-successor-host="' + replica.Key.Hostname + '" data-successor-port="' + replica.Key.Port + '">Recover, try to promote <code>' + replica.title + '</code></a></li>');
+            '<li><a class="dropdown-item" href="#" data-btn="recover-suggested-successor" data-command="recover-suggested-successor" data-successor-host="' + replica.Key.Hostname + '" data-successor-port="' + replica.Key.Port + '">Recover, try to promote <code>' + replica.title + '</code></a></li>');
         });
       }
     }
     if (!instance.isMaster) {
-      recoveryListing.append('<li><a href="#" data-btn="auto" data-command="recover-auto">Auto (implies running external hooks/processes)</a></li>');
-      recoveryListing.append('<li role="separator" class="divider"></li>');
-      recoveryListing.append('<li><a href="#" data-btn="relocate-replicas" data-command="relocate-replicas" data-successor-host="' + instance.MasterKey.Hostname + '" data-successor-port="' + instance.MasterKey.Port + '">Relocate replicas to <code>' + instance.masterTitle + '</code></a></li>');
+      recoveryListing.append('<li><a class="dropdown-item" href="#" data-btn="auto" data-command="recover-auto">Auto (implies running external hooks/processes)</a></li>');
+      recoveryListing.append('<li><hr class="dropdown-divider"></li>');
+      recoveryListing.append('<li><a class="dropdown-item" href="#" data-btn="relocate-replicas" data-command="relocate-replicas" data-successor-host="' + instance.MasterKey.Hostname + '" data-successor-port="' + instance.MasterKey.Port + '">Relocate replicas to <code>' + instance.masterTitle + '</code></a></li>');
     }
     if (instance.masterNode) {
       // Intermediate master; suggest successor
@@ -1605,7 +1604,7 @@ function Cluster() {
           return
         }
         recoveryListing.append(
-          '<li><a href="#" data-btn="relocate-replicas" data-command="relocate-replicas" data-successor-host="' + sibling.Key.Hostname + '" data-successor-port="' + sibling.Key.Port + '">Relocate replicas to <code>' + sibling.title + '</code></a></li>');
+          '<li><a class="dropdown-item" href="#" data-btn="relocate-replicas" data-command="relocate-replicas" data-successor-host="' + sibling.Key.Hostname + '" data-successor-port="' + sibling.Key.Port + '">Relocate replicas to <code>' + sibling.title + '</code></a></li>');
       });
     }
   }
@@ -1747,18 +1746,18 @@ function Cluster() {
         $("#cluster_subtitle").append(clusterSubtitle)
 
 
-        $("#dropdown-context").append('<li><a data-command="change-cluster-alias" data-alias="' + clusterInfo.ClusterAlias + '">Alias: ' + alias + '</a></li>');
+        $("#dropdown-context").append('<li><a class="dropdown-item" href="#" data-command="change-cluster-alias" data-alias="' + clusterInfo.ClusterAlias + '">Alias: ' + alias + '</a></li>');
       }
-      $("#dropdown-context").append('<li><a href="' + appUrl('/web/cluster-pools/' + currentClusterName()) + '">Pools</a></li>');
+      $("#dropdown-context").append('<li><a class="dropdown-item" href="' + appUrl('/web/cluster-pools/' + currentClusterName()) + '">Pools</a></li>');
       if (isCompactDisplay()) {
-        $("#dropdown-context").append('<li><a data-command="expand-display" href="' + location.href.split("?")[0].split("#")[0] + '?compact=false"><span class="glyphicon glyphicon-ok small"></span> Compact display</a></li>');
+        $("#dropdown-context").append('<li><a class="dropdown-item" data-command="expand-display" href="' + location.href.split("?")[0].split("#")[0] + '?compact=false"><span class="glyphicon glyphicon-ok small"></span> Compact display</a></li>');
       } else {
-        $("#dropdown-context").append('<li><a data-command="compact-display" href="' + location.href.split("?")[0].split("#")[0] + '?compact=true">Compact display</a></li>');
+        $("#dropdown-context").append('<li><a class="dropdown-item" data-command="compact-display" href="' + location.href.split("?")[0].split("#")[0] + '?compact=true">Compact display</a></li>');
       }
-      $("#dropdown-context").append('<li><a data-command="pool-indicator">Pool indicator</a></li>');
-      $("#dropdown-context").append('<li><a data-command="colorize-dc">Colorize DC</a></li>');
-      $("#dropdown-context").append('<li><a data-command="anonymize">Anonymize</a></li>');
-      $("#dropdown-context").append('<li><a data-command="alias">Alias</a></li>');
+      $("#dropdown-context").append('<li><a class="dropdown-item" href="#" data-command="pool-indicator">Pool indicator</a></li>');
+      $("#dropdown-context").append('<li><a class="dropdown-item" href="#" data-command="colorize-dc">Colorize DC</a></li>');
+      $("#dropdown-context").append('<li><a class="dropdown-item" href="#" data-command="anonymize">Anonymize</a></li>');
+      $("#dropdown-context").append('<li><a class="dropdown-item" href="#" data-command="alias">Alias</a></li>');
       if ($.cookie("pool-indicator") == "true") {
         $("#dropdown-context a[data-command=pool-indicator]").prepend('<span class="glyphicon glyphicon-ok small"></span> ');
       }
@@ -1899,8 +1898,8 @@ function Cluster() {
       return
     });
 
-    $("[data-toggle=popover]").popover();
-    $("[data-toggle=popover]").show();
+    $("[data-bs-toggle=popover]").popover();
+    $("[data-bs-toggle=popover]").show();
 
     if (isAuthorizedForAction()) {
       // Read-only users don't get auto-refresh. Sorry!

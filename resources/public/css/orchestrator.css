@@ -55,24 +55,291 @@ body {
     font-weight: 600;
 }
 
-/* ── Bootstrap 3 → 5 compatibility helpers ──────────────────────────── */
+/* ── Bootstrap 3 → 5 compatibility shims ────────────────────────────── */
 .pull-left  { float: left !important; }
 .pull-right { float: right !important; }
 
-.input-sm {
+.hidden { display: none !important; }
+.invisible { visibility: hidden !important; }
+
+.sr-only,
+.sr-only-focusable:not(:focus):not(:focus-within) {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+.input-sm,
+.form-control.input-sm {
     padding: 0.25rem 0.5rem;
     font-size: 0.875rem;
+    border-radius: 0.2rem;
+    min-height: calc(1.5em + 0.5rem + 2px);
 }
 
 .btn-xs {
     padding: 0.125rem 0.375rem;
     font-size: 0.75rem;
     border-radius: 0.2rem;
+    line-height: 1.5;
 }
 
-.glyphicon {
-    font-family: "Glyphicons Halflings";
+/* Bootstrap 3 .btn-default was the neutral gray button; map to BS5 light */
+.btn-default {
+    color: #212529;
+    background-color: #f8f9fa;
+    border-color: #d3d4d5;
 }
+.btn-default:hover,
+.btn-default:focus {
+    color: #212529;
+    background-color: #e2e6ea;
+    border-color: #d3d4d5;
+}
+
+/* Bootstrap 3 panel-* aliases (we already use card mostly, but JS still emits panel) */
+.panel {
+    background-color: var(--orc-card-bg);
+    border: 1px solid var(--orc-card-border);
+    border-radius: 0.5rem;
+    box-shadow: var(--orc-card-shadow);
+    margin-bottom: 1rem;
+}
+.panel-heading {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid var(--orc-card-border);
+    padding: 0.5rem 1rem;
+    font-weight: 600;
+    border-top-left-radius: calc(0.5rem - 1px);
+    border-top-right-radius: calc(0.5rem - 1px);
+}
+.panel-body {
+    padding: 1rem;
+}
+.panel-footer {
+    background-color: #f8f9fa;
+    border-top: 1px solid var(--orc-card-border);
+    padding: 0.5rem 1rem;
+    border-bottom-left-radius: calc(0.5rem - 1px);
+    border-bottom-right-radius: calc(0.5rem - 1px);
+}
+
+/* Bootstrap 3 had .label; BS5 only has .badge. Map .label-* to .badge styles */
+.label,
+.badge {
+    display: inline-block;
+    padding: 0.25em 0.4em;
+    font-size: 75%;
+    font-weight: 700;
+    line-height: 1;
+    text-align: center;
+    white-space: nowrap;
+    vertical-align: baseline;
+    border-radius: 0.25rem;
+    color: #fff;
+}
+.badge.label-primary, .label-primary { background-color: #0d6efd; }
+.badge.label-info,    .label-info    { background-color: #0dcaf0; color: #000; }
+.badge.label-success, .label-success { background-color: #198754; }
+.badge.label-warning, .label-warning { background-color: #ffc107; color: #000; }
+.badge.label-danger,  .label-danger  { background-color: #dc3545; }
+.badge.label-stale,   .label-stale   { background-color: #808080; }
+.badge.label-errant,  .label-errant  { background-color: #b0b0b0; }
+.badge.label-fatal,   .label-fatal   { background-color: #000000; }
+
+/* Bootstrap 3 .pager (removed in BS4+); used by audit pages for prev/next */
+.pager {
+    padding-left: 0;
+    margin: 1rem 0;
+    list-style: none;
+    text-align: center;
+}
+.pager li {
+    display: inline;
+}
+.pager li > a,
+.pager li > span {
+    display: inline-block;
+    padding: 5px 14px;
+    background-color: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 15px;
+    color: var(--orc-primary);
+    text-decoration: none;
+}
+.pager li > a:hover {
+    background-color: #f8f9fa;
+}
+.pager .previous > a,
+.pager .previous > span {
+    float: left;
+}
+.pager .next > a,
+.pager .next > span {
+    float: right;
+}
+.pager .disabled > a,
+.pager .disabled > a:hover,
+.pager .disabled > span {
+    color: #6c757d;
+    cursor: not-allowed;
+    background-color: #fff;
+    pointer-events: none;
+}
+
+/* Bootstrap 3 .jumbotron (removed in BS5); home page uses it */
+.jumbotron {
+    padding: 2rem 1rem;
+    margin-bottom: 2rem;
+    background-color: #e9ecef;
+    border-radius: 0.5rem;
+}
+.jumbotron h1 {
+    font-weight: 300;
+}
+
+/* Bootstrap 3 popover-title/popover-content (renamed to popover-header/popover-body) */
+.popover-title,
+.popover-header {
+    padding: 8px 14px;
+    margin: 0;
+    font-size: 14px;
+    background-color: #f7f7f7;
+    border-bottom: 1px solid #ebebeb;
+    border-radius: 5px 5px 0 0;
+}
+.popover-content,
+.popover-body {
+    padding: 9px 14px;
+}
+
+/* Bootstrap 3 popover positioning was static-ish; orchestrator uses static popovers as cards */
+.popover {
+    position: relative;
+    top: auto;
+    left: auto;
+    display: block;
+    max-width: none;
+    background-color: #fff;
+    border: 1px solid rgba(0,0,0,.2);
+    border-radius: 6px;
+}
+
+/* Bootstrap 3 close button (BS5 uses .btn-close) */
+button.close {
+    padding: 0;
+    background-color: transparent;
+    border: 0;
+    float: right;
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1;
+    color: #000;
+    text-shadow: 0 1px 0 #fff;
+    opacity: .5;
+    cursor: pointer;
+}
+button.close:hover {
+    opacity: .75;
+}
+
+/* Bootstrap 3 .divider in dropdowns (BS5 uses <hr class="dropdown-divider">) */
+.dropdown-menu .divider {
+    height: 0;
+    margin: 0.5rem 0;
+    overflow: hidden;
+    border-top: 1px solid #e9ecef;
+}
+/* Generic .divider used as a horizontal separator (e.g. between popover entries) */
+.popover .divider,
+.popover-body .divider,
+.popover-content .divider {
+    height: 0;
+    margin: 0.5rem 0;
+    overflow: hidden;
+    border-top: 1px solid #e9ecef;
+}
+
+/* Alert dismissable spelling: BS3 used dismissable, BS4+ uses dismissible */
+.alert-dismissable,
+.alert-dismissible {
+    padding-right: 4rem;
+    position: relative;
+}
+.alert-dismissable .close,
+.alert-dismissible .close {
+    position: absolute;
+    top: 0;
+    right: 0;
+    padding: 0.75rem 1.25rem;
+    color: inherit;
+}
+
+/* ── Glyphicon → Bootstrap Icons mapping ────────────────────────────── */
+/* We load Bootstrap Icons font in layout.tmpl. Each .glyphicon-X maps to */
+/* the unicode codepoint of the equivalent Bootstrap Icon.                 */
+.glyphicon {
+    display: inline-block;
+    font-family: "bootstrap-icons" !important;
+    font-style: normal;
+    font-weight: normal !important;
+    font-variant: normal;
+    text-transform: none;
+    line-height: 1;
+    vertical-align: -.125em;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+.glyphicon-search::before        { content: "\F52A"; }
+.glyphicon-cog::before           { content: "\F3E6"; }
+.glyphicon-exclamation-sign::before { content: "\F33B"; }
+.glyphicon-time::before          { content: "\F293"; }
+.glyphicon-adjust::before        { content: "\F129"; }
+.glyphicon-compressed::before    { content: "\F2F5"; }
+.glyphicon-tint::before          { content: "\F312"; }
+.glyphicon-user::before          { content: "\F4E1"; }
+.glyphicon-tag::before           { content: "\F583"; }
+.glyphicon-tags::before          { content: "\F584"; }
+.glyphicon-volume-off::before    { content: "\F605"; }
+.glyphicon-volume-up::before     { content: "\F606"; }
+.glyphicon-eye-open::before      { content: "\F341"; }
+.glyphicon-eye-close::before     { content: "\F340"; }
+.glyphicon-pencil::before        { content: "\F4CB"; }
+.glyphicon-globe::before         { content: "\F3EE"; }
+.glyphicon-remove-sign::before   { content: "\F623"; }
+.glyphicon-ok-sign::before       { content: "\F26B"; }
+.glyphicon-heart::before         { content: "\F417"; }
+.glyphicon-heart-empty::before   { content: "\F416"; }
+.glyphicon-stop::before          { content: "\F4F8"; }
+.glyphicon-play::before          { content: "\F4F4"; }
+.glyphicon-repeat::before        { content: "\F130"; }
+.glyphicon-pause::before         { content: "\F4C3"; }
+.glyphicon-refresh::before       { content: "\F130"; }
+.glyphicon-chevron-left::before  { content: "\F284"; }
+.glyphicon-chevron-right::before { content: "\F285"; }
+.glyphicon-info-sign::before     { content: "\F431"; }
+.glyphicon-camera::before        { content: "\F21D"; }
+.glyphicon-filter::before        { content: "\F3CE"; }
+.glyphicon-check::before         { content: "\F26B"; }
+.glyphicon-saved::before         { content: "\F2C0"; }
+.glyphicon-forward::before       { content: "\F3DD"; }
+.glyphicon-tower::before         { content: "\F221"; }
+.glyphicon-star::before          { content: "\F586"; }
+.glyphicon-thumbs-down::before   { content: "\F407"; }
+.glyphicon-ban-circle::before    { content: "\F623"; }
+.glyphicon-wrench::before        { content: "\F644"; }
+.glyphicon-minus-sign::before    { content: "\F462"; }
+.glyphicon-remove::before        { content: "\F659"; }
+.glyphicon-ok::before            { content: "\F633"; }
+.glyphicon-question-sign::before { content: "\F505"; }
+.glyphicon-plus::before          { content: "\F4FE"; }
+.glyphicon-plus-sign::before     { content: "\F500"; }
 
 .orchestrator-brand {
     height: 32px;
@@ -436,7 +703,7 @@ body {
 }
 
 #node_modal .modal-dialog {
-  width: 800px;
+  max-width: 800px;
 }
 
 #node_modal .modal-body {
@@ -469,6 +736,14 @@ body {
 
 #node_modal .begin-downtime .card-body {
   background-color: #d9edf7;
+}
+
+#node_modal .modal-header {
+    align-items: center;
+}
+
+#node_modal .modal-header .btn-close {
+    margin-left: auto;
 }
 
 #modalDataAttributesTable tbody tr td:first-child {
@@ -631,6 +906,12 @@ body {
 
 #cluster_sidebar li {
     font-size: 1.2em;
+    list-style: none;
+}
+
+#cluster_sidebar ul {
+    padding-left: 0;
+    margin-bottom: 0;
 }
 
 #cluster_sidebar li > div > span {
@@ -992,8 +1273,9 @@ body {
     vertical-align: top;
 }
 
-#clusters_analysis .popover-content span.glyphicon {
-	font-family: "Glyphicons Halflings";
+#clusters_analysis .popover-content span.glyphicon,
+#clusters_analysis .popover-body span.glyphicon {
+	font-family: "bootstrap-icons";
 }
 
 #main_container {
@@ -1002,6 +1284,7 @@ body {
 
 #main_container.container, #main_container .container {
     width: inherit;
+    max-width: none;
 }
 
 .container.clusters .popover.instance {
@@ -1026,19 +1309,23 @@ body {
 }
 
 
-.container.clusters .popover.instance .popover-content span {
+.container.clusters .popover.instance .popover-content span,
+.container.clusters .popover.instance .popover-body span {
     font: 12px sans-serif;
 }
 
-.container.clusters .popover.instance .popover-content div.downtimed {
+.container.clusters .popover.instance .popover-content div.downtimed,
+.container.clusters .popover.instance .popover-body div.downtimed {
     background-color: #e7e7e7;
 }
 
-.container.clusters .popover.instance .popover-content div.blocked {
+.container.clusters .popover.instance .popover-content div.blocked,
+.container.clusters .popover.instance .popover-body div.blocked {
     background-color: #ebccd1;
 }
 
-.container.clusters .popover.instance .popover-content span.badge {
+.container.clusters .popover.instance .popover-content span.badge,
+.container.clusters .popover.instance .popover-body span.badge {
     color: #ffffff;
     font-size: 10px;
     font-weight: bold;

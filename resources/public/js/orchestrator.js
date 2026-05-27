@@ -164,7 +164,7 @@ function addAlert(alertText, alertClass) {
     alertClass = "danger";
   }
   $("#alerts_container").append(
-    '<div class="alert alert-' + alertClass + ' alert-dismissable">' + '<button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button>' + alertText + '</div>');
+    '<div class="alert alert-' + alertClass + ' alert-dismissible fade show">' + alertText + '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>');
   $(".alert").alert();
   return false;
 }
@@ -230,7 +230,7 @@ function addNodeModalDataAttribute(name, value) {
 
 function addModalAlert(alertText) {
   $("#node_modal .modal-body").append(
-    '<div class="alert alert-danger alert-dismissable">' + '<button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button>' + alertText + '</div>');
+    '<div class="alert alert-danger alert-dismissible fade show">' + alertText + '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>');
   $(".alert").alert();
   return false;
 }
@@ -304,7 +304,7 @@ function openNodeModal(node) {
           return;
         }
         var title = canonizeInstanceTitle(equivalence.Key.Hostname + ':' + equivalence.Key.Port);
-        $('#node_modal [data-btn-group=move-equivalent] ul').append('<li><a href="#" data-btn="move-equivalent" data-hostname="' + equivalence.Key.Hostname + '" data-port="' + equivalence.Key.Port + '">' + title + '</a></li>');
+        $('#node_modal [data-btn-group=move-equivalent] ul').append('<li><a class="dropdown-item" href="#" data-btn="move-equivalent" data-hostname="' + equivalence.Key.Hostname + '" data-port="' + equivalence.Key.Port + '">' + title + '</a></li>');
       });
 
       if ($('#node_modal [data-btn-group=move-equivalent] ul li').length) {
@@ -406,7 +406,7 @@ function openNodeModal(node) {
   }, "json");
 
 
-  $('#node_modal [data-btn]').unbind("click");
+  $('#node_modal [data-btn]').off("click");
 
   $("#beginDowntimeOwner").val(getUserId());
   $('#node_modal button[data-btn=begin-downtime]').click(function() {
@@ -520,8 +520,8 @@ function openNodeModal(node) {
   });
 
   if (node.IsDowntimed) {
-    $('#node_modal .end-downtime .panel-heading').html("Downtimed by <strong>" + node.DowntimeOwner + "</strong> until " + node.DowntimeEndTimestamp);
-    $('#node_modal .end-downtime .panel-body').html(
+    $('#node_modal .end-downtime .card-header').html("Downtimed by <strong>" + node.DowntimeOwner + "</strong> until " + node.DowntimeEndTimestamp);
+    $('#node_modal .end-downtime .card-body').html(
       node.DowntimeReason
     );
     $('#node_modal .begin-downtime').hide();
@@ -622,7 +622,7 @@ function openNodeModal(node) {
   }
 
   $('#node_modal').modal({})
-  $('#node_modal').unbind('hidden.bs.modal');
+  $('#node_modal').off('hidden.bs.modal');
   $('#node_modal').on('hidden.bs.modal', function() {
     nodeModalVisible = false;
   })
@@ -904,8 +904,8 @@ function renderInstanceElement(popoverElement, instance, renderType) {
     popoverElement.find(".instance-content").append('<div>Instances: <div class="pull-right"></div></div>');
 
     function addInstancesBadge(count, badgeClass, title) {
-      popoverElement.find(".instance-content .pull-right").append('<span class="badge ' + badgeClass + '" data-toggle="tooltip" data-placement="bottom" data-html="true" title="' + title + '">' + count + '</span> ');
-      popoverElement.find('[data-toggle="tooltip"]').tooltip();
+      popoverElement.find(".instance-content .pull-right").append('<span class="badge ' + badgeClass + '" data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-html="true" title="' + title + '">' + count + '</span> ');
+      popoverElement.find('[data-bs-toggle="tooltip"]').tooltip();
     }
     var instancesHint = instance.aggregatedProblems[""].join("<br>");
     addInstancesBadge(instance.aggregatedInstances.length, "label-primary", "Aggregated instances<br>" + instancesHint);
@@ -1088,7 +1088,7 @@ function renderGlobalRecoveriesButton(isGlobalRecoveriesEnabled) {
     iconContainer
       .prop("title", "Global Recoveries Enabled")
       .addClass("glyphicon-ok-sign")
-      .removeClass("hidden")
+      .removeClass("d-none")
       .click(function(event) {
         bootbox.confirm("<h3>Global Recoveries</h3>Are you sure you want to <strong>disable</strong> global recoveries?", function(confirm) {
           if (confirm) {
@@ -1100,7 +1100,7 @@ function renderGlobalRecoveriesButton(isGlobalRecoveriesEnabled) {
     iconContainer
       .prop("title", "Global Recoveries Disabled")
       .addClass("glyphicon-remove-sign")
-      .removeClass("hidden")
+      .removeClass("d-none")
       .click(function(event) {
         bootbox.confirm("<h3>Global Recoveries</h3>Are you sure you want to enable global recoveries?", function(confirm) {
           if (confirm) {
@@ -1135,7 +1135,7 @@ $(document).ready(function() {
         url = appUrl('/web/cluster/alias/' + encodeURIComponent(cluster.ClusterAlias));
         title = '<strong>' + cluster.ClusterAlias + '</strong>, <span class="small">' + title + '</span>';;
       }
-      $("#dropdown-clusters").append('<li><a href="' + url + '">' + title + '</a></li>');
+      $("#dropdown-clusters").append('<li><a class="dropdown-item" href="' + url + '">' + title + '</a></li>');
     });
     onClustersListeners.forEach(function(func) {
       func(clusters);
