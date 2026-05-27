@@ -90,8 +90,10 @@ func init() {
 	_ = metrics.Register("raft.is_leader", isRaftLeaderGauge)
 
 	ometrics.OnMetricsTick(func() {
-		discoveryQueueLengthGauge.Update(int64(discoveryQueue.QueueLen()))
-		ometrics.DiscoveryQueueLength.Set(float64(discoveryQueue.QueueLen()))
+		if discoveryQueue != nil {
+			discoveryQueueLengthGauge.Update(int64(discoveryQueue.QueueLen()))
+			ometrics.DiscoveryQueueLength.Set(float64(discoveryQueue.QueueLen()))
+		}
 	})
 	ometrics.OnMetricsTick(func() {
 		if recentDiscoveryOperationKeys == nil {
@@ -115,34 +117,9 @@ func init() {
 	ometrics.OnMetricsTick(func() {
 		isRaftLeaderGauge.Update(atomic.LoadInt64(&isElectedNode))
 	})
-	ometrics.OnMetricsTick(func() {
-		if instances, err := inst.ReadDowntimedInstances(""); err == nil {
-			ometrics.DowntimedInstances.Set(float64(len(instances)))
-		}
-		if recoveries, err := ReadActiveRecoveries(); err == nil {
-			ometrics.ActiveRecoveries.Set(float64(len(recoveries)))
-		}
-		if analysis, err := inst.GetReplicationAnalysis("", &inst.ReplicationAnalysisHints{}); err == nil {
-			issuesCount := make(map[string]int)
-			for _, a := range analysis {
-				issuesCount[string(a.Analysis)]++
-			}
-			ometrics.ActiveTopologyIssues.Reset()
-			for issueType, count := range issuesCount {
-				ometrics.ActiveTopologyIssues.WithLabelValues(issueType).Set(float64(count))
-			}
-		}
-		if clusters, err := inst.ReadClustersInfo(""); err == nil {
-			ometrics.ClustersTotal.Set(float64(len(clusters)))
-			var instancesTotal uint
-			for _, c := range clusters {
-				instancesTotal += c.CountInstances
-			}
-			ometrics.InstancesTotal.Set(float64(instancesTotal))
-		}
-	})
 }
 
+// IsLeader returns true if the current orchestrator instance is the cluster leader.
 func IsLeader() bool {
 	if orcraft.IsRaftEnabled() {
 		return orcraft.IsLeader()
@@ -150,6 +127,8 @@ func IsLeader() bool {
 	return atomic.LoadInt64(&isElectedNode) == 1
 }
 
+// IsLeaderOrActive returns true if the current orchestrator instance is either the cluster leader
+// or an active member (when Raft is enabled, returns true if part of quorum).
 func IsLeaderOrActive() bool {
 	if orcraft.IsRaftEnabled() {
 		return orcraft.IsPartOfQuorum()
@@ -611,6 +590,7 @@ func ContinuousDiscovery() {
 	raftCaretakingTick := time.Tick(10 * time.Minute)
 	recoveryTick := time.Tick(time.Duration(config.RecoveryPollSeconds) * time.Second)
 	autoPseudoGTIDTick := time.Tick(time.Duration(config.PseudoGTIDIntervalSeconds) * time.Second)
+	dbMetricsTick := time.Tick(30 * time.Second)
 	var recoveryEntrance int64
 	var snapshotTopologiesTick <-chan time.Time
 	if config.Config.SnapshotTopologiesIntervalHours > 0 {
@@ -642,6 +622,33 @@ func ContinuousDiscovery() {
 	log.Infof("continuous discovery: starting")
 	for {
 		select {
+		case <-dbMetricsTick:
+			go func() {
+				if instances, err := inst.ReadDowntimedInstances(""); err == nil {
+					ometrics.DowntimedInstances.Set(float64(len(instances)))
+				}
+				if recoveries, err := ReadActiveRecoveries(); err == nil {
+					ometrics.ActiveRecoveries.Set(float64(len(recoveries)))
+				}
+				if analysis, err := inst.GetReplicationAnalysis("", &inst.ReplicationAnalysisHints{}); err == nil {
+					issuesCount := make(map[string]int)
+					for _, a := range analysis {
+						issuesCount[string(a.Analysis)]++
+					}
+					ometrics.ActiveTopologyIssues.Reset()
+					for issueType, count := range issuesCount {
+						ometrics.ActiveTopologyIssues.WithLabelValues(issueType).Set(float64(count))
+					}
+				}
+				if clusters, err := inst.ReadClustersInfo(""); err == nil {
+					ometrics.ClustersTotal.Set(float64(len(clusters)))
+					var instancesTotal uint
+					for _, c := range clusters {
+						instancesTotal += c.CountInstances
+					}
+					ometrics.InstancesTotal.Set(float64(instancesTotal))
+				}
+			}()
 		case <-healthTick:
 			go func() {
 				onHealthTick()
