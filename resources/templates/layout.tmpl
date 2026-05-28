@@ -233,6 +233,13 @@
 		keeps working. We also normalise legacy data-toggle/data-dismiss/data-target
 		attributes onto Bootstrap 5's data-bs-* equivalents for any 3rd-party
 		HTML that still uses them.
+
+		The bridge installs in TWO passes: once synchronously here, and once
+		on DOMContentLoaded. Bootstrap 5.3.x registers its own jQueryInterface
+		via an onDOMContentLoaded callback fired during the same event — its
+		registration would clobber ours if we only installed eagerly. The second
+		pass guarantees we end up with the legacy-compatible signatures (e.g.
+		`$(el).modal({})` opening the modal instead of just constructing it).
 	-->
 	<script>
 	(function ($) {
@@ -269,21 +276,33 @@
 			};
 		}
 
-		$.fn.modal    = pluginFor(bootstrap.Modal, { defaultMethod: "show" });
-		$.fn.dropdown = pluginFor(bootstrap.Dropdown);
-		$.fn.tooltip  = pluginFor(bootstrap.Tooltip, { requireTitleOrContent: true });
-		$.fn.popover  = pluginFor(bootstrap.Popover, { requireTitleOrContent: true });
+		function install() {
+			$.fn.modal    = pluginFor(bootstrap.Modal, { defaultMethod: "show" });
+			$.fn.dropdown = pluginFor(bootstrap.Dropdown);
+			$.fn.tooltip  = pluginFor(bootstrap.Tooltip, { requireTitleOrContent: true });
+			$.fn.popover  = pluginFor(bootstrap.Popover, { requireTitleOrContent: true });
 
-		$.fn.alert = function (option) {
-			return this.each(function () {
-				var el = this;
-				if (option === "close") {
-					bootstrap.Alert.getOrCreateInstance(el).close();
-				} else {
-					bootstrap.Alert.getOrCreateInstance(el);
-				}
-			});
-		};
+			$.fn.alert = function (option) {
+				return this.each(function () {
+					var el = this;
+					if (option === "close") {
+						bootstrap.Alert.getOrCreateInstance(el).close();
+					} else {
+						bootstrap.Alert.getOrCreateInstance(el);
+					}
+				});
+			};
+		}
+
+		install();
+		if (document.readyState === "loading") {
+			document.addEventListener("DOMContentLoaded", install);
+		} else {
+			// DOM is already ready — Bootstrap's deferred registration has
+			// either already fired or will fire in this turn of the event loop.
+			// Re-install on the next tick to win the race.
+			setTimeout(install, 0);
+		}
 
 		// Legacy attribute aliases. Some bootbox/legacy markup still emits the
 		// Bootstrap 3 names; map them to the BS5 ones via a single delegated
