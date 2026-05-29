@@ -283,65 +283,9 @@ button.close:hover {
     color: inherit;
 }
 
-/* ── Glyphicon → Bootstrap Icons mapping ────────────────────────────── */
-/* We load Bootstrap Icons font in layout.tmpl. Each .glyphicon-X maps to */
-/* the unicode codepoint of the equivalent Bootstrap Icon.                 */
-.glyphicon {
-    display: inline-block;
-    font-family: "bootstrap-icons" !important;
-    font-style: normal;
-    font-weight: normal !important;
-    font-variant: normal;
-    text-transform: none;
-    line-height: 1;
-    vertical-align: -.125em;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-}
-.glyphicon-search::before        { content: "\F52A"; }
-.glyphicon-cog::before           { content: "\F3E6"; }
-.glyphicon-exclamation-sign::before { content: "\F33B"; }
-.glyphicon-time::before          { content: "\F293"; }
-.glyphicon-adjust::before        { content: "\F129"; }
-.glyphicon-compressed::before    { content: "\F2F5"; }
-.glyphicon-tint::before          { content: "\F312"; }
-.glyphicon-user::before          { content: "\F4E1"; }
-.glyphicon-tag::before           { content: "\F583"; }
-.glyphicon-tags::before          { content: "\F584"; }
-.glyphicon-volume-off::before    { content: "\F605"; }
-.glyphicon-volume-up::before     { content: "\F606"; }
-.glyphicon-eye-open::before      { content: "\F341"; }
-.glyphicon-eye-close::before     { content: "\F340"; }
-.glyphicon-pencil::before        { content: "\F4CB"; }
-.glyphicon-globe::before         { content: "\F3EE"; }
-.glyphicon-remove-sign::before   { content: "\F623"; }
-.glyphicon-ok-sign::before       { content: "\F26B"; }
-.glyphicon-heart::before         { content: "\F417"; }
-.glyphicon-heart-empty::before   { content: "\F416"; }
-.glyphicon-stop::before          { content: "\F4F8"; }
-.glyphicon-play::before          { content: "\F4F4"; }
-.glyphicon-repeat::before        { content: "\F130"; }
-.glyphicon-pause::before         { content: "\F4C3"; }
-.glyphicon-refresh::before       { content: "\F130"; }
-.glyphicon-chevron-left::before  { content: "\F284"; }
-.glyphicon-chevron-right::before { content: "\F285"; }
-.glyphicon-info-sign::before     { content: "\F431"; }
-.glyphicon-camera::before        { content: "\F21D"; }
-.glyphicon-filter::before        { content: "\F3CE"; }
-.glyphicon-check::before         { content: "\F26B"; }
-.glyphicon-saved::before         { content: "\F2C0"; }
-.glyphicon-forward::before       { content: "\F3DD"; }
-.glyphicon-tower::before         { content: "\F221"; }
-.glyphicon-star::before          { content: "\F586"; }
-.glyphicon-thumbs-down::before   { content: "\F407"; }
-.glyphicon-ban-circle::before    { content: "\F623"; }
-.glyphicon-wrench::before        { content: "\F644"; }
-.glyphicon-minus-sign::before    { content: "\F462"; }
-.glyphicon-remove::before        { content: "\F659"; }
-.glyphicon-ok::before            { content: "\F633"; }
-.glyphicon-question-sign::before { content: "\F505"; }
-.glyphicon-plus::before          { content: "\F4FE"; }
-.glyphicon-plus-sign::before     { content: "\F500"; }
+/* Bootstrap Icons font and per-icon codepoints are provided by the
+   bootstrap-icons CSS loaded in layout.tmpl — we just style the .bi spans
+   contextually in the rules below. */
 
 .orchestrator-brand {
     height: 32px;
@@ -453,25 +397,25 @@ button.close:hover {
     width: auto;
 }
 
-.instance h3 .pull-right > .glyphicon {
+.instance h3 .pull-right > .bi {
     color: #606060;
 }
 
-.instance h3 .pull-right > .glyphicon.text-muted {
+.instance h3 .pull-right > .bi.text-muted {
     color: #999999;
 }
 
-.instance h3 .pull-right > .glyphicon.text-danger {
+.instance h3 .pull-right > .bi.text-danger {
     color: #a94442;
 }
 
 
-.instance h3 .glyphicon {
+.instance h3 .bi {
     position: inherit;
     cursor: default;
 }
 
-.instance h3 .glyphicon-tags {
+.instance h3 .bi-tags-fill {
     margin-right: 0.4em;
 }
 
@@ -479,7 +423,7 @@ button.close:hover {
     cursor: pointer;
 }
 
-.instance h3 .glyphicon {
+.instance h3 .bi {
     cursor: pointer;
 }
 
@@ -488,7 +432,7 @@ button.close:hover {
     color: #ffffff;
 }
 
-.instance h3.label-info .glyphicon {
+.instance h3.label-info .bi {
     color: #ffffff;
 }
 
@@ -497,11 +441,11 @@ button.close:hover {
     color: #ffffff;
 }
 
-.instance h3.label-warning .glyphicon {
+.instance h3.label-warning .bi {
     color: #ffffff;
 }
 
-.glyphicon.text-warning {
+.bi.text-warning {
     color: #f0ad4e;
 }
 
@@ -510,7 +454,7 @@ button.close:hover {
     color: #ffffff;
 }
 
-.instance h3.label-danger .glyphicon {
+.instance h3.label-danger .bi {
     color: #ffffff;
 }
 
@@ -519,7 +463,7 @@ button.close:hover {
     color: #ffffff;
 }
 
-.instance h3.label-stale .glyphicon {
+.instance h3.label-stale .bi {
     color: #ffffff;
 }
 
@@ -528,7 +472,7 @@ button.close:hover {
     color: #ffffff;
 }
 
-.instance h3.label-errant .glyphicon {
+.instance h3.label-errant .bi {
     color: #ffffff;
 }
 
@@ -537,7 +481,7 @@ button.close:hover {
     color: #ffffff;
 }
 
-.instance h3.label-fatal .glyphicon {
+.instance h3.label-fatal .bi {
     color: #ffffff;
 }
 
@@ -546,7 +490,7 @@ button.close:hover {
     color: #ffffff;
 }
 
-.instance h3.label-primary .glyphicon {
+.instance h3.label-primary .bi {
     color: #ffffff;
 }
 
@@ -626,13 +570,13 @@ button.close:hover {
 }
 
 
-#clusters .instance h3 .pull-right > .glyphicon {
+#clusters .instance h3 .pull-right > .bi {
 	margin-right: 2px;
 	font-size: 12px;
 	color: #31708f;
 }
 
-#clusters .instance h3 .pull-left > .glyphicon {
+#clusters .instance h3 .pull-left > .bi {
 	margin-right: 2px;
 }
 
@@ -926,12 +870,12 @@ button.close:hover {
     cursor: pointer;
 }
 
-#cluster_sidebar li[data-bullet] span.glyphicon {
+#cluster_sidebar li[data-bullet] span.bi {
     font-size: 20px;
     margin-bottom: 15px;
 }
 
-#cluster_sidebar li a .glyphicon {
+#cluster_sidebar li a .bi {
     cursor: pointer;
 }
 
@@ -954,7 +898,7 @@ button.close:hover {
     margin-bottom: 8px;
 }
 
-#cluster_sidebar li div.glyphicon {
+#cluster_sidebar li div.bi {
     font-size: 24px;
     padding-right: 8px;
 }
@@ -990,7 +934,7 @@ button.close:hover {
   margin-bottom: 8px;
 }
 
-#cluster_info [data-tag=glyphs] span.glyphicon {
+#cluster_info [data-tag=glyphs] span.bi {
   font-size: 20px;
 }
 
@@ -1010,7 +954,7 @@ button.close:hover {
   padding: 4px;
 }
 
-#cluster_info div[data-tag=analysis] div .pull-left.glyphicon {
+#cluster_info div[data-tag=analysis] div .pull-left.bi {
   font-size: 32px;
 }
 
@@ -1179,7 +1123,7 @@ button.close:hover {
     color: #ffffff;
 }
 
-.instance.accept_drop h3 .glyphicon {
+.instance.accept_drop h3 .bi {
     color: #ffffff;
 }
 
@@ -1188,7 +1132,7 @@ button.close:hover {
     color: #ffffff;
 }
 
-.instance.accept_drop_warning h3 .glyphicon {
+.instance.accept_drop_warning h3 .bi {
     color: #ffffff;
 }
 
@@ -1281,8 +1225,8 @@ button.close:hover {
     vertical-align: top;
 }
 
-#clusters_analysis .popover-content span.glyphicon,
-#clusters_analysis .popover-body span.glyphicon {
+#clusters_analysis .popover-content span.bi,
+#clusters_analysis .popover-body span.bi {
 	font-family: "bootstrap-icons";
 }
 

@@ -247,7 +247,7 @@ function Cluster() {
     var masterSectionEl = $('<div class="instance-master-section" data-nodeid="' + node.id + '"></div>').appendTo(instanceEl);
     var normalSectionEl = $('<div class="instance-normal-section" data-nodeid="' + node.id + '"></div>').appendTo(instanceEl);
     if (node.children) {
-      var trailerEl = $('<div class="instance-trailer" data-nodeid="' + node.id + '"><div><span class="glyphicon glyphicon-chevron-left" title="Drag and drop replicas of this instance"></span></div></div>').appendTo(instanceEl);
+      var trailerEl = $('<div class="instance-trailer" data-nodeid="' + node.id + '"><div><span class="bi bi-chevron-left" title="Drag and drop replicas of this instance"></span></div></div>').appendTo(instanceEl);
       instanceEl.data("instance-trailer", trailerEl);
       var numReplicas = 0;
       node.children.forEach(function(replica) {
@@ -348,7 +348,7 @@ function Cluster() {
           $(duplicate).addClass("draggable-msg");
           $(duplicate).find(".instance-content,.instance-trailer-content").html($(this).attr("data-drop-comment"))
         } else {
-          $(duplicate).find(".instance-content,.instance-trailer-content").html('<span class="glyphicon glyphicon-minus-sign text-danger"></span> Cannot drop here')
+          $(duplicate).find(".instance-content,.instance-trailer-content").html('<span class="bi bi-dash-circle-fill text-danger"></span> Cannot drop here')
         }
       },
       out: function(event, ui) {
@@ -408,7 +408,7 @@ function Cluster() {
           $(duplicate).addClass("draggable-msg");
           $(duplicate).find(".instance-content,.instance-trailer-content").html($(this).attr("data-drop-comment"))
         } else {
-          $(duplicate).find(".instance-content,.instance-trailer-content").html('<span class="glyphicon glyphicon-minus-sign text-danger"></span> Cannot drop here')
+          $(duplicate).find(".instance-content,.instance-trailer-content").html('<span class="bi bi-dash-circle-fill text-danger"></span> Cannot drop here')
         }
       },
       out: function(event, ui) {
@@ -480,7 +480,7 @@ function Cluster() {
         }
         return {
           accept: "ok",
-          type: '<span class="glyphicon glyphicon-exclamation-sign text-warning"></span> <strong>MAKE CO MASTER</strong> with ' + droppableTitle,
+          type: '<span class="bi bi-exclamation-circle-fill text-warning"></span> <strong>MAKE CO MASTER</strong> with ' + droppableTitle,
         };
       }
       if (instanceIsDescendant(droppableNode, node)) {
@@ -557,7 +557,7 @@ function Cluster() {
         }
         return {
           accept: "ok",
-          type: '<span class="glyphicon glyphicon-exclamation-sign text-warning"></span> <strong>MAKE CO MASTER</strong> with ' + droppableTitle,
+          type: '<span class="bi bi-exclamation-circle-fill text-warning"></span> <strong>MAKE CO MASTER</strong> with ' + droppableTitle,
         };
       }
       if (instanceIsDescendant(droppableNode, node)) {
@@ -628,7 +628,7 @@ function Cluster() {
           }
           return {
             accept: "ok",
-            type: '<span class="glyphicon glyphicon-exclamation-sign text-warning"></span> <strong>MAKE CO MASTER</strong> with ' + droppableTitle,
+            type: '<span class="bi bi-exclamation-circle-fill text-warning"></span> <strong>MAKE CO MASTER</strong> with ' + droppableTitle,
           };
         }
       }
@@ -702,7 +702,7 @@ function Cluster() {
         }
         return {
           accept: "ok",
-          type: '<span class="glyphicon glyphicon-exclamation-sign text-warning"></span> <strong>MAKE CO MASTER</strong> with ' + droppableTitle,
+          type: '<span class="bi bi-exclamation-circle-fill text-warning"></span> <strong>MAKE CO MASTER</strong> with ' + droppableTitle,
         };
       }
       return {
@@ -755,7 +755,7 @@ function Cluster() {
       }
       return {
         accept: "ok",
-        type: '<span class="glyphicon glyphicon-exclamation-sign text-warning"></span> <strong>take master</strong> ' + droppableTitle
+        type: '<span class="bi bi-exclamation-circle-fill text-warning"></span> <strong>take master</strong> ' + droppableTitle
       };
     }
     if (instanceIsChild(node, droppableNode) &&
@@ -772,7 +772,7 @@ function Cluster() {
       }
       return {
         accept: "ok",
-        type: '<span class="glyphicon glyphicon-exclamation-sign text-warning"></span> <strong>PROMOTE AS MASTER</strong> '
+        type: '<span class="bi bi-exclamation-circle-fill text-warning"></span> <strong>PROMOTE AS MASTER</strong> '
       };
     }
     return moveInstance(node, droppableNode, shouldApply);
@@ -1089,7 +1089,7 @@ function Cluster() {
 
 
   function gracefulMasterTakeover(newMasterNode, existingMasterNode) {
-    var message = '<h1><span class="glyphicon glyphicon-exclamation-sign text-warning"></span> DANGER ZONE</h1><h4>Graceful-master-takeover</h4>Are you sure you wish to promote <code><strong>' +
+    var message = '<h1><span class="bi bi-exclamation-circle-fill text-warning"></span> DANGER ZONE</h1><h4>Graceful-master-takeover</h4>Are you sure you wish to promote <code><strong>' +
       newMasterNode.Key.Hostname + ':' + newMasterNode.Key.Port +
       '</strong></code> as master?';
     bootbox.confirm(anonymizeIfNeedBe(message), function(confirm) {
@@ -1443,9 +1443,9 @@ function Cluster() {
         addSidebarInfoPopoverContent(content, "audit-recovery-title", true);
       }
       recoveries.forEach(function(recovery) {
-        var glyph = '<span class="glyphicon text-success glyphicon-ok-sign"></span>';
+        var glyph = '<span class="bi text-success bi-check-circle-fill"></span>';
         if (recovery.IsSuccessful === false) {
-          glyph = '<span class="glyphicon text-danger glyphicon-remove-sign"></span>';
+          glyph = '<span class="bi text-danger bi-x-circle-fill"></span>';
         }
         var content = '<a href="/web/audit-recovery/uid/'+recovery.UID+'">' + recovery.RecoveryStartTimestamp + '</a>: ' + glyph + ' ' + recovery.AnalysisEntry.Analysis
         addSidebarInfoPopoverContent(content, "audit-recovery", true);
@@ -1465,7 +1465,7 @@ function Cluster() {
     });
     // Colorize-dc
     {
-      var glyph = $("#cluster_sidebar [data-bullet=colorize-dc] .glyphicon");
+      var glyph = $("#cluster_sidebar [data-bullet=colorize-dc] .bi");
       if (isColorizeDC()) {
         glyph.addClass("text-info");
         glyph.attr("title", "Disable colors");
@@ -1477,7 +1477,7 @@ function Cluster() {
     // Compact display
     {
       var anchor = $("#cluster_sidebar [data-bullet=compact-display] a");
-      var glyph = $(anchor).find(".glyphicon")
+      var glyph = $(anchor).find(".bi")
       if (isCompactDisplay()) {
         glyph.addClass("text-info");
         glyph.attr("title", "Disable compact display");
@@ -1488,7 +1488,7 @@ function Cluster() {
     }
     // Pool indicator
     {
-      var glyph = $("#cluster_sidebar [data-bullet=pool-indicator] .glyphicon");
+      var glyph = $("#cluster_sidebar [data-bullet=pool-indicator] .bi");
       if ($.cookie("pool-indicator") == "true") {
         glyph.addClass("text-info");
         glyph.attr("title", "Disable pool indication");
@@ -1499,7 +1499,7 @@ function Cluster() {
     }
     // Anonymize
     {
-      var glyph = $("#cluster_sidebar [data-bullet=anonymize] .glyphicon");
+      var glyph = $("#cluster_sidebar [data-bullet=anonymize] .bi");
       if (isAnonymized()) {
         glyph.addClass("text-info");
         glyph.attr("title", "Cancel anonymize");
@@ -1510,14 +1510,14 @@ function Cluster() {
     }
     // Alias
     {
-      var glyph = $("#cluster_sidebar [data-bullet=alias] .glyphicon");
+      var glyph = $("#cluster_sidebar [data-bullet=alias] .bi");
       var is = isAliased();
       glyph.addClass(is ? "text-info" : "text-muted");
       glyph.attr("title", is ? "Cancel alias" : "Instance alias display");
     }
     // Silent UI
     {
-      var glyph = $("#cluster_sidebar [data-bullet=silent-ui] .glyphicon");
+      var glyph = $("#cluster_sidebar [data-bullet=silent-ui] .bi");
       if (isSilentUI()) {
         glyph.addClass("text-info");
         glyph.attr("title", "Cancel UI silence");
@@ -1532,9 +1532,9 @@ function Cluster() {
     var glyph = '';
     var hasDowntime = analysisEntry.IsDowntimed || analysisEntry.IsReplicasDowntimed
     if (analysisEntry.IsStructureAnalysis) {
-      glyph = '<span class="pull-left glyphicon glyphicon-exclamation-sign '+(hasDowntime ? "text-muted" : "text-warning")+'"></span>';
+      glyph = '<span class="pull-left bi bi-exclamation-circle-fill '+(hasDowntime ? "text-muted" : "text-warning")+'"></span>';
     } else {
-      glyph = '<span class="pull-left glyphicon glyphicon-exclamation-sign '+(hasDowntime ? "text-muted" : "text-danger")+'"></span>';
+      glyph = '<span class="pull-left bi bi-exclamation-circle-fill '+(hasDowntime ? "text-muted" : "text-danger")+'"></span>';
     }
     var analysisContent = '<div><strong>' + analysisEntry.Analysis + "</strong></div>";
     var extraText = '';
@@ -1555,11 +1555,11 @@ function Cluster() {
     var popoverElement = getInstanceDiv(instance.id);
 
     popoverElement.append('<h4 class="popover-footer"><div class="dropdown"></div></h4>');
-    popoverElement.find(".popover-footer .dropdown").append('<button type="button" class="btn btn-sm btn-default dropdown-toggle" id="recover_dropdown_' + instance.id + '" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><span class="glyphicon glyphicon-heart text-danger"></span> Recover</button><ul class="dropdown-menu" aria-labelledby="recover_dropdown_' + instance.id + '"></ul>');
+    popoverElement.find(".popover-footer .dropdown").append('<button type="button" class="btn btn-sm btn-default dropdown-toggle" id="recover_dropdown_' + instance.id + '" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><span class="bi bi-heart-fill text-danger"></span> Recover</button><ul class="dropdown-menu" aria-labelledby="recover_dropdown_' + instance.id + '"></ul>');
     var recoveryListing = popoverElement.find(".dropdown ul");
 
     if (instance.isMaster) {
-      recoveryListing.append('<li><a class="dropdown-item" href="#" data-btn="force-master-failover" data-command="force-master-failover"><div class="glyphicon glyphicon-exclamation-sign text-danger"></div> <span class="text-danger">Force fail over <strong>now</strong> (even if normal handling would not fail over)</span></a></li>');
+      recoveryListing.append('<li><a class="dropdown-item" href="#" data-btn="force-master-failover" data-command="force-master-failover"><div class="bi bi-exclamation-circle-fill text-danger"></div> <span class="text-danger">Force fail over <strong>now</strong> (even if normal handling would not fail over)</span></a></li>');
       recoveryListing.append('<li><hr class="dropdown-divider"></li>');
 
       // Suggest successor
@@ -1643,12 +1643,12 @@ function Cluster() {
     });
     if (clusterHasReplicationAnalysisIssue) {
       var iconClass = (allIssuesAreDowntimed ? "text-muted" : "text-danger");
-      $("#cluster_sidebar [data-bullet=info] div span").addClass(iconClass).addClass("glyphicon-exclamation-sign");;
+      $("#cluster_sidebar [data-bullet=info] div span").addClass(iconClass).addClass("bi-exclamation-circle-fill");;
     } else if (clusterHasStructureAnalysisIssue) {
       var iconClass = (allIssuesAreDowntimed ? "text-muted" : "text-warning");
-      $("#cluster_sidebar [data-bullet=info] div span").addClass(iconClass).addClass("glyphicon-exclamation-sign");;
+      $("#cluster_sidebar [data-bullet=info] div span").addClass(iconClass).addClass("bi-exclamation-circle-fill");;
     } else {
-      $("#cluster_sidebar [data-bullet=info] div span").addClass("text-info").addClass("glyphicon-info-sign");
+      $("#cluster_sidebar [data-bullet=info] div span").addClass("text-info").addClass("bi-info-circle-fill");
     }
   }
 
@@ -1661,9 +1661,9 @@ function Cluster() {
           var instance = instancesMap[instanceId];
           if (!instance.IsInPool) {
             instance.IsInPool = true;
-            getInstanceDiv(instance.id).find("h3 div.pull-right").prepend('<span class="glyphicon glyphicon-tint" title="pools:"></span> ');
+            getInstanceDiv(instance.id).find("h3 div.pull-right").prepend('<span class="bi bi-droplet-fill" title="pools:"></span> ');
           }
-          var indicatorElement = getInstanceDiv(instance.id).find("h3 div.pull-right span.glyphicon-tint");
+          var indicatorElement = getInstanceDiv(instance.id).find("h3 div.pull-right span.bi-droplet-fill");
           indicatorElement.attr("title", indicatorElement.attr("title") + " " + pool);
         });
       }
@@ -1739,14 +1739,14 @@ function Cluster() {
         $("#cluster_name").text(visualAlias);
         var clusterSubtitle = '';
         if (clusterInfo.HasAutomatedMasterRecovery === true) {
-          clusterSubtitle += '<span class="glyphicon glyphicon-heart text-info" title="Automated master recovery for this cluster ENABLED"></span>';
+          clusterSubtitle += '<span class="bi bi-heart-fill text-info" title="Automated master recovery for this cluster ENABLED"></span>';
         } else {
-          clusterSubtitle += '<span class="glyphicon glyphicon-heart text-muted pull-right" title="Automated master recovery for this cluster DISABLED"></span>';
+          clusterSubtitle += '<span class="bi bi-heart-fill text-muted pull-right" title="Automated master recovery for this cluster DISABLED"></span>';
         }
         if (clusterInfo.HasAutomatedIntermediateMasterRecovery === true) {
-          clusterSubtitle += '<span class="glyphicon glyphicon-heart-empty text-info" title="Automated intermediate master recovery for this cluster ENABLED"></span>';
+          clusterSubtitle += '<span class="bi bi-heart text-info" title="Automated intermediate master recovery for this cluster ENABLED"></span>';
         } else {
-          clusterSubtitle += '<span class="glyphicon glyphicon-heart-empty text-muted pull-right" title="Automated intermediate master recovery for this cluster DISABLED"></span>';
+          clusterSubtitle += '<span class="bi bi-heart text-muted pull-right" title="Automated intermediate master recovery for this cluster DISABLED"></span>';
         }
         $("#cluster_subtitle").append(clusterSubtitle)
 
@@ -1755,7 +1755,7 @@ function Cluster() {
       }
       $("#dropdown-context").append('<li><a class="dropdown-item" href="' + appUrl('/web/cluster-pools/' + currentClusterName()) + '">Pools</a></li>');
       if (isCompactDisplay()) {
-        $("#dropdown-context").append('<li><a class="dropdown-item" data-command="expand-display" href="' + location.href.split("?")[0].split("#")[0] + '?compact=false"><span class="glyphicon glyphicon-ok small"></span> Compact display</a></li>');
+        $("#dropdown-context").append('<li><a class="dropdown-item" data-command="expand-display" href="' + location.href.split("?")[0].split("#")[0] + '?compact=false"><span class="bi bi-check small"></span> Compact display</a></li>');
       } else {
         $("#dropdown-context").append('<li><a class="dropdown-item" data-command="compact-display" href="' + location.href.split("?")[0].split("#")[0] + '?compact=true">Compact display</a></li>');
       }
@@ -1764,16 +1764,16 @@ function Cluster() {
       $("#dropdown-context").append('<li><a class="dropdown-item" href="#" data-command="anonymize">Anonymize</a></li>');
       $("#dropdown-context").append('<li><a class="dropdown-item" href="#" data-command="alias">Alias</a></li>');
       if ($.cookie("pool-indicator") == "true") {
-        $("#dropdown-context a[data-command=pool-indicator]").prepend('<span class="glyphicon glyphicon-ok small"></span> ');
+        $("#dropdown-context a[data-command=pool-indicator]").prepend('<span class="bi bi-check small"></span> ');
       }
       if (isAnonymized()) {
-        $("#dropdown-context a[data-command=anonymize]").prepend('<span class="glyphicon glyphicon-ok small"></span> ');
+        $("#dropdown-context a[data-command=anonymize]").prepend('<span class="bi bi-check small"></span> ');
       }
       if (isAliased()) {
-        $("#dropdown-context a[data-command=alias]").prepend('<span class="glyphicon glyphicon-ok small"></span> ');
+        $("#dropdown-context a[data-command=alias]").prepend('<span class="bi bi-check small"></span> ');
       }
       if (isColorizeDC()) {
-        $("#dropdown-context a[data-command=colorize-dc]").prepend('<span class="glyphicon glyphicon-ok small"></span> ');
+        $("#dropdown-context a[data-command=colorize-dc]").prepend('<span class="bi bi-check small"></span> ');
       }
       populateSidebar(clusterInfo);
     });
