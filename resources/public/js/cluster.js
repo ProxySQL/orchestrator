@@ -161,7 +161,12 @@ function Cluster() {
     var opts = {
       addClasses: true,
       opacity: 1,
-      cancel: "button,a,span, .instance-trailer",
+      // Cancel drag on the title bar (h3) so clicking the node header reliably
+      // opens the modal — jQuery UI's default 1px drag distance would otherwise
+      // turn even tiny mouse jitter on the title text into a drag and swallow
+      // the click event. Dragging still works from the rest of the card and
+      // from the .instance-trailer chevron.
+      cancel: "button,a,span,h3,.instance-trailer",
       snap: "#cluster_container .instance",
       snapMode: "inner",
       snapTolerance: 10,

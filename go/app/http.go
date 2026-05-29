@@ -105,13 +105,23 @@ func standardHttp(continuousDiscovery bool) {
 		}
 	}
 
-	// Static file serving
+	// Static file serving. Wrap the FileServer so browsers always revalidate
+	// (via If-Modified-Since) instead of relying on heuristic freshness. The
+	// orchestrator UI ships its assets unversioned (e.g. /js/orchestrator.js),
+	// so without this header a stale JS file can persist in the browser cache
+	// long after a server upgrade.
 	prefix := config.Config.URLPrefix
 	fileServer := nethttp.FileServer(nethttp.Dir("resources/public"))
+	revalidate := func(h nethttp.Handler) nethttp.Handler {
+		return nethttp.HandlerFunc(func(w nethttp.ResponseWriter, r *nethttp.Request) {
+			w.Header().Set("Cache-Control", "no-cache, must-revalidate")
+			h.ServeHTTP(w, r)
+		})
+	}
 	if prefix != "" {
-		router.Handle(prefix+"/*", nethttp.StripPrefix(prefix, fileServer))
+		router.Handle(prefix+"/*", nethttp.StripPrefix(prefix, revalidate(fileServer)))
 	} else {
-		router.Handle("/*", fileServer)
+		router.Handle("/*", revalidate(fileServer))
 	}
 
 	if config.Config.UseMutualTLS {

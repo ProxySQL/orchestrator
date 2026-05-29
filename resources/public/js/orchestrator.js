@@ -1061,7 +1061,10 @@ function renderInstanceElement(popoverElement, instance, renderType) {
     popoverElement.find(".instance-content").html(contentHtml);
   }
 
-  popoverElement.find("h3 .instance-glyphs").click(function() {
+  // Open the modal from anywhere in the title bar (title text, status glyphs,
+  // or the cog cluster). jQuery UI draggable still works because it
+  // distinguishes click from drag based on mouse movement.
+  popoverElement.find("h3").css("cursor", "pointer").click(function() {
     openNodeModal(instance);
     return false;
   });
