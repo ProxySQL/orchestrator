@@ -104,8 +104,10 @@ func renderHTML(w http.ResponseWriter, status int, name string, data interface{}
 		return
 	}
 	// Auto-inject assetVersion so layout.tmpl can cache-bust static asset URLs
-	// without each call site having to remember to pass it.
-	if m, ok := data.(map[string]interface{}); ok {
+	// without each call site having to remember to pass it. Guard against a
+	// typed-nil map — `m[key] = v` would panic — even though no current caller
+	// passes one.
+	if m, ok := data.(map[string]interface{}); ok && m != nil {
 		if _, present := m["assetVersion"]; !present {
 			m["assetVersion"] = assetVersion
 		}
