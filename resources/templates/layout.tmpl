@@ -262,6 +262,9 @@
 					try {
 						inst = Ctor.getOrCreateInstance(this, config);
 					} catch (err) {
+ 						if (typeof console !== "undefined" && console.warn) {
+ 							console.warn("Bootstrap bridge: failed to initialize", Ctor.NAME || Ctor, err);
+ 						}
 						return;
 					}
 					if (typeof option === "string" && typeof inst[option] === "function") {
