@@ -91,8 +91,9 @@ func init() {
 
 	ometrics.OnMetricsTick(func() {
 		if discoveryQueue != nil {
-			discoveryQueueLengthGauge.Update(int64(discoveryQueue.QueueLen()))
-			ometrics.DiscoveryQueueLength.Set(float64(discoveryQueue.QueueLen()))
+			queueLen := discoveryQueue.QueueLen()
+			discoveryQueueLengthGauge.Update(int64(queueLen))
+			ometrics.DiscoveryQueueLength.Set(float64(queueLen))
 		}
 	})
 	ometrics.OnMetricsTick(func() {
