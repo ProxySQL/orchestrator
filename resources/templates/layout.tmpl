@@ -9,17 +9,15 @@
 	<meta name="author" content="">
 	<link rel="shortcut icon" href="/images/orchestrator-logo-32-dark.png">
 	<title>Orchestrator - {{.title}}</title>
-	<script type="text/javascript" src="{{.prefix}}/js/jquery.min.js"></script>
-	<script type="text/javascript" src="{{.prefix}}/js/jquery.cookie-1.4.1.min.js"></script>
-	<script type="text/javascript" src="{{.prefix}}/js/corex.js"></script>
-	<script type="text/javascript" src="{{.prefix}}/js/corex-jquery.js"></script>
-	<script src="{{.prefix}}/js/md5.js"></script>
-	<script src="{{.prefix}}/js/common.js"></script>
-	<script src="{{.prefix}}/js/orchestrator.js"></script>
-	<script src="{{.prefix}}/js/custom.js"></script>
-	<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YcnS/1p8FjY20lOFFCB6Uf8ECZTI2bPZCmL" crossorigin="anonymous">
-	<link href="{{.prefix}}/css/orchestrator.css" rel="stylesheet">
-	<link href="{{.prefix}}/css/custom.css" rel="stylesheet">
+	<script type="text/javascript" src="{{.prefix}}/js/jquery.min.js?v={{.assetVersion}}"></script>
+	<script type="text/javascript" src="{{.prefix}}/js/js-cookie.min.js?v={{.assetVersion}}"></script>
+	<script type="text/javascript" src="{{.prefix}}/js/jquery.cookie-1.4.1.min.js?v={{.assetVersion}}"></script>
+	<script src="{{.prefix}}/js/md5.js?v={{.assetVersion}}"></script>
+	<script src="{{.prefix}}/js/common.js?v={{.assetVersion}}"></script>
+	<link href="{{.prefix}}/bootstrap/css/bootstrap.min.css?v={{.assetVersion}}" rel="stylesheet">
+	<link href="{{.prefix}}/bootstrap-icons/font/bootstrap-icons.min.css?v={{.assetVersion}}" rel="stylesheet">
+	<link href="{{.prefix}}/css/orchestrator.css?v={{.assetVersion}}" rel="stylesheet">
+	<link href="{{.prefix}}/css/custom.css?v={{.assetVersion}}" rel="stylesheet">
 
 	<style type="text/css">
 		.ajaxLoader {
@@ -37,7 +35,7 @@
 
 	<nav class="navbar navbar-expand-md navbar-dark bg-dark fixed-top">
 		<div class="container-fluid">
-			<a class="navbar-brand orchestrator-brand" href="https://github.com/openark/orchestrator">orchestrator</a>
+			<a class="navbar-brand orchestrator-brand" href="https://github.com/ProxySQL/orchestrator">orchestrator</a>
 			<button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain" aria-controls="navbarMain" aria-expanded="false" aria-label="Toggle navigation">
 				<span class="navbar-toggler-icon"></span>
 			</button>
@@ -47,13 +45,13 @@
 					<a href="#" id="mainAjaxLoader" class="nav-link ajaxLoader"><img src="{{.prefix}}/images/ajax-loader.gif" /></a>
 				</li>
 				<li class="nav-item dropdown" data-nav-page="home">
-					<a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">
+					<a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown" role="button" aria-expanded="false">
                             Home
                         </a>
 					<ul class="dropdown-menu">
 						<li><a class="dropdown-item" href="{{.prefix}}/web/about">About</a></li>
-						<li><a class="dropdown-item" href="https://github.com/openark/orchestrator/wiki/Orchestrator-Manual" target="_blank">Manual</a></li>
-						<li><a class="dropdown-item" href="https://github.com/openark/orchestrator/wiki/FAQ" target="_blank">FAQ</a></li>
+						<li><a class="dropdown-item" href="https://github.com/ProxySQL/orchestrator/wiki/Orchestrator-Manual" target="_blank">Manual</a></li>
+						<li><a class="dropdown-item" href="https://github.com/ProxySQL/orchestrator/wiki/FAQ" target="_blank">FAQ</a></li>
 						<li><a class="dropdown-item" href="{{.prefix}}/web/keep-calm">Keep calm</a></li>
 						<li><hr class="dropdown-divider"></li>
 						<li><a class="dropdown-item" href="{{.prefix}}/web/status">Status</a></li>
@@ -61,51 +59,53 @@
 				</li>
 
 				<li class="nav-item dropdown" data-nav-page="cluster">
-					<a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">
+					<a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown" role="button" aria-expanded="false">
                             Clusters
 		                </a>
 					<ul class="dropdown-menu" id="dropdown-clusters">
-						<li><a class="dropdown-item" href="{{.prefix}}/web/clusters/">Dashboard</a></li>
-						<li><a class="dropdown-item" href="{{.prefix}}/web/clusters-analysis/">Failure analysis</a></li>
+						<li><a class="dropdown-item" href="{{.prefix}}/web/clusters">Dashboard</a></li>
+						<li><a class="dropdown-item" href="{{.prefix}}/web/clusters-analysis">Failure analysis</a></li>
 						<li><a class="dropdown-item" href="{{.prefix}}/web/discover">Discover</a></li>
 						<li><hr class="dropdown-divider"></li>
 					</ul>
 				</li>
 
 				<li class="nav-item dropdown" data-nav-page="audit">
-					<a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">
+					<a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown" role="button" aria-expanded="false">
                             Audit
                         </a>
 					<ul class="dropdown-menu">
 						<li><a class="dropdown-item" href="{{.prefix}}/web/audit">General</a></li>
 						<li><a class="dropdown-item" href="{{.prefix}}/web/audit-failure-detection">Failure detection</a></li>
 						<li><a class="dropdown-item" href="{{.prefix}}/web/audit-recovery">Recovery</a></li>
+						{{if .agentsHttpActive}}
 						<li><hr class="dropdown-divider"></li>
 						<li><a class="dropdown-item" href="{{.prefix}}/web/agents">Agents</a></li>
 						<li><a class="dropdown-item" href="{{.prefix}}/web/seeds">Seeds</a></li>
+						{{end}}
 					</ul>
 				</li>
 
 				<li class="nav-item" data-nav-page="search">
 					<form class="d-flex" role="search" name="searchForm" action="{{.prefix}}/web/search">
 						<input type="text" name="s" id="searchInput" class="form-control form-control-sm me-2" placeholder="Search">
-						<button type="submit" class="btn btn-secondary btn-sm"><span class="glyphicon glyphicon-search"></span></button>
+						<button type="submit" class="btn btn-secondary btn-sm"><span class="bi bi-search"></span></button>
 					</form>
 				</li>
 				<li class="nav-item dropdown" data-nav-page="context" style="visibility: hidden;">
-					<a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">
-						<span class="glyphicon glyphicon-cog"></span>
+					<a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown" role="button" aria-expanded="false">
+						<span class="bi bi-gear-fill"></span>
 					</a>
 					<ul class="dropdown-menu" id="dropdown-context">
 					</ul>
 				</li>
 				<li class="nav-item" data-nav-page="global-recoveries">
 					<a id="global-recoveries-icon" class="nav-link" name="global-recoveries" href="#">
-						<span class="glyphicon hidden"></span>
+						<span class="bi d-none"></span>
 					</a>
 				</li>
 				<li class="nav-item" data-nav-page="read-only" style="display: none;">
-					<a class="nav-link" name="read-only" title="read only mode"><span class="glyphicon glyphicon-eye-open"></span></a>
+					<a class="nav-link" name="read-only" title="read only mode"><span class="bi bi-eye-fill"></span></a>
 				</li>
 				<li class="nav-item" data-nav-page="user-id" style="display: none;">
 					<a class="nav-link" name="user-id"></a>
@@ -120,34 +120,34 @@
 
 	<div id="alerts_container"></div>
 	<div class="container-fluid" id="main_container">
-		<div class="pull-right" id="instance_problems">
-			<div class="dropdown pull-right">
-				<button type="button" id="instance_problems_button" class="btn btn-secondary dropdown-toggle" data-bs-toggle="dropdown" title="Problems">
-					<span class="glyphicon glyphicon-exclamation-sign"></span> <span class="caret"></span>
+		<div class="float-end" id="instance_problems">
+			<div class="dropdown float-end">
+				<button type="button" id="instance_problems_button" class="btn btn-secondary dropdown-toggle" data-bs-toggle="dropdown" title="Problems" aria-expanded="false">
+					<span class="bi bi-exclamation-circle-fill"></span>
 				</button>
 				<ul class="dropdown-menu" role="menu" aria-labelledby="dLabel">
 				</ul>
 			</div>
 		</div>
 
-		{{yield}}
+    {{block "content" .}}{{end}}
 
 		<div class="modal fade" id="node_modal" tabindex="-1">
-			<div class="modal-dialog">
+			<div class="modal-dialog modal-lg">
 				<div class="modal-content">
 					<div class="modal-header">
-						<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 						<h4 class="modal-title"></h4>
+						<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 					</div>
 					<div class="modal-body">
 
 						<div class="card begin-downtime">
 						  <div class="card-body">
 								<form class="form-inline">
-									<div class="form-group">
-										<input type="text" class="form-control input-sm" id="beginDowntimeOwner" placeholder="owner name" />
-										<input type="text" class="form-control input-sm" id="beginDowntimeReason" placeholder="reason" />
-										<select class="form-control input-sm" id="beginDowntimeDuration">
+									<div class="form-group d-flex flex-wrap gap-2 align-items-center">
+										<input type="text" class="form-control form-control-sm" id="beginDowntimeOwner" placeholder="owner name" />
+										<input type="text" class="form-control form-control-sm" id="beginDowntimeReason" placeholder="reason" />
+										<select class="form-select form-select-sm" id="beginDowntimeDuration">
 											<option value="10m">10m</option>
 											<option value="30m">30m</option>
 											<option value="1h">1h</option>
@@ -156,10 +156,10 @@
 											<option value="2d">2d</option>
 											<option value="7d">7d</option>
 										</select>
+										<button type="button" class="btn btn-info ms-auto" data-btn="begin-downtime">
+											<span class="bi bi-volume-mute-fill"></span> Begin downtime
+										</button>
 									</div>
-									<button type="button" class="form-control btn btn-info pull-right" data-btn="begin-downtime">
-										<span class="glyphicon glyphicon-volume-off"></span> Begin downtime
-									</button>
 								</form>
 							</div>
 						</div>
@@ -169,7 +169,7 @@
 							</div>
 							<div class="card-footer">
 								<button type="button" class="btn btn-secondary" data-btn="end-downtime">
-									<span class="glyphicon glyphicon-volume-up"></span> End downtime
+									<span class="bi bi-volume-up-fill"></span> End downtime
 								</button>
 							</div>
 						</div>
@@ -179,40 +179,39 @@
 						</table>
 					</div>
 					<div class="modal-footer">
-						<button type="button" class="btn btn-success" data-btn="recover" title="Recover from failure"><span class="glyphicon glyphicon-heart"></span> Recover</button>
-						<button type="button" class="btn alert-success" data-btn="refresh-instance" title="Refresh instance status now"><span class="glyphicon glyphicon-refresh"></span> Refresh</button>
-						<button type="button" class="btn btn-danger" data-btn="stop-replica"><span class="glyphicon glyphicon-stop"></span> Stop replication</button>
-						<button type="button" class="btn btn-success" data-btn="start-replica"><span class="glyphicon glyphicon-play"></span> Start replication</button>
-						<button type="button" class="btn btn-warning" data-btn="restart-replica"><span class="glyphicon glyphicon-repeat"></span> Restart replication</button>
-						<button type="button" class="btn btn-danger" data-btn="detach-replica" title="Corrupt replica coordinates such that it fails to replicate. Reversible via reattach-replica"><span class="glyphicon glyphicon-remove-sign"></span> Detach replica</button>
-						<button type="button" class="btn btn-success" data-btn="reattach-replica" title="Restore replica coordinates corrupted by detach-replica"><span class="glyphicon glyphicon-ok-sign"></span> Reattach replica</button>
+						<button type="button" class="btn btn-success" data-btn="recover" title="Recover from failure"><span class="bi bi-heart-fill"></span> Recover</button>
+						<button type="button" class="btn alert-success" data-btn="refresh-instance" title="Refresh instance status now"><span class="bi bi-arrow-clockwise"></span> Refresh</button>
+						<button type="button" class="btn btn-danger" data-btn="stop-replica"><span class="bi bi-stop-fill"></span> Stop replication</button>
+						<button type="button" class="btn btn-success" data-btn="start-replica"><span class="bi bi-play-fill"></span> Start replication</button>
+						<button type="button" class="btn btn-warning" data-btn="restart-replica"><span class="bi bi-arrow-repeat"></span> Restart replication</button>
+						<button type="button" class="btn btn-danger" data-btn="detach-replica" title="Corrupt replica coordinates such that it fails to replicate. Reversible via reattach-replica"><span class="bi bi-x-circle-fill"></span> Detach replica</button>
+						<button type="button" class="btn btn-success" data-btn="reattach-replica" title="Restore replica coordinates corrupted by detach-replica"><span class="bi bi-check-circle-fill"></span> Reattach replica</button>
 
 						<button type="button" class="btn btn-danger" data-btn="skip-query" title="Skip a single query and resume replication">Skip query</button>
-						<button type="button" class="btn btn-warning" data-btn="set-read-only"><span class="glyphicon glyphicon-eye-open"></span> Set read-only</button>
-						<button type="button" class="btn btn-warning" data-btn="set-writeable"><span class="glyphicon glyphicon-pencil"></span> Set writeable</button>
-						<button type="button" class="btn btn-warning" data-btn="reattach-replica-master-host" title="Reattach with detached master">
-							</span> Reattach</button>
+						<button type="button" class="btn btn-warning" data-btn="set-read-only"><span class="bi bi-eye-fill"></span> Set read-only</button>
+						<button type="button" class="btn btn-warning" data-btn="set-writeable"><span class="bi bi-pencil-fill"></span> Set writeable</button>
+						<button type="button" class="btn btn-warning" data-btn="reattach-replica-master-host" title="Reattach with detached master">Reattach</button>
 						<button type="button" class="btn btn-danger" data-btn="reset-replica" title="Make this replica forget its master and stop replicating">Reset replica</button>
 						<button type="button" class="btn btn-info" data-btn="take-siblings" title="Take siblings of this replica">Take siblings</button>
-						<button type="button" class="btn btn-success" data-btn="enable-gtid"><span class="glyphicon glyphicon-globe"></span> Enable</button>
-						<button type="button" class="btn btn-danger" data-btn="disable-gtid"><span class="glyphicon glyphicon-remove"></span> Disable</button>
+						<button type="button" class="btn btn-success" data-btn="enable-gtid"><span class="bi bi-globe"></span> Enable</button>
+						<button type="button" class="btn btn-danger" data-btn="disable-gtid"><span class="bi bi-x-lg"></span> Disable</button>
 						<div class="btn-group" data-btn-group="gtid-errant-fix">
 							<button type="button" class="btn btn-danger" data-btn="gtid-errant-fix" data-grouped="true">Fix</button>
-							<button type="button" class="btn btn-danger dropdown-toggle" data-bs-toggle="dropdown">
-								<span class="caret"></span> <span class="visually-hidden">Toggle Dropdown</span>
+							<button type="button" class="btn btn-danger dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
+								<span class="visually-hidden">Toggle Dropdown</span>
 							</button>
 							<ul class="dropdown-menu" role="menu">
-								<li><a href="#" data-btn="gtid-errant-reset-master">Reset master</a></li>
-								<li><a href="#" data-btn="gtid-errant-inject-empty">Inject empty transactions</a></li>
+								<li><a class="dropdown-item" href="#" data-btn="gtid-errant-reset-master">Reset master</a></li>
+								<li><a class="dropdown-item" href="#" data-btn="gtid-errant-inject-empty">Inject empty transactions</a></li>
 							</ul>
 						</div>
 						<button type="button" class="btn btn-info" data-btn="regroup-replicas" title="Pick candidate replica and have it take its siblings">Regroup replicas</button>
-						<button type="button" class="btn alert-danger" data-btn="forget-instance" title="Make orchestrator forget this instance. Orchestrator may auto-find it again."><span class="glyphicon glyphicon-remove"></span> Forget</button>
+						<button type="button" class="btn alert-danger" data-btn="forget-instance" title="Make orchestrator forget this instance. Orchestrator may auto-find it again."><span class="bi bi-x-lg"></span> Forget</button>
 						<button type="button" class="btn btn-warning" data-btn="end-maintenance" title="End maintenance period now">End maintenance</button>
 						<button type="button" class="btn btn-primary" data-bs-dismiss="modal">Done</button>
 						<div class="btn-group" data-btn-group="move-equivalent">
-							<button type="button" class="btn btn-success dropdown-toggle" data-bs-toggle="dropdown">
-								Safe revert to <span class="caret"></span> <span class="visually-hidden">Toggle Dropdown</span>
+							<button type="button" class="btn btn-success dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+								Safe revert to <span class="visually-hidden">Toggle Dropdown</span>
 							</button>
 							<ul class="dropdown-menu" role="menu">
 							</ul>
@@ -227,34 +226,109 @@
 
 	</div>
 
-	<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
-	<!-- Bootstrap 5 compatibility: map legacy data-toggle/data-dismiss attributes -->
+	<script src="{{.prefix}}/bootstrap/js/bootstrap.bundle.min.js?v={{.assetVersion}}"></script>
+	<!--
+		jQuery-Bootstrap-5 bridge: Bootstrap 5 dropped the jQuery plugin wrappers
+		that orchestrator's JS relies on. We re-add the small subset of jQuery
+		plugins ($.fn.modal, $.fn.popover, $.fn.dropdown, $.fn.tooltip,
+		$.fn.alert) on top of Bootstrap 5's native classes so the existing code
+		keeps working. We also normalise legacy data-toggle/data-dismiss/data-target
+		attributes onto Bootstrap 5's data-bs-* equivalents for any 3rd-party
+		HTML that still uses them.
+
+		The bridge installs in TWO passes: once synchronously here, and once
+		on DOMContentLoaded. Bootstrap 5.3.x registers its own jQueryInterface
+		via an onDOMContentLoaded callback fired during the same event — its
+		registration would clobber ours if we only installed eagerly. The second
+		pass guarantees we end up with the legacy-compatible signatures (e.g.
+		`$(el).modal({})` opening the modal instead of just constructing it).
+	-->
 	<script>
-		document.addEventListener('DOMContentLoaded', function() {
-			document.addEventListener('click', function(e) {
-				var el = e.target.closest('[data-toggle="dropdown"]');
-				if (el) {
-					var dd = bootstrap.Dropdown.getOrCreateInstance(el);
-					dd.toggle();
-					e.preventDefault();
-				}
-				var dismissBtn = e.target.closest('[data-dismiss="modal"]');
-				if (dismissBtn) {
-					var modal = dismissBtn.closest('.modal');
-					if (modal) {
-						var bsModal = bootstrap.Modal.getInstance(modal);
-						if (bsModal) bsModal.hide();
+	(function ($) {
+		if (!$ || !window.bootstrap) return;
+
+		function pluginFor(Ctor, opts) {
+			opts = opts || {};
+			return function (option, arg) {
+				var ret;
+				this.each(function () {
+					if (opts.requireTitleOrContent) {
+						var hasTitle = this.getAttribute("title") || this.getAttribute("data-bs-title");
+						var hasContent = this.getAttribute("data-bs-content");
+						if (!hasTitle && !hasContent) return;
 					}
-				}
-				var dismissAlert = e.target.closest('[data-dismiss="alert"]');
-				if (dismissAlert) {
-					var alert = dismissAlert.closest('.alert');
-					if (alert) alert.remove();
-				}
-			});
+					var inst;
+					var config = (option && typeof option === "object") ? option : undefined;
+					try {
+						inst = Ctor.getOrCreateInstance(this, config);
+					} catch (err) {
+ 						if (typeof console !== "undefined" && console.warn) {
+ 							console.warn("Bootstrap bridge: failed to initialize", Ctor.NAME || Ctor, err);
+ 						}
+						return;
+					}
+					if (typeof option === "string" && typeof inst[option] === "function") {
+						var result = inst[option](arg);
+						if (ret === undefined) ret = result;
+					} else if (opts.defaultMethod && typeof inst[opts.defaultMethod] === "function") {
+						// Legacy Bootstrap 3 behaviour: `$(el).modal()` / `$(el).modal({...})`
+						// opens the modal. Replicate that for callers that pass options
+						// or nothing.
+						inst[opts.defaultMethod]();
+					}
+				});
+				return ret === undefined ? this : ret;
+			};
+		}
+
+		function install() {
+			$.fn.modal    = pluginFor(bootstrap.Modal, { defaultMethod: "show" });
+			$.fn.dropdown = pluginFor(bootstrap.Dropdown);
+			$.fn.tooltip  = pluginFor(bootstrap.Tooltip, { requireTitleOrContent: true });
+			$.fn.popover  = pluginFor(bootstrap.Popover, { requireTitleOrContent: true });
+
+			$.fn.alert = function (option) {
+				return this.each(function () {
+					var el = this;
+					if (option === "close") {
+						bootstrap.Alert.getOrCreateInstance(el).close();
+					} else {
+						bootstrap.Alert.getOrCreateInstance(el);
+					}
+				});
+			};
+		}
+
+		install();
+		if (document.readyState === "loading") {
+			document.addEventListener("DOMContentLoaded", install);
+		} else {
+			// DOM is already ready — Bootstrap's deferred registration has
+			// either already fired or will fire in this turn of the event loop.
+			// Re-install on the next tick to win the race.
+			setTimeout(install, 0);
+		}
+
+		// Legacy attribute aliases. Some bootbox/legacy markup still emits the
+		// Bootstrap 3 names; map them to the BS5 ones via a single delegated
+		// listener so we don't have to find every occurrence.
+		document.addEventListener("click", function (e) {
+			var t = e.target.closest('[data-dismiss="modal"]');
+			if (t) {
+				var m = t.closest(".modal");
+				if (m) bootstrap.Modal.getOrCreateInstance(m).hide();
+			}
+			var a = e.target.closest('[data-dismiss="alert"]');
+			if (a) {
+				var alertEl = a.closest(".alert");
+				if (alertEl) bootstrap.Alert.getOrCreateInstance(alertEl).close();
+			}
 		});
+	})(window.jQuery);
 	</script>
-	<script type="text/javascript" src="{{.prefix}}/js/bootbox.min.js"></script>
+	<script src="{{.prefix}}/js/orchestrator.js?v={{.assetVersion}}"></script>
+	<script src="{{.prefix}}/js/custom.js?v={{.assetVersion}}"></script>
+	<script type="text/javascript" src="{{.prefix}}/js/bootbox.min.js?v={{.assetVersion}}"></script>
 	<script>
 		function autoshowProblems() {
 			return "{{.autoshow_problems}}";
@@ -280,7 +354,7 @@
 			return "{{.webMessage}}";
 		}
 	</script>
-	<script src="{{.prefix}}/js/instance-problems.js"></script>
+	<script src="{{.prefix}}/js/instance-problems.js?v={{.assetVersion}}"></script>
 </body>
 
 </html>

@@ -18,13 +18,30 @@ package http
 
 import (
 	"encoding/json"
+	"fmt"
 	"html/template"
 	"net/http"
+	"os"
 	"path/filepath"
 	"sync"
 
 	"github.com/proxysql/golib/log"
 )
+
+// assetVersion is computed once at process start and appended as a query
+// parameter on static asset URLs in templates. Browsers cache assets by full
+// URL, so bumping this string on every server restart guarantees clients pick
+// up fresh JS/CSS without needing a hard reload.
+var assetVersion = computeAssetVersion()
+
+func computeAssetVersion() string {
+	if exe, err := os.Executable(); err == nil {
+		if info, err := os.Stat(exe); err == nil {
+			return fmt.Sprintf("%d", info.ModTime().UnixNano())
+		}
+	}
+	return fmt.Sprintf("%d", os.Getpid())
+}
 
 // renderJSON writes a JSON response with the given status code.
 func renderJSON(w http.ResponseWriter, status int, data interface{}) {
@@ -43,6 +60,7 @@ var templateCache = struct {
 
 const templateDir = "resources"
 const layoutFile = "templates/layout"
+const contentTemplateName = "content"
 
 // getTemplate returns a cached template or parses and caches it.
 func getTemplate(name string) (*template.Template, error) {
@@ -55,8 +73,18 @@ func getTemplate(name string) (*template.Template, error) {
 
 	layoutPath := filepath.Join(templateDir, layoutFile+".tmpl")
 	tmplPath := filepath.Join(templateDir, name+".tmpl")
-	t, err := template.ParseFiles(layoutPath, tmplPath)
+
+	t, err := template.ParseFiles(layoutPath)
 	if err != nil {
+		return nil, err
+	}
+
+	tmplBytes, err := os.ReadFile(tmplPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if _, err := t.New(contentTemplateName).Parse(string(tmplBytes)); err != nil {
 		return nil, err
 	}
 
@@ -74,6 +102,15 @@ func renderHTML(w http.ResponseWriter, status int, name string, data interface{}
 		_ = log.Errorf("Error parsing template %s: %+v", name, err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
+	}
+	// Auto-inject assetVersion so layout.tmpl can cache-bust static asset URLs
+	// without each call site having to remember to pass it. Guard against a
+	// typed-nil map — `m[key] = v` would panic — even though no current caller
+	// passes one.
+	if m, ok := data.(map[string]interface{}); ok && m != nil {
+		if _, present := m["assetVersion"]; !present {
+			m["assetVersion"] = assetVersion
+		}
 	}
 	w.Header().Set("Content-Type", "text/html; charset=UTF-8")
 	w.WriteHeader(status)

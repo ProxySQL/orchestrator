@@ -87,9 +87,9 @@ $(document).ready(function() {
     appendRow("Failed instance", failedInstanceTitle)
     var successor = getInstanceTitle(audit.SuccessorKey.Hostname, audit.SuccessorKey.Port);
     if (audit.IsSuccessful === false) {
-      successor = '<span class="text-danger"><span class="glyphicon glyphicon-remove-sign"></span> FAIL '+successor+'</span>';
+      successor = '<span class="text-danger"><span class="bi bi-x-circle-fill"></span> FAIL '+successor+'</span>';
     } else {
-      successor = '<span class="text-success"><span class="glyphicon glyphicon-ok-sign"></span> '+successor+'</span>';
+      successor = '<span class="text-success"><span class="bi bi-check-circle-fill"></span> '+successor+'</span>';
     }
     appendRow("Successor", successor)
     if (clusterAlias != clusterName) {
@@ -131,13 +131,13 @@ $(document).ready(function() {
       var analyzedInstanceDisplay = getInstanceTitle(audit.AnalysisEntry.AnalyzedInstanceKey.Hostname, audit.AnalysisEntry.AnalyzedInstanceKey.Port);
       var sucessorInstanceDisplay = getInstanceTitle(audit.SuccessorKey.Hostname, audit.SuccessorKey.Port);
       var row = $('<tr/>');
-      var ack = $('<span class="glyphicon acknowledge-indicator" title=""></span>');
+      var ack = $('<span class="bi acknowledge-indicator" title=""></span>');
       if (audit.Acknowledged) {
-        ack.addClass("glyphicon-ok-sign").addClass("text-primary");
+        ack.addClass("bi-check-circle-fill").addClass("text-primary");
         var ackTitle = "Acknowledged by " + audit.AcknowledgedBy + " at " + audit.AcknowledgedAt + ": " + audit.AcknowledgedComment;
         ack.attr("title", ackTitle);
       } else {
-        ack.addClass("glyphicon-question-sign").addClass("text-danger").addClass("ack-recovery");
+        ack.addClass("bi-question-circle-fill").addClass("text-danger").addClass("ack-recovery");
         ack.attr("data-recovery-id", audit.Id);
         ack.attr("title", "Unacknowledged. Click to acknowledge");
       }

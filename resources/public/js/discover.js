@@ -1,6 +1,6 @@
 
 $(document).ready(function () {
-    $('button[data-btn=discover-instance]').unbind("click");
+    $('button[data-btn=discover-instance]').off("click");
     $('button[data-btn=discover-instance]').click(function() {
 
         if (!$("#discoverHostName").val()) {

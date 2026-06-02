@@ -3,37 +3,37 @@
 		<ul class="nav">
 			<li data-bullet="info">
 				<div>
-					<a data-command="info"><span class="glyphicon glyphicon-time"></span></a>
+					<a data-command="info"><span class="bi bi-clock"></span></a>
 				</div>
 			</li>
 			<li data-bullet="colorize-dc">
 				<div>
-					<a data-command="colorize-dc"><span class="glyphicon glyphicon-adjust"></span></a>
+					<a data-command="colorize-dc"><span class="bi bi-circle-half"></span></a>
 				</div>
 			</li>
 			<li data-bullet="compact-display">
 				<div>
-					<a data-command="compact-display"><span class="glyphicon glyphicon-compressed"></span></a>
+					<a data-command="compact-display"><span class="bi bi-file-zip-fill"></span></a>
 				</div>
 			</li>
 			<li data-bullet="pool-indicator">
 				<div>
-					<a data-command="pool-indicator"><span class="glyphicon glyphicon-tint"></span></a>
+					<a data-command="pool-indicator"><span class="bi bi-droplet-fill"></span></a>
 				</div>
 			</li>
 			<li data-bullet="anonymize">
 				<div>
-					<a data-command="anonymize"><span class="glyphicon glyphicon-user"></span></a>
+					<a data-command="anonymize"><span class="bi bi-person-fill"></span></a>
 				</div>
 			</li>
 			<li data-bullet="alias">
 				<div>
-					<a data-command="alias"><span class="glyphicon glyphicon-tag"></span></a>
+					<a data-command="alias"><span class="bi bi-tag-fill"></span></a>
 				</div>
 			</li>
 			<li data-bullet="silent-ui">
 				<div>
-					<a data-command="silent-ui"><span class="glyphicon glyphicon-volume-off"></span></a>
+					<a data-command="silent-ui"><span class="bi bi-volume-mute-fill"></span></a>
 				</div>
 			</li>
 		</ul>
@@ -52,17 +52,16 @@
 	<div id="cluster_legend"></div>
 </div>
 
-<li id="li-move-instance-method" data-nav-page="relocate method" style="display:none">
+<li id="li-move-instance-method" class="nav-item dropdown" data-nav-page="relocate method" style="display:none">
 	<div id="move-instance-method" class="dropdown">
-		<button class="btn btn-xs dropdown-toggle" type="button" id="move-instance-method-button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+		<button class="btn btn-sm dropdown-toggle" type="button" id="move-instance-method-button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
 			Move
-			<span class="caret"></span>
 		</button>
-		<ul class="dropdown-menu" aria-labelledby="move-instance-method">
-			<li><a href="#" data-method="smart" title="Let orchestrator choose replica relocating method">Smart mode</a></li>
-			<li><a href="#" data-method="classic" title="Move replicas using classic binlog file name and position">Classic mode</a></li>
-			<li><a href="#" data-method="gtid" title="Move replicas via GTID">GTID mode</a></li>
-			<li><a href="#" data-method="pseudo-gtid" title="Move replicas via Pseudo-GTID match of binary logs">Pseudo GTID mode</a></li>
+		<ul class="dropdown-menu" aria-labelledby="move-instance-method-button">
+			<li><a class="dropdown-item" href="#" data-method="smart" title="Let orchestrator choose replica relocating method">Smart mode</a></li>
+			<li><a class="dropdown-item" href="#" data-method="classic" title="Move replicas using classic binlog file name and position">Classic mode</a></li>
+			<li><a class="dropdown-item" href="#" data-method="gtid" title="Move replicas via GTID">GTID mode</a></li>
+			<li><a class="dropdown-item" href="#" data-method="pseudo-gtid" title="Move replicas via Pseudo-GTID match of binary logs">Pseudo GTID mode</a></li>
 		</ul>
 	</div>
 </li>
@@ -81,8 +80,8 @@
 	}
 </script>
 
-<script src="{{.prefix}}/js/jquery-ui.min.js"></script>
-<script src="{{.prefix}}/js/d3.v3.min.js"></script>
-<script src="{{.prefix}}/js/cluster-analysis-shared.js"></script>
-<script src="{{.prefix}}/js/cluster.js"></script>
-<script src="{{.prefix}}/js/cluster-tree.js"></script>
+<script src="{{.prefix}}/js/jquery-ui.min.js?v={{.assetVersion}}"></script>
+<script src="{{.prefix}}/js/d3.v7.min.js?v={{.assetVersion}}"></script>
+<script src="{{.prefix}}/js/cluster-analysis-shared.js?v={{.assetVersion}}"></script>
+<script src="{{.prefix}}/js/cluster.js?v={{.assetVersion}}"></script>
+<script src="{{.prefix}}/js/cluster-tree.js?v={{.assetVersion}}"></script>

@@ -1,7 +1,7 @@
 FROM golang:1.25.7-bookworm
 LABEL maintainer="kamil.holubicki@percona.com"
 
-ENV WORKPATH /go/src/github.com/openark/orchestrator
+ENV WORKPATH /go/src/github.com/proxysql/orchestrator
 WORKDIR $WORKPATH
 
 COPY . .
