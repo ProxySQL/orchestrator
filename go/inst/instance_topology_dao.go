@@ -302,7 +302,13 @@ func DrainRelayLogs(instanceKey *InstanceKey, timeout time.Duration) (*Instance,
 	}
 
 	if instance.SQLDelay == 0 {
-		if instance, err = WaitForSQLThreadUpToDate(instanceKey, timeout, 0); err != nil {
+		// Use a generous stale window so a briefly idle SQL thread is not treated as stuck
+		// while still applying residual relay events.
+		staleTimeout := timeout
+		if staleTimeout < 30*time.Second {
+			staleTimeout = 30 * time.Second
+		}
+		if instance, err = WaitForSQLThreadUpToDate(instanceKey, timeout, staleTimeout); err != nil {
 			return instance, err
 		}
 	}
@@ -318,8 +324,14 @@ func DrainRelayLogs(instanceKey *InstanceKey, timeout time.Duration) (*Instance,
 	}
 
 	instance, err = ReadTopologyInstance(instanceKey)
+	if err != nil {
+		return instance, err
+	}
+	if !instance.SQLThreadUpToDate() {
+		return instance, log.Errorf("%+v: DrainRelayLogs: SQL thread still not up to date after wait", *instanceKey)
+	}
 	log.Infof("Drained relay logs on %+v, Self:%+v, Exec:%+v", *instanceKey, instance.SelfBinlogCoordinates, instance.ExecBinlogCoordinates)
-	return instance, err
+	return instance, nil
 }
 
 // StopReplicationNicely stops a replica such that SQL_thread and IO_thread are aligned (i.e.

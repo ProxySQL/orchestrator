@@ -2265,20 +2265,18 @@ func chooseCandidateReplica(replicas [](*Instance)) (candidateReplica *Instance,
 }
 
 // ensureReplicaRelayDrained attempts to apply remaining relay log events on the candidate.
-// Returns the refreshed instance on success, or an error if the SQL thread cannot catch up.
+// Always re-reads and drains via DrainRelayLogs (does not trust a possibly stale in-memory
+// SQLThreadUpToDate snapshot). Returns error if the SQL thread cannot catch up.
 func ensureReplicaRelayDrained(replica *Instance, timeout time.Duration) (*Instance, error) {
 	if replica == nil {
 		return nil, fmt.Errorf("ensureReplicaRelayDrained: nil replica")
-	}
-	if replica.SQLThreadUpToDate() {
-		return replica, nil
 	}
 	drained, err := DrainRelayLogs(&replica.Key, timeout)
 	if err != nil {
 		return replica, err
 	}
-	if !drained.SQLThreadUpToDate() {
-		return drained, fmt.Errorf("ensureReplicaRelayDrained: %+v SQL thread still not up to date after drain", drained.Key)
+	if drained == nil || !drained.SQLThreadUpToDate() {
+		return drained, fmt.Errorf("ensureReplicaRelayDrained: %+v SQL thread still not up to date after drain", replica.Key)
 	}
 	return drained, nil
 }
@@ -2309,6 +2307,10 @@ func GetCandidateReplica(masterKey *InstanceKey, forRematchPurposes bool) (*Inst
 	}
 
 	drainTimeout := time.Duration(config.Config.InstanceBulkOperationsWaitTimeoutSeconds) * time.Second
+	if drainTimeout < 30*time.Second {
+		// Allow enough time to apply residual relay-log events after SQL was stopped.
+		drainTimeout = 30 * time.Second
+	}
 	remaining := replicas
 	for len(remaining) > 0 {
 		candidateReplica, aheadReplicas, equalReplicas, laterReplicas, cannotReplicateReplicas, err = chooseCandidateReplica(remaining)
