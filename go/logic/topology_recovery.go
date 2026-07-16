@@ -573,7 +573,7 @@ func recoverDeadMaster(topologyRecovery *TopologyRecovery, candidateInstanceKey 
 				}
 				if !candidate.SQLThreadUpToDate() {
 					if config.Config.DelayMasterPromotionIfSQLThreadNotUpToDate {
-						AuditTopologyRecovery(topologyRecovery, fmt.Sprintf("DelayMasterPromotionIfSQLThreadNotUpToDate: waiting for SQL thread on %+v before re-point", candidate.Key))
+						_ = AuditTopologyRecovery(topologyRecovery, fmt.Sprintf("DelayMasterPromotionIfSQLThreadNotUpToDate: waiting for SQL thread on %+v before re-point", candidate.Key))
 						if _, waitErr := inst.WaitForSQLThreadUpToDate(&candidate.Key, 0, 0); waitErr != nil {
 							return fmt.Errorf("DelayMasterPromotionIfSQLThreadNotUpToDate error before re-point: %+v", waitErr)
 						}

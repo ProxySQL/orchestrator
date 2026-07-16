@@ -438,10 +438,10 @@ func StopReplicas(replicas [](*Instance), stopReplicationMethod StopReplicationM
 					if replica.IsMariaDB() {
 						// MariaDB GTID may drop relay logs on IO thread restart; drain via SQL thread only.
 						if _, err := DrainRelayLogs(&replica.Key, timeout); err != nil {
-							log.Errorf("DrainRelayLogs failed on %+v: %+v", replica.Key, err)
+							_ = log.Errorf("DrainRelayLogs failed on %+v: %+v", replica.Key, err)
 						}
 					} else {
-						StopReplicationNicely(&replica.Key, timeout)
+						_, _ = StopReplicationNicely(&replica.Key, timeout)
 					}
 				}
 				replica, _ = StopReplication(&replica.Key)
