@@ -270,6 +270,58 @@ func RestartReplicationQuick(instance *Instance, instanceKey *InstanceKey) error
 	return nil
 }
 
+// DrainRelayLogs starts the SQL thread only (does not stop/start the IO thread), waits until
+// SQL has consumed all relay log entries, then stops replication on both threads.
+// Safe for MariaDB GTID: stopping/starting the IO thread can drop relay logs; this path avoids that.
+func DrainRelayLogs(instanceKey *InstanceKey, timeout time.Duration) (*Instance, error) {
+	instance, err := ReadTopologyInstance(instanceKey)
+	if err != nil {
+		return instance, log.Errore(err)
+	}
+
+	if !instance.ReplicationThreadsExist() {
+		return instance, fmt.Errorf("instance is not a replica: %+v", instanceKey)
+	}
+
+	if instance.SQLThreadUpToDate() {
+		_, err = ExecInstance(instanceKey, instance.QSP.stop_slave())
+		if err != nil {
+			if instance.isMaxScale() && err.Error() == "Error 1199: Slave connection is not running" {
+				err = nil
+			}
+		}
+		if err != nil {
+			return instance, log.Errore(err)
+		}
+		instance, err = ReadTopologyInstance(instanceKey)
+		return instance, err
+	}
+
+	if _, err := ExecInstance(instanceKey, instance.QSP.start_slave_sql_thread()); err != nil {
+		return nil, log.Errorf("%+v: DrainRelayLogs: start sql thread failed: %+v", *instanceKey, err)
+	}
+
+	if instance.SQLDelay == 0 {
+		if instance, err = WaitForSQLThreadUpToDate(instanceKey, timeout, 0); err != nil {
+			return instance, err
+		}
+	}
+
+	_, err = ExecInstance(instanceKey, instance.QSP.stop_slave())
+	if err != nil {
+		if instance.isMaxScale() && err.Error() == "Error 1199: Slave connection is not running" {
+			err = nil
+		}
+	}
+	if err != nil {
+		return instance, log.Errore(err)
+	}
+
+	instance, err = ReadTopologyInstance(instanceKey)
+	log.Infof("Drained relay logs on %+v, Self:%+v, Exec:%+v", *instanceKey, instance.SelfBinlogCoordinates, instance.ExecBinlogCoordinates)
+	return instance, err
+}
+
 // StopReplicationNicely stops a replica such that SQL_thread and IO_thread are aligned (i.e.
 // SQL_thread consumes all relay log entries)
 // It will actually START the sql_thread even if the replica is completely stopped.
@@ -382,8 +434,15 @@ func StopReplicas(replicas [](*Instance), stopReplicationMethod StopReplicationM
 			defer func() { barrier <- *updatedReplica }()
 			// Wait your turn to read a replica
 			ExecuteOnTopology(func() {
-				if stopReplicationMethod == StopReplicationNice && !replica.IsMariaDB() {
-					StopReplicationNicely(&replica.Key, timeout)
+				if stopReplicationMethod == StopReplicationNice {
+					if replica.IsMariaDB() {
+						// MariaDB GTID may drop relay logs on IO thread restart; drain via SQL thread only.
+						if _, err := DrainRelayLogs(&replica.Key, timeout); err != nil {
+							log.Errorf("DrainRelayLogs failed on %+v: %+v", replica.Key, err)
+						}
+					} else {
+						StopReplicationNicely(&replica.Key, timeout)
+					}
 				}
 				replica, _ = StopReplication(&replica.Key)
 				updatedReplica = &replica

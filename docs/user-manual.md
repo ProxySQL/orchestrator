@@ -391,11 +391,11 @@ Orchestrator recognizes many failure scenarios. The most important ones:
 
 | Failure Type | Condition |
 |---|---|
-| `DeadMaster` | Master unreachable, all replicas have broken replication |
-| `DeadMasterAndSomeReplicas` | Master unreachable, some replicas also unreachable, remaining replicas have broken replication |
+| `DeadMaster` | Master unreachable, all replicas have broken replication, and no replica has a running IO thread |
+| `DeadMasterAndSomeReplicas` | Master unreachable, some replicas also unreachable, remaining replicas have broken replication, no IO-running replica |
 | `DeadMasterAndReplicas` | Master and all replicas unreachable |
 | `DeadMasterWithoutReplicas` | Master unreachable, had no replicas |
-| `UnreachableMaster` | Master unreachable but replicas still report replication is working (possible network glitch; triggers emergency re-read of replicas) |
+| `UnreachableMaster` | Master unreachable but replicas still report replication working, or at least one replica still has IO running (SQL may be stopped); not treated as dead master |
 | `UnreachableMasterWithLaggingReplicas` | Master unreachable, all replicas are lagging (possible overloaded master; orchestrator restarts replication on replicas to force a connection test) |
 | `AllMasterReplicasNotReplicating` | Master is reachable but none of its replicas are replicating |
 

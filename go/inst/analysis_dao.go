@@ -261,6 +261,13 @@ func GetReplicationAnalysis(clusterName string, hints *ReplicationAnalysisHints)
 		IFNULL(
 			SUM(
 				replica_instance.last_checked <= replica_instance.last_seen
+				AND replica_instance.slave_io_running != 0
+			),
+			0
+		) AS count_valid_io_running_replicas,
+		IFNULL(
+			SUM(
+				replica_instance.last_checked <= replica_instance.last_seen
 				AND replica_instance.slave_io_running = 0
 				AND (
 					replica_instance.last_io_error like '%%error %%connecting to master%%'
@@ -499,6 +506,7 @@ func GetReplicationAnalysis(clusterName string, hints *ReplicationAnalysisHints)
 		a.CountReplicas = m.GetUint("count_replicas")
 		a.CountValidReplicas = m.GetUint("count_valid_replicas")
 		a.CountValidReplicatingReplicas = m.GetUint("count_valid_replicating_replicas")
+		a.CountValidIORunningReplicas = m.GetUint("count_valid_io_running_replicas")
 		a.CountReplicasFailingToConnectToMaster = m.GetUint("count_replicas_failing_to_connect_to_master")
 		a.CountDowntimedReplicas = m.GetUint("count_downtimed_replicas")
 		a.ReplicationDepth = m.GetUint("replication_depth")
@@ -554,15 +562,21 @@ func GetReplicationAnalysis(clusterName string, hints *ReplicationAnalysisHints)
 				a.Analysis = DeadMasterWithoutReplicas
 				a.Description = "Master cannot be reached by orchestrator and has no replica"
 				//
-			} else if a.IsMaster && !a.LastCheckValid && a.CountValidReplicas == a.CountReplicas && a.CountValidReplicatingReplicas == 0 {
+			} else if a.IsMaster && !a.LastCheckValid && a.CountValidIORunningReplicas > 0 {
+				// IO thread running on a valid replica proves the master is accepting replica connections.
+				// Do not treat SQL-thread-stopped replicas as evidence of a dead master (issue #106).
+				a.Analysis = UnreachableMaster
+				a.Description = "Master cannot be reached by orchestrator but at least one replica has a running IO thread; master is likely alive"
+				//
+			} else if a.IsMaster && !a.LastCheckValid && a.CountValidReplicas == a.CountReplicas && a.CountValidReplicatingReplicas == 0 && a.CountValidIORunningReplicas == 0 {
 				a.Analysis = DeadMaster
 				a.Description = "Master cannot be reached by orchestrator and none of its replicas is replicating"
 				//
-			} else if a.IsMaster && !a.LastCheckValid && a.CountReplicas > 0 && a.CountValidReplicas == 0 && a.CountValidReplicatingReplicas == 0 {
+			} else if a.IsMaster && !a.LastCheckValid && a.CountReplicas > 0 && a.CountValidReplicas == 0 && a.CountValidReplicatingReplicas == 0 && a.CountValidIORunningReplicas == 0 {
 				a.Analysis = DeadMasterAndReplicas
 				a.Description = "Master cannot be reached by orchestrator and none of its replicas is replicating"
 				//
-			} else if a.IsMaster && !a.LastCheckValid && a.CountValidReplicas < a.CountReplicas && a.CountValidReplicas > 0 && a.CountValidReplicatingReplicas == 0 {
+			} else if a.IsMaster && !a.LastCheckValid && a.CountValidReplicas < a.CountReplicas && a.CountValidReplicas > 0 && a.CountValidReplicatingReplicas == 0 && a.CountValidIORunningReplicas == 0 {
 				a.Analysis = DeadMasterAndSomeReplicas
 				a.Description = "Master cannot be reached by orchestrator; some of its replicas are unreachable and none of its reachable replicas is replicating"
 				//

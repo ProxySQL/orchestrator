@@ -59,22 +59,26 @@ Briefly looking at some examples, here is how `orchestrator` reaches failure con
 #### `DeadMaster`:
 
 1. Master MySQL access failure
-2. All of master's replicas are failing replication
+2. All of master's replicas are failing replication (both IO and SQL threads not running as a healthy pair)
+3. No valid replica still has a running IO thread
 
-This makes for a potential recovery process
+This makes for a potential recovery process.
 
 #### `DeadMasterAndSomeReplicas`:
 
 1. Master MySQL access failure
 2. Some of its replicas are also unreachable
 3. Rest of the replicas are failing replication
+4. No valid replica still has a running IO thread
 
 This makes for a potential recovery process
 
 #### `UnreachableMaster`:
 
 1. Master MySQL access failure
-2. But it has replicating replicas.
+2. But it has replicating replicas, **or** at least one valid replica still has a running IO thread
+   (SQL may be stopped). A running IO thread proves the master is accepting replica connections,
+   so this is not treated as `DeadMaster` (see issue #106).
 
 This does not make for a recovery process. However, to improve analysis, `orchestrator` will
 issue an emergent re-read of the replicas, to figure out whether they are really happy with the master

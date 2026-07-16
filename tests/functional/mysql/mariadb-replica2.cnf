@@ -1,0 +1,9 @@
+[mysqld]
+server-id=3
+log-bin=mysql-bin
+binlog-format=ROW
+log-slave-updates=ON
+gtid_strict_mode=ON
+binlog-row-image=MINIMAL
+read_only=ON
+report-host=mysql3

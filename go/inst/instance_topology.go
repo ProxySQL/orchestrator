@@ -2264,6 +2264,25 @@ func chooseCandidateReplica(replicas [](*Instance)) (candidateReplica *Instance,
 	return candidateReplica, aheadReplicas, equalReplicas, laterReplicas, cannotReplicateReplicas, err
 }
 
+// ensureReplicaRelayDrained attempts to apply remaining relay log events on the candidate.
+// Returns the refreshed instance on success, or an error if the SQL thread cannot catch up.
+func ensureReplicaRelayDrained(replica *Instance, timeout time.Duration) (*Instance, error) {
+	if replica == nil {
+		return nil, fmt.Errorf("ensureReplicaRelayDrained: nil replica")
+	}
+	if replica.SQLThreadUpToDate() {
+		return replica, nil
+	}
+	drained, err := DrainRelayLogs(&replica.Key, timeout)
+	if err != nil {
+		return replica, err
+	}
+	if !drained.SQLThreadUpToDate() {
+		return drained, fmt.Errorf("ensureReplicaRelayDrained: %+v SQL thread still not up to date after drain", drained.Key)
+	}
+	return drained, nil
+}
+
 // GetCandidateReplica chooses the best replica to promote given a (possibly dead) master
 func GetCandidateReplica(masterKey *InstanceKey, forRematchPurposes bool) (*Instance, [](*Instance), [](*Instance), [](*Instance), [](*Instance), error) {
 	var candidateReplica *Instance
@@ -2288,17 +2307,61 @@ func GetCandidateReplica(masterKey *InstanceKey, forRematchPurposes bool) (*Inst
 	if len(replicas) == 0 {
 		return candidateReplica, aheadReplicas, equalReplicas, laterReplicas, cannotReplicateReplicas, fmt.Errorf("No replicas found for %+v", *masterKey)
 	}
-	candidateReplica, aheadReplicas, equalReplicas, laterReplicas, cannotReplicateReplicas, err = chooseCandidateReplica(replicas)
-	if err != nil {
-		return candidateReplica, aheadReplicas, equalReplicas, laterReplicas, cannotReplicateReplicas, err
+
+	drainTimeout := time.Duration(config.Config.InstanceBulkOperationsWaitTimeoutSeconds) * time.Second
+	remaining := replicas
+	for len(remaining) > 0 {
+		candidateReplica, aheadReplicas, equalReplicas, laterReplicas, cannotReplicateReplicas, err = chooseCandidateReplica(remaining)
+		if err != nil || candidateReplica == nil {
+			return candidateReplica, aheadReplicas, equalReplicas, laterReplicas, cannotReplicateReplicas, err
+		}
+		if !forRematchPurposes {
+			break
+		}
+		// Skip candidates that cannot apply remaining relay logs (e.g. SQL error 1062).
+		drained, drainErr := ensureReplicaRelayDrained(candidateReplica, drainTimeout)
+		if drainErr != nil {
+			_ = log.Errorf("GetCandidateReplica: skipping %+v; cannot drain relay logs: %+v", candidateReplica.Key, drainErr)
+			remaining = RemoveInstance(remaining, &candidateReplica.Key)
+			candidateReplica = nil
+			continue
+		}
+		candidateReplica = drained
+		// Recompute sibling buckets against the drained candidate coordinates.
+		remaining = RemoveInstance(remaining, &candidateReplica.Key)
+		aheadReplicas = [](*Instance){}
+		equalReplicas = [](*Instance){}
+		laterReplicas = [](*Instance){}
+		cannotReplicateReplicas = [](*Instance){}
+		for _, replica := range remaining {
+			replica := replica
+			if canReplicate, canErr := replica.CanReplicateFromEx(candidateReplica, "GetCandidateReplica()"); !canReplicate {
+				cannotReplicateReplicas = append(cannotReplicateReplicas, replica)
+				if canErr != nil {
+					_ = log.Errorf("GetCandidateReplica(): error checking CanReplicateFrom(). replica: %v; error: %v", replica.Key, canErr)
+				}
+			} else if replica.ExecBinlogCoordinates.SmallerThan(&candidateReplica.ExecBinlogCoordinates) {
+				laterReplicas = append(laterReplicas, replica)
+			} else if replica.ExecBinlogCoordinates.Equals(&candidateReplica.ExecBinlogCoordinates) {
+				equalReplicas = append(equalReplicas, replica)
+			} else {
+				aheadReplicas = append(aheadReplicas, replica)
+			}
+		}
+		break
 	}
-	if candidateReplica != nil {
+	if forRematchPurposes && candidateReplica == nil {
+		return nil, aheadReplicas, equalReplicas, laterReplicas, cannotReplicateReplicas, fmt.Errorf("GetCandidateReplica: no drainable candidate replica found for %+v", *masterKey)
+	}
+	if candidateReplica != nil && len(replicas) > 0 {
 		mostUpToDateReplica := replicas[0]
 		if candidateReplica.ExecBinlogCoordinates.SmallerThan(&mostUpToDateReplica.ExecBinlogCoordinates) {
 			_ = log.Warningf("GetCandidateReplica: chosen replica: %+v is behind most-up-to-date replica: %+v", candidateReplica.Key, mostUpToDateReplica.Key)
 		}
 	}
-	log.Debugf("GetCandidateReplica: candidate: %+v, ahead: %d, equal: %d, late: %d, break: %d", candidateReplica.Key, len(aheadReplicas), len(equalReplicas), len(laterReplicas), len(cannotReplicateReplicas))
+	if candidateReplica != nil {
+		log.Debugf("GetCandidateReplica: candidate: %+v, ahead: %d, equal: %d, late: %d, break: %d", candidateReplica.Key, len(aheadReplicas), len(equalReplicas), len(laterReplicas), len(cannotReplicateReplicas))
+	}
 	return candidateReplica, aheadReplicas, equalReplicas, laterReplicas, cannotReplicateReplicas, nil
 }
 
@@ -2511,7 +2574,9 @@ func RegroupReplicasPseudoGTIDIncludingSubReplicasOfBinlogServers(
 	return RegroupReplicasPseudoGTID(masterKey, returnReplicaEvenOnFailureToRegroup, onCandidateReplicaChosen, postponedFunctionsContainer, postponeAllMatchOperations)
 }
 
-// RegroupReplicasGTID will choose a candidate replica of a given instance, and take its siblings using GTID
+// RegroupReplicasGTID will choose a candidate replica of a given instance, and take its siblings using GTID.
+// validateCandidate, when non-nil, runs after a drainable candidate is selected and before any sibling is
+// re-pointed. If it returns an error, no CHANGE MASTER / re-point is performed.
 func RegroupReplicasGTID(
 	masterKey *InstanceKey,
 	returnReplicaEvenOnFailureToRegroup bool,
@@ -2519,6 +2584,25 @@ func RegroupReplicasGTID(
 	onCandidateReplicaChosen func(*Instance),
 	postponedFunctionsContainer *PostponedFunctionsContainer,
 	postponeAllMatchOperations func(*Instance, bool) bool,
+) (
+	lostReplicas [](*Instance),
+	movedReplicas [](*Instance),
+	cannotReplicateReplicas [](*Instance),
+	candidateReplica *Instance,
+	err error,
+) {
+	return RegroupReplicasGTIDWithValidation(masterKey, returnReplicaEvenOnFailureToRegroup, startReplicationOnCandidate, onCandidateReplicaChosen, postponedFunctionsContainer, postponeAllMatchOperations, nil)
+}
+
+// RegroupReplicasGTIDWithValidation is RegroupReplicasGTID with an optional pre-repoint validation callback.
+func RegroupReplicasGTIDWithValidation(
+	masterKey *InstanceKey,
+	returnReplicaEvenOnFailureToRegroup bool,
+	startReplicationOnCandidate bool,
+	onCandidateReplicaChosen func(*Instance),
+	postponedFunctionsContainer *PostponedFunctionsContainer,
+	postponeAllMatchOperations func(*Instance, bool) bool,
+	validateCandidate func(*Instance) error,
 ) (
 	lostReplicas [](*Instance),
 	movedReplicas [](*Instance),
@@ -2539,6 +2623,21 @@ func RegroupReplicasGTID(
 	if onCandidateReplicaChosen != nil {
 		onCandidateReplicaChosen(candidateReplica)
 	}
+
+	if validateCandidate != nil && candidateReplica != nil {
+		if err = validateCandidate(candidateReplica); err != nil {
+			// Do not return a candidate for promotion if pre-repoint validation failed:
+			// siblings were not re-pointed and promoting would risk data loss / partial topology.
+			return emptyReplicas, emptyReplicas, emptyReplicas, nil, err
+		}
+	}
+
+	// Always require SQL thread up to date before re-pointing siblings (issue #106).
+	if candidateReplica != nil && !candidateReplica.SQLThreadUpToDate() {
+		err = fmt.Errorf("RegroupReplicasGTID: candidate %+v SQL thread is not up to date; refusing to re-point siblings", candidateReplica.Key)
+		return emptyReplicas, emptyReplicas, emptyReplicas, nil, err
+	}
+
 	replicasToMove := append(equalReplicas, laterReplicas...)
 	hasBestPromotionRule := true
 	if candidateReplica != nil {
