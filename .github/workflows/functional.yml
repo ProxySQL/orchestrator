@@ -120,10 +120,6 @@ jobs:
     - name: Run smoke tests
       run: bash tests/functional/test-smoke.sh
 
-    # Run before failover suites so topology is still the clean setup-replication state.
-    - name: Run relay drain / SQL-stopped failover tests
-      run: bash tests/functional/test-mariadb-relay-drain.sh
-
     - name: Run topology discovery validation
       run: bash tests/functional/test-topology-discovery.sh
 
@@ -144,6 +140,12 @@ jobs:
 
     - name: Run named channels tests
       run: bash tests/functional/test-named-channels.sh
+
+    # Last: mutates topology (stops mysql1). Keep after other suites.
+    - name: Run relay drain / SQL-stopped failover tests
+      env:
+        MYSQL_IMAGE: mysql:${{ matrix.mysql_version }}
+      run: bash tests/functional/test-mariadb-relay-drain.sh
 
     - name: Collect orchestrator logs
       if: always()
@@ -267,9 +269,15 @@ jobs:
         ' || { echo "Orchestrator not ready"; docker compose -f docker-compose.yml -f docker-compose.mariadb.yml logs orchestrator --tail=50; exit 1; }
 
     - name: Run smoke tests
+      env:
+        MYSQL_IMAGE: mariadb:${{ matrix.mariadb_version }}
+        COMPOSE: docker compose -f tests/functional/docker-compose.yml -f tests/functional/docker-compose.mariadb.yml
       run: bash tests/functional/test-smoke.sh
 
     - name: Run relay drain / SQL-stopped failover tests
+      env:
+        MYSQL_IMAGE: mariadb:${{ matrix.mariadb_version }}
+        COMPOSE: docker compose -f tests/functional/docker-compose.yml -f tests/functional/docker-compose.mariadb.yml
       run: bash tests/functional/test-mariadb-relay-drain.sh
 
     - name: Collect orchestrator logs

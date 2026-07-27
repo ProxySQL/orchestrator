@@ -5,14 +5,24 @@ set -uo pipefail
 cd "$(dirname "$0")/../.."
 source tests/functional/lib.sh
 
+# Prefer MYSQL_IMAGE (set by CI) so we select the MariaDB compose overlay before
+# probing VERSION(); a plain compose exec can fail and mis-detect as MySQL.
 COMPOSE="docker compose -f tests/functional/docker-compose.yml"
-if mysql_is_mariadb 2>/dev/null; then
+if echo "${MYSQL_IMAGE:-}" | grep -qi mariadb; then
     COMPOSE="docker compose -f tests/functional/docker-compose.yml -f tests/functional/docker-compose.mariadb.yml"
 fi
 export COMPOSE
+# Clear cached version probes so they use the correct COMPOSE.
+MYSQL_MAJOR_VERSION=""
+MYSQL_FULL_VERSION_CACHE=""
+if mysql_is_mariadb 2>/dev/null; then
+    COMPOSE="docker compose -f tests/functional/docker-compose.yml -f tests/functional/docker-compose.mariadb.yml"
+    export COMPOSE
+fi
 
 echo "=== MARIADB / RELAY DRAIN FAILOVER TESTS (issue #106) ==="
 echo "Version: $(mysql_full_version 2>/dev/null || echo unknown)"
+echo "COMPOSE: $COMPOSE"
 
 wait_for_orchestrator || { echo "FATAL: Orchestrator not reachable"; exit 1; }
 
@@ -22,6 +32,7 @@ START_REPLICA=$(mysql_start_replica_sql)
 STOP_REPLICA=$(mysql_stop_replica_sql)
 RESET_REPLICA=$(mysql_reset_replica_all_sql)
 CHANGE_TO_MYSQL1=$(mysql_change_source_sql mysql1 3306 repl repl_pass)
+echo "Using SQL dialect: stop_sql='$STOP_SQL_THREAD' start_replica='$START_REPLICA'"
 
 # Parse one SHOW SLAVE/REPLICA STATUS\G blob. Prints: IO|SQL|READ|EXEC
 replica_status_fields() {
@@ -326,5 +337,9 @@ if [ "$RECOVERED" = "true" ]; then
 else
     fail "No successful recovery within 90s"
 fi
+
+# Best-effort restore so a mid-suite run does not poison later tests.
+echo "--- Cleanup: restart mysql1 (best-effort) ---"
+$COMPOSE start mysql1 >/dev/null 2>&1 || true
 
 summary
