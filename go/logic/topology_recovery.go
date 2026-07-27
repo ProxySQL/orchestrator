@@ -559,7 +559,39 @@ func recoverDeadMaster(topologyRecovery *TopologyRecovery, candidateInstanceKey 
 	case MasterRecoveryGTID:
 		{
 			AuditTopologyRecovery(topologyRecovery, "RecoverDeadMaster: regrouping replicas via GTID")
-			lostReplicas, _, cannotReplicateReplicas, promotedReplica, err = inst.RegroupReplicasGTID(failedInstanceKey, true, false, nil, &topologyRecovery.PostponedFunctionsContainer, promotedReplicaIsIdeal)
+			// Validate candidate (geo, lag, SQL up-to-date) before re-pointing siblings (issue #106).
+			validateCandidate := func(candidate *inst.Instance) error {
+				if candidate == nil {
+					return fmt.Errorf("RecoverDeadMaster: no GTID candidate")
+				}
+				if satisfied, reason := MasterFailoverGeographicConstraintSatisfied(analysisEntry, candidate); !satisfied {
+					return fmt.Errorf("RecoverDeadMaster: failed %+v pre-repoint validation; %s", candidate.Key, reason)
+				}
+				if config.Config.FailMasterPromotionOnLagMinutes > 0 &&
+					time.Duration(candidate.ReplicationLagSeconds.Int64)*time.Second >= time.Duration(config.Config.FailMasterPromotionOnLagMinutes)*time.Minute {
+					return fmt.Errorf("RecoverDeadMaster: failed pre-repoint validation. FailMasterPromotionOnLagMinutes is set to %d (minutes) and candidate %+v 's lag is %d (seconds)", config.Config.FailMasterPromotionOnLagMinutes, candidate.Key, candidate.ReplicationLagSeconds.Int64)
+				}
+				if !candidate.SQLThreadUpToDate() {
+					if config.Config.DelayMasterPromotionIfSQLThreadNotUpToDate {
+						_ = AuditTopologyRecovery(topologyRecovery, fmt.Sprintf("DelayMasterPromotionIfSQLThreadNotUpToDate: waiting for SQL thread on %+v before re-point", candidate.Key))
+						if _, waitErr := inst.WaitForSQLThreadUpToDate(&candidate.Key, 0, 0); waitErr != nil {
+							return fmt.Errorf("DelayMasterPromotionIfSQLThreadNotUpToDate error before re-point: %+v", waitErr)
+						}
+						refreshed, readErr := inst.ReadTopologyInstance(&candidate.Key)
+						if readErr != nil {
+							return readErr
+						}
+						*candidate = *refreshed
+					}
+					if !candidate.SQLThreadUpToDate() {
+						return fmt.Errorf("RecoverDeadMaster: candidate %+v SQL thread is not up to date; refusing to re-point siblings", candidate.Key)
+					}
+				}
+				return nil
+			}
+			// startReplicationOnCandidate=false: do not restart replication toward the dead master.
+			// Relay logs are drained during GetCandidateReplica / DrainRelayLogs.
+			lostReplicas, _, cannotReplicateReplicas, promotedReplica, err = inst.RegroupReplicasGTIDWithValidation(failedInstanceKey, true, false, nil, &topologyRecovery.PostponedFunctionsContainer, promotedReplicaIsIdeal, validateCandidate)
 		}
 	case MasterRecoveryPseudoGTID:
 		{

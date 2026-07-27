@@ -110,11 +110,26 @@ mysql_version() {
         echo "$MYSQL_MAJOR_VERSION"
         return
     fi
-    local FULL
-    FULL=$(docker compose -f tests/functional/docker-compose.yml exec -T mysql1 \
+    local FULL COMPOSE_CMD
+    COMPOSE_CMD="${COMPOSE:-docker compose -f tests/functional/docker-compose.yml}"
+    FULL=$($COMPOSE_CMD exec -T mysql1 \
         mysql -uroot -ptestpass -Nse "SELECT VERSION()" 2>/dev/null | tr -d '[:space:]')
     MYSQL_MAJOR_VERSION=$(echo "$FULL" | sed -E 's/^([0-9]+\.[0-9]+).*/\1/')
     echo "$MYSQL_MAJOR_VERSION"
+}
+
+# Full version string (cached)
+MYSQL_FULL_VERSION_CACHE=""
+mysql_full_version() {
+    if [ -n "$MYSQL_FULL_VERSION_CACHE" ]; then
+        echo "$MYSQL_FULL_VERSION_CACHE"
+        return
+    fi
+    local COMPOSE_CMD
+    COMPOSE_CMD="${COMPOSE:-docker compose -f tests/functional/docker-compose.yml}"
+    MYSQL_FULL_VERSION_CACHE=$($COMPOSE_CMD exec -T mysql1 \
+        mysql -uroot -ptestpass -Nse "SELECT VERSION()" 2>/dev/null | tr -d '[:space:]')
+    echo "$MYSQL_FULL_VERSION_CACHE"
 }
 
 # Check if MySQL version is 5.7 (returns 0 for 5.7, 1 otherwise)
@@ -122,11 +137,17 @@ mysql_is_57() {
     [ "$(mysql_version)" = "5.7" ]
 }
 
+mysql_is_mariadb() {
+    mysql_full_version | grep -qi mariadb
+}
+
 # Return the correct CHANGE REPLICATION SOURCE / CHANGE MASTER command
 # Arguments: HOST PORT USER PASSWORD
 mysql_change_source_sql() {
     local HOST="$1" PORT="$2" USER="$3" PASS="$4"
-    if mysql_is_57; then
+    if mysql_is_mariadb; then
+        echo "CHANGE MASTER TO MASTER_HOST='${HOST}', MASTER_PORT=${PORT}, MASTER_USER='${USER}', MASTER_PASSWORD='${PASS}', MASTER_USE_GTID=slave_pos;"
+    elif mysql_is_57; then
         echo "CHANGE MASTER TO MASTER_HOST='${HOST}', MASTER_PORT=${PORT}, MASTER_USER='${USER}', MASTER_PASSWORD='${PASS}', MASTER_AUTO_POSITION=1;"
     else
         echo "CHANGE REPLICATION SOURCE TO SOURCE_HOST='${HOST}', SOURCE_PORT=${PORT}, SOURCE_USER='${USER}', SOURCE_PASSWORD='${PASS}', SOURCE_AUTO_POSITION=1, GET_SOURCE_PUBLIC_KEY=1;"
@@ -146,17 +167,25 @@ mysql_change_source_channel_sql() {
 
 # Return the correct START REPLICA / START SLAVE command
 mysql_start_replica_sql() {
-    if mysql_is_57; then echo "START SLAVE;"; else echo "START REPLICA;"; fi
+    if mysql_is_57 || mysql_is_mariadb; then echo "START SLAVE;"; else echo "START REPLICA;"; fi
 }
 
 # Return the correct STOP REPLICA / STOP SLAVE command
 mysql_stop_replica_sql() {
-    if mysql_is_57; then echo "STOP SLAVE;"; else echo "STOP REPLICA;"; fi
+    if mysql_is_57 || mysql_is_mariadb; then echo "STOP SLAVE;"; else echo "STOP REPLICA;"; fi
+}
+
+mysql_stop_sql_thread_sql() {
+    if mysql_is_57 || mysql_is_mariadb; then echo "STOP SLAVE SQL_THREAD;"; else echo "STOP REPLICA SQL_THREAD;"; fi
+}
+
+mysql_start_sql_thread_sql() {
+    if mysql_is_57 || mysql_is_mariadb; then echo "START SLAVE SQL_THREAD;"; else echo "START REPLICA SQL_THREAD;"; fi
 }
 
 # Return the correct RESET REPLICA ALL / RESET SLAVE ALL command
 mysql_reset_replica_all_sql() {
-    if mysql_is_57; then echo "RESET SLAVE ALL;"; else echo "RESET REPLICA ALL;"; fi
+    if mysql_is_57 || mysql_is_mariadb; then echo "RESET SLAVE ALL;"; else echo "RESET REPLICA ALL;"; fi
 }
 
 # Get ProxySQL servers for a hostgroup
@@ -178,7 +207,7 @@ mysql_read_only() {
 # Uses tab-separated SHOW STATUS — Source_Host is column 2
 mysql_source_host() {
     local CONTAINER="$1"
-    if mysql_is_57; then
+    if mysql_is_57 || mysql_is_mariadb; then
         docker compose -f tests/functional/docker-compose.yml exec -T "$CONTAINER" \
             mysql -uroot -ptestpass -Nse "SHOW SLAVE STATUS" 2>/dev/null | awk -F'\t' '{print $2; exit}'
     else

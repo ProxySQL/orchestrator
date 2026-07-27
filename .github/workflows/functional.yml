@@ -141,6 +141,12 @@ jobs:
     - name: Run named channels tests
       run: bash tests/functional/test-named-channels.sh
 
+    # Last: mutates topology (stops mysql1). Keep after other suites.
+    - name: Run relay drain / SQL-stopped failover tests
+      env:
+        MYSQL_IMAGE: mysql:${{ matrix.mysql_version }}
+      run: bash tests/functional/test-mariadb-relay-drain.sh
+
     - name: Collect orchestrator logs
       if: always()
       working-directory: tests/functional
@@ -176,6 +182,125 @@ jobs:
       env:
         MYSQL_IMAGE: mysql:${{ matrix.mysql_version }}
       run: docker compose down -v --remove-orphans 2>/dev/null || true
+
+  functional-mariadb:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: build
+
+    strategy:
+      fail-fast: false
+      matrix:
+        mariadb_version: ['10.6', '10.11']
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Download orchestrator binary
+      uses: actions/download-artifact@v4
+      with:
+        name: orchestrator-binary
+        path: bin
+
+    - name: Make binary executable
+      run: chmod +x bin/orchestrator
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build orchestrator runtime image
+      uses: docker/build-push-action@v6
+      with:
+        context: tests/functional
+        file: tests/functional/orchestrator-runtime.Dockerfile
+        tags: orchestrator-runtime:latest
+        load: true
+        cache-from: type=gha,scope=orchestrator-runtime
+        cache-to: type=gha,mode=max,scope=orchestrator-runtime
+
+    - name: Start test infrastructure (MariaDB + ProxySQL)
+      working-directory: tests/functional
+      env:
+        MYSQL_IMAGE: mariadb:${{ matrix.mariadb_version }}
+      run: |
+        echo "Using MariaDB image: $MYSQL_IMAGE"
+        docker compose -f docker-compose.yml -f docker-compose.mariadb.yml up -d mysql1 mysql2 mysql3 proxysql
+        echo "Waiting for MariaDB and ProxySQL to be healthy..."
+        timeout 120 bash -c '
+          while true; do
+            HEALTHY=$(docker compose -f docker-compose.yml -f docker-compose.mariadb.yml ps --format json 2>/dev/null | python3 -c "
+        import json, sys
+        healthy = 0
+        for line in sys.stdin:
+            svc = json.loads(line)
+            if \"healthy\" in svc.get(\"Status\",\"\").lower():
+                healthy += 1
+        print(healthy)
+        " 2>/dev/null || echo "0")
+            if [ "$HEALTHY" -ge 4 ]; then
+              echo "All 4 services healthy"
+              exit 0
+            fi
+            sleep 2
+          done
+        ' || { echo "Timeout"; docker compose -f docker-compose.yml -f docker-compose.mariadb.yml ps; docker compose -f docker-compose.yml -f docker-compose.mariadb.yml logs --tail=30; exit 1; }
+
+    - name: Setup replication
+      env:
+        MYSQL_IMAGE: mariadb:${{ matrix.mariadb_version }}
+        COMPOSE: docker compose -f tests/functional/docker-compose.yml -f tests/functional/docker-compose.mariadb.yml
+      run: bash tests/functional/setup-replication.sh
+
+    - name: Start orchestrator in Docker network
+      working-directory: tests/functional
+      env:
+        MYSQL_IMAGE: mariadb:${{ matrix.mariadb_version }}
+      run: |
+        docker compose -f docker-compose.yml -f docker-compose.mariadb.yml up -d orchestrator
+        echo "Waiting for orchestrator to be ready..."
+        timeout 120 bash -c '
+          while true; do
+            if curl -sf http://localhost:3099/api/clusters > /dev/null 2>&1; then
+              echo "Orchestrator ready"
+              exit 0
+            fi
+            sleep 2
+          done
+        ' || { echo "Orchestrator not ready"; docker compose -f docker-compose.yml -f docker-compose.mariadb.yml logs orchestrator --tail=50; exit 1; }
+
+    - name: Run smoke tests
+      env:
+        MYSQL_IMAGE: mariadb:${{ matrix.mariadb_version }}
+        COMPOSE: docker compose -f tests/functional/docker-compose.yml -f tests/functional/docker-compose.mariadb.yml
+      run: bash tests/functional/test-smoke.sh
+
+    - name: Run relay drain / SQL-stopped failover tests
+      env:
+        MYSQL_IMAGE: mariadb:${{ matrix.mariadb_version }}
+        COMPOSE: docker compose -f tests/functional/docker-compose.yml -f tests/functional/docker-compose.mariadb.yml
+      run: bash tests/functional/test-mariadb-relay-drain.sh
+
+    - name: Collect orchestrator logs
+      if: always()
+      working-directory: tests/functional
+      env:
+        MYSQL_IMAGE: mariadb:${{ matrix.mariadb_version }}
+      run: |
+        docker compose -f docker-compose.yml -f docker-compose.mariadb.yml logs orchestrator > /tmp/orchestrator-mariadb-test.log 2>&1 || true
+
+    - name: Upload orchestrator logs
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: orchestrator-test-logs-mariadb-${{ matrix.mariadb_version }}
+        path: /tmp/orchestrator-mariadb-test.log
+
+    - name: Cleanup
+      if: always()
+      working-directory: tests/functional
+      env:
+        MYSQL_IMAGE: mariadb:${{ matrix.mariadb_version }}
+      run: docker compose -f docker-compose.yml -f docker-compose.mariadb.yml down -v --remove-orphans 2>/dev/null || true
 
   functional-postgresql:
     runs-on: ubuntu-latest

@@ -139,6 +139,7 @@ type ReplicationAnalysis struct {
 	CountReplicas                             uint
 	CountValidReplicas                        uint
 	CountValidReplicatingReplicas             uint
+	CountValidIORunningReplicas               uint
 	CountReplicasFailingToConnectToMaster     uint
 	CountDowntimedReplicas                    uint
 	ReplicationDepth                          uint
