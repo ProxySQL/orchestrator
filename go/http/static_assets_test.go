@@ -35,7 +35,7 @@ func TestBundledJQueryMeetsSecurityFloor(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	line, err := bufio.NewReader(f).ReadString('\n')
 	if err != nil {
