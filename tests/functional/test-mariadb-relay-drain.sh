@@ -14,17 +14,116 @@ echo "=== MARIADB / RELAY DRAIN FAILOVER TESTS (issue #106) ==="
 echo "Version: $(mysql_full_version 2>/dev/null || echo unknown)"
 
 wait_for_orchestrator || { echo "FATAL: Orchestrator not reachable"; exit 1; }
-discover_topology "mysql1"
 
 STOP_SQL_THREAD=$(mysql_stop_sql_thread_sql)
-START_SQL=$(mysql_start_replica_sql)
+START_SQL_THREAD=$(mysql_start_sql_thread_sql)
+START_REPLICA=$(mysql_start_replica_sql)
+STOP_REPLICA=$(mysql_stop_replica_sql)
+RESET_REPLICA=$(mysql_reset_replica_all_sql)
+CHANGE_TO_MYSQL1=$(mysql_change_source_sql mysql1 3306 repl repl_pass)
+
+# Parse one SHOW SLAVE/REPLICA STATUS\G blob. Prints: IO|SQL|READ|EXEC
+replica_status_fields() {
+    local container="$1"
+    local blob io sql readpos execpos
+    if mysql_is_mariadb || mysql_is_57; then
+        blob=$($COMPOSE exec -T "$container" mysql -uroot -ptestpass -e "SHOW SLAVE STATUS\G" 2>/dev/null || true)
+        io=$(echo "$blob" | awk -F': *' '/Slave_IO_Running:/{print $2; exit}' | tr -d '[:space:]')
+        sql=$(echo "$blob" | awk -F': *' '/Slave_SQL_Running:/{print $2; exit}' | tr -d '[:space:]')
+        readpos=$(echo "$blob" | awk -F': *' '/Read_Master_Log_Pos:/{print $2; exit}' | tr -d '[:space:]')
+        execpos=$(echo "$blob" | awk -F': *' '/Exec_Master_Log_Pos:/{print $2; exit}' | tr -d '[:space:]')
+    else
+        blob=$($COMPOSE exec -T "$container" mysql -uroot -ptestpass -e "SHOW REPLICA STATUS\G" 2>/dev/null || true)
+        io=$(echo "$blob" | awk -F': *' '/Replica_IO_Running:/{print $2; exit}' | tr -d '[:space:]')
+        sql=$(echo "$blob" | awk -F': *' '/Replica_SQL_Running:/{print $2; exit}' | tr -d '[:space:]')
+        readpos=$(echo "$blob" | awk -F': *' '/Read_Source_Log_Pos:/{print $2; exit}' | tr -d '[:space:]')
+        execpos=$(echo "$blob" | awk -F': *' '/Exec_Source_Log_Pos:/{print $2; exit}' | tr -d '[:space:]')
+        # Fall back to legacy names if present
+        [ -z "$io" ] && io=$(echo "$blob" | awk -F': *' '/Slave_IO_Running:/{print $2; exit}' | tr -d '[:space:]')
+        [ -z "$sql" ] && sql=$(echo "$blob" | awk -F': *' '/Slave_SQL_Running:/{print $2; exit}' | tr -d '[:space:]')
+        [ -z "$readpos" ] && readpos=$(echo "$blob" | awk -F': *' '/Read_Master_Log_Pos:/{print $2; exit}' | tr -d '[:space:]')
+        [ -z "$execpos" ] && execpos=$(echo "$blob" | awk -F': *' '/Exec_Master_Log_Pos:/{print $2; exit}' | tr -d '[:space:]')
+    fi
+    echo "${io}|${sql}|${readpos}|${execpos}"
+}
+
+# Ensure mysql1 is master and mysql2/mysql3 are healthy direct replicas.
+# Required after earlier failover suites that promote mysql2 and stop mysql1.
+ensure_flat_topology() {
+    echo "Ensuring flat topology (mysql1 master, mysql2/mysql3 replicas)..."
+    $COMPOSE start mysql1 mysql2 mysql3 >/dev/null 2>&1 || true
+    sleep 3
+
+    for HOST in mysql1 mysql2 mysql3; do
+        for i in $(seq 1 30); do
+            if $COMPOSE exec -T "$HOST" mysqladmin -uroot -ptestpass ping --silent 2>/dev/null; then
+                break
+            fi
+            sleep 1
+        done
+    done
+
+    $COMPOSE exec -T mysql1 mysql -uroot -ptestpass -e "
+        SET GLOBAL read_only=0;
+        SET GLOBAL super_read_only=0;
+    " 2>/dev/null || true
+
+    for r in mysql2 mysql3; do
+        # Best-effort stop (syntax differs MySQL 5.7/8+/MariaDB)
+        $COMPOSE exec -T "$r" mysql -uroot -ptestpass -e "STOP REPLICA; STOP SLAVE;" 2>/dev/null || true
+        $COMPOSE exec -T "$r" mysql -uroot -ptestpass -e "
+            $RESET_REPLICA
+            $CHANGE_TO_MYSQL1
+            SET GLOBAL read_only=1;
+            $START_REPLICA
+        " 2>/dev/null || true
+    done
+
+    # ProxySQL writer back to mysql1 (best-effort; may not exist on MariaDB-only job)
+    docker compose -f tests/functional/docker-compose.yml exec -T proxysql \
+        mysql -h127.0.0.1 -P6032 -uradmin -pradmin -e \
+        "DELETE FROM mysql_servers WHERE hostgroup_id IN (10,20); INSERT INTO mysql_servers (hostgroup_id,hostname,port) VALUES (10,'mysql1',3306),(20,'mysql2',3306),(20,'mysql3',3306); LOAD MYSQL SERVERS TO RUNTIME; SAVE MYSQL SERVERS TO DISK;" \
+        2>/dev/null || true
+
+    sleep 2
+    curl -s --max-time 10 "$ORC_URL/api/discover/mysql1/3306" >/dev/null 2>&1
+    curl -s --max-time 10 "$ORC_URL/api/discover/mysql2/3306" >/dev/null 2>&1
+    curl -s --max-time 10 "$ORC_URL/api/discover/mysql3/3306" >/dev/null 2>&1
+    discover_topology "mysql1" || true
+
+    for r in mysql2 mysql3; do
+        OK=false
+        for i in $(seq 1 45); do
+            fields=$(replica_status_fields "$r")
+            IO=$(echo "$fields" | cut -d'|' -f1)
+            SQL=$(echo "$fields" | cut -d'|' -f2)
+            if [ "$IO" = "Yes" ] && [ "$SQL" = "Yes" ]; then
+                OK=true
+                break
+            fi
+            # Nudge replica start
+            if [ "$((i % 10))" = "0" ]; then
+                $COMPOSE exec -T "$r" mysql -uroot -ptestpass -e "$START_REPLICA" 2>/dev/null || true
+            fi
+            sleep 1
+        done
+        if [ "$OK" != "true" ]; then
+            fail "Could not restore $r as replicating replica of mysql1 (status=$(replica_status_fields "$r"))"
+            $COMPOSE exec -T "$r" mysql -uroot -ptestpass -e "SHOW SLAVE STATUS\G; SHOW REPLICA STATUS\G;" 2>/dev/null | head -40 || true
+            summary
+        fi
+    done
+    pass "Flat topology ready (mysql1 master, replicas IO/SQL=Yes)"
+}
+
+ensure_flat_topology
 
 # ----------------------------------------------------------------
 echo ""
 echo "--- Test 1: SQL stopped + IO running is not DeadMaster while master is up ---"
 
 $COMPOSE exec -T mysql2 mysql -uroot -ptestpass -e "$STOP_SQL_THREAD" 2>/dev/null
-curl -s --max-time 10 "$ORC_URL/api/discover/mysql2/3306" > /dev/null 2>&1
+curl -s --max-time 10 "$ORC_URL/api/discover/mysql2/3306" >/dev/null 2>&1
 sleep 3
 
 ANALYSIS=$(curl -s --max-time 10 "$ORC_URL/api/replication-analysis" 2>/dev/null || echo "[]")
@@ -46,9 +145,19 @@ else
     fail "Unexpected DeadMaster while master is still up"
 fi
 
-# Restore SQL thread for next phase
-$COMPOSE exec -T mysql2 mysql -uroot -ptestpass -e "$START_SQL" 2>/dev/null
+# Restore SQL thread only (IO was still running)
+$COMPOSE exec -T mysql2 mysql -uroot -ptestpass -e "$START_SQL_THREAD" 2>/dev/null || \
+    $COMPOSE exec -T mysql2 mysql -uroot -ptestpass -e "$START_REPLICA" 2>/dev/null || true
 sleep 2
+for i in $(seq 1 30); do
+    fields=$(replica_status_fields mysql2)
+    IO=$(echo "$fields" | cut -d'|' -f1)
+    SQL=$(echo "$fields" | cut -d'|' -f2)
+    if [ "$IO" = "Yes" ] && [ "$SQL" = "Yes" ]; then
+        break
+    fi
+    sleep 1
+done
 
 # ----------------------------------------------------------------
 echo ""
@@ -57,7 +166,8 @@ echo "--- Test 2: Unapplied relay events survive failover (drain before promote)
 $COMPOSE exec -T mysql1 mysql -uroot -ptestpass -e "
 CREATE DATABASE IF NOT EXISTS orch_relay_test;
 CREATE TABLE IF NOT EXISTS orch_relay_test.t (id INT PRIMARY KEY, v VARCHAR(64));
-INSERT INTO orch_relay_test.t (id, v) VALUES (1, 'before_stop') ON DUPLICATE KEY UPDATE v=VALUES(v);
+INSERT INTO orch_relay_test.t (id, v) VALUES (1, 'before_stop')
+  ON DUPLICATE KEY UPDATE v='before_stop';
 " 2>/dev/null
 
 # Wait for both replicas to apply id=1 (fail hard if not)
@@ -69,12 +179,17 @@ for r in mysql2 mysql3; do
             APPLIED=true
             break
         fi
+        # If replica not applying, try restarting SQL thread
+        if [ "$((i % 10))" = "0" ]; then
+            $COMPOSE exec -T "$r" mysql -uroot -ptestpass -e "$START_SQL_THREAD" 2>/dev/null || \
+                $COMPOSE exec -T "$r" mysql -uroot -ptestpass -e "$START_REPLICA" 2>/dev/null || true
+        fi
         sleep 1
     done
     if [ "$APPLIED" = "true" ]; then
         pass "$r applied id=1"
     else
-        fail "$r never applied id=1 (COUNT=${COUNT:-empty})"
+        fail "$r never applied id=1 (COUNT=${COUNT:-empty} status=$(replica_status_fields "$r"))"
         summary
     fi
 done
@@ -86,27 +201,19 @@ sleep 1
 
 # Committed on master; wait until IO has received into relay while SQL stays stopped
 $COMPOSE exec -T mysql1 mysql -uroot -ptestpass -e "
-INSERT INTO orch_relay_test.t (id, v) VALUES (2, 'in_relay_only') ON DUPLICATE KEY UPDATE v=VALUES(v);
+INSERT INTO orch_relay_test.t (id, v) VALUES (2, 'in_relay_only')
+  ON DUPLICATE KEY UPDATE v='in_relay_only';
 " 2>/dev/null
 
-# Poll until both replicas have id=2 still unapplied (SQL stopped) but IO has advanced:
-# Seconds_Behind_Master becomes NULL when SQL is stopped; check Exec vs Read positions differ
-# or that a temporary START SQL would apply — we only assert table still missing id=2 and IO=Yes.
 for r in mysql2 mysql3; do
     READY=false
-    for i in $(seq 1 30); do
+    for i in $(seq 1 45); do
         COUNT=$($COMPOSE exec -T "$r" mysql -uroot -ptestpass -Nse "SELECT COUNT(*) FROM orch_relay_test.t WHERE id=2" 2>/dev/null | tr -d '[:space:]')
-        if mysql_is_mariadb || mysql_is_57; then
-            IO=$($COMPOSE exec -T "$r" mysql -uroot -ptestpass -e "SHOW SLAVE STATUS\G" 2>/dev/null | awk '/Slave_IO_Running:/{print $2; exit}')
-            SQL=$($COMPOSE exec -T "$r" mysql -uroot -ptestpass -e "SHOW SLAVE STATUS\G" 2>/dev/null | awk '/Slave_SQL_Running:/{print $2; exit}')
-            READ_POS=$($COMPOSE exec -T "$r" mysql -uroot -ptestpass -e "SHOW SLAVE STATUS\G" 2>/dev/null | awk '/Read_Master_Log_Pos:/{print $2; exit}')
-            EXEC_POS=$($COMPOSE exec -T "$r" mysql -uroot -ptestpass -e "SHOW SLAVE STATUS\G" 2>/dev/null | awk '/Exec_Master_Log_Pos:/{print $2; exit}')
-        else
-            IO=$($COMPOSE exec -T "$r" mysql -uroot -ptestpass -e "SHOW REPLICA STATUS\G" 2>/dev/null | awk '/Replica_IO_Running:/{print $2; exit}')
-            SQL=$($COMPOSE exec -T "$r" mysql -uroot -ptestpass -e "SHOW REPLICA STATUS\G" 2>/dev/null | awk '/Replica_SQL_Running:/{print $2; exit}')
-            READ_POS=$($COMPOSE exec -T "$r" mysql -uroot -ptestpass -e "SHOW REPLICA STATUS\G" 2>/dev/null | awk '/Read_Source_Log_Pos:/{print $2; exit}')
-            EXEC_POS=$($COMPOSE exec -T "$r" mysql -uroot -ptestpass -e "SHOW REPLICA STATUS\G" 2>/dev/null | awk '/Exec_Source_Log_Pos:/{print $2; exit}')
-        fi
+        fields=$(replica_status_fields "$r")
+        IO=$(echo "$fields" | cut -d'|' -f1)
+        SQL=$(echo "$fields" | cut -d'|' -f2)
+        READ_POS=$(echo "$fields" | cut -d'|' -f3)
+        EXEC_POS=$(echo "$fields" | cut -d'|' -f4)
         if [ "$COUNT" = "0" ] && [ "$IO" = "Yes" ] && [ "$SQL" = "No" ] && [ -n "$READ_POS" ] && [ -n "$EXEC_POS" ] && [ "$READ_POS" != "$EXEC_POS" ]; then
             READY=true
             echo "$r: id=2 unapplied, IO=$IO SQL=$SQL Read=$READ_POS Exec=$EXEC_POS"
@@ -117,7 +224,7 @@ for r in mysql2 mysql3; do
     if [ "$READY" = "true" ]; then
         pass "$r has id=2 only in relay (SQL stopped, Read!=Exec)"
     else
-        fail "$r not ready for failover drain test (COUNT=${COUNT:-?} IO=${IO:-?} SQL=${SQL:-?} Read=${READ_POS:-?} Exec=${EXEC_POS:-?})"
+        fail "$r not ready for failover drain test (COUNT=${COUNT:-?} status=$(replica_status_fields "$r"))"
         summary
     fi
 done

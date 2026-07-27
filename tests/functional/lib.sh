@@ -110,8 +110,9 @@ mysql_version() {
         echo "$MYSQL_MAJOR_VERSION"
         return
     fi
-    local FULL
-    FULL=$(docker compose -f tests/functional/docker-compose.yml exec -T mysql1 \
+    local FULL COMPOSE_CMD
+    COMPOSE_CMD="${COMPOSE:-docker compose -f tests/functional/docker-compose.yml}"
+    FULL=$($COMPOSE_CMD exec -T mysql1 \
         mysql -uroot -ptestpass -Nse "SELECT VERSION()" 2>/dev/null | tr -d '[:space:]')
     MYSQL_MAJOR_VERSION=$(echo "$FULL" | sed -E 's/^([0-9]+\.[0-9]+).*/\1/')
     echo "$MYSQL_MAJOR_VERSION"
@@ -124,7 +125,9 @@ mysql_full_version() {
         echo "$MYSQL_FULL_VERSION_CACHE"
         return
     fi
-    MYSQL_FULL_VERSION_CACHE=$(docker compose -f tests/functional/docker-compose.yml exec -T mysql1 \
+    local COMPOSE_CMD
+    COMPOSE_CMD="${COMPOSE:-docker compose -f tests/functional/docker-compose.yml}"
+    MYSQL_FULL_VERSION_CACHE=$($COMPOSE_CMD exec -T mysql1 \
         mysql -uroot -ptestpass -Nse "SELECT VERSION()" 2>/dev/null | tr -d '[:space:]')
     echo "$MYSQL_FULL_VERSION_CACHE"
 }
