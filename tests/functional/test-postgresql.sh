@@ -269,10 +269,13 @@ pg_wait_streaming_standby() {
         state=$($COMPOSE exec -T "$container" psql -U postgres -tAc \
             "SELECT pg_is_in_recovery()::text || ',' || COALESCE((SELECT status FROM pg_stat_wal_receiver LIMIT 1), 'none');" \
             2>/dev/null | tr -d '[:space:]')
-        if [ "$state" = "t,streaming" ]; then
-            echo "$container is streaming as a standby after ${i}s"
-            return 0
-        fi
+        # pg_is_in_recovery()::text is "true"/"false"; bare bool prints "t"/"f"
+        case "$state" in
+            t,streaming|true,streaming)
+                echo "$container is streaming as a standby after ${i}s"
+                return 0
+                ;;
+        esac
         sleep 1
     done
     echo "$container failed to reach streaming standby state (last=$(
