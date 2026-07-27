@@ -103,6 +103,7 @@ services:
       POSTGRES_PASSWORD: testpass
       POSTGRES_USER: postgres
     volumes:
+      - pgprimary-data:/var/lib/postgresql/data
       - ./postgres/init-primary.sh:/docker-entrypoint-initdb.d/init.sh
     ports:
       - "15432:5432"
@@ -125,6 +126,7 @@ services:
       PGUSER: postgres
       PGPASSWORD: repl_pass
     volumes:
+      - pgstandby1-data:/var/lib/postgresql/data
       - ./postgres/init-standby.sh:/init-standby.sh
     entrypoint: ["/bin/bash", "/init-standby.sh"]
     depends_on:
@@ -274,6 +276,10 @@ services:
         ipv4_address: 172.30.0.42
         aliases:
           - orchestrator-raft3
+
+volumes:
+  pgprimary-data:
+  pgstandby1-data:
 
 networks:
   orchnet:

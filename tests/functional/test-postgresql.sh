@@ -224,26 +224,83 @@ echo "--- Graceful switchover round-trip (switch back) ---"
 # actually stream WAL from the new primary. Simulate what a
 # PostGracefulTakeoverProcesses hook would do.
 
-if [ "${SWITCHOVER_OK:-false}" = "true" ]; then
-    echo "Converting demoted pgprimary into a live standby of pgstandby1..."
-    $COMPOSE exec -T pgprimary bash -c 'touch /var/lib/postgresql/data/standby.signal && chown postgres:postgres /var/lib/postgresql/data/standby.signal' || true
-    $COMPOSE restart pgprimary
-    echo "Waiting for pgprimary to become a healthy standby..."
-    STANDBY_READY=false
-    for i in $(seq 1 60); do
-        IN_RECOVERY=$($COMPOSE exec -T pgprimary psql -U postgres -tAc "SELECT pg_is_in_recovery();" 2>/dev/null | tr -d '[:space:]')
-        if [ "$IN_RECOVERY" = "t" ]; then
-            STANDBY_READY=true
-            echo "pgprimary is in recovery (standby mode) after ${i}s"
-            break
+# Reclone a demoted node as a streaming standby of $2 (IP).
+# A plain standby.signal restart is not enough: after promote the demoted
+# primary's recovery point is often past the new timeline fork, so it cannot
+# follow the promoted primary without pg_rewind or a fresh basebackup.
+# Uses named volumes so we can stop the service, rewrite datadir via a
+# one-off container, then start again.
+pg_reclone_as_standby() {
+    local container="$1"
+    local new_primary_ip="$2"
+    echo "Stopping $container for reclone onto $new_primary_ip..."
+    $COMPOSE stop "$container" >/dev/null
+    # One-off container shares the service's named volume + network.
+    if ! $COMPOSE run --rm --no-deps --entrypoint bash \
+        -e PGPASSWORD=repl_pass \
+        "$container" -c "
+set -e
+PGDATA=/var/lib/postgresql/data
+rm -rf \"\$PGDATA\"/*
+chown postgres:postgres \"\$PGDATA\"
+gosu postgres pg_basebackup \
+    -h '$new_primary_ip' -p 5432 -U repl -D \"\$PGDATA\" -Fp -Xs -P -R
+# Force IP-based primary_conninfo (Docker DNS breaks when containers stop)
+cat > \"\$PGDATA/postgresql.auto.conf\" <<EOF
+primary_conninfo = 'host=$new_primary_ip port=5432 user=repl password=repl_pass'
+EOF
+touch \"\$PGDATA/standby.signal\"
+chown -R postgres:postgres \"\$PGDATA\"
+chmod 0700 \"\$PGDATA\"
+"; then
+        echo "pg_basebackup reclone of $container failed"
+        $COMPOSE start "$container" >/dev/null || true
+        return 1
+    fi
+    $COMPOSE start "$container" >/dev/null
+}
+
+# Wait until container is in recovery AND streaming from its primary.
+pg_wait_streaming_standby() {
+    local container="$1"
+    local max_secs="${2:-60}"
+    for i in $(seq 1 "$max_secs"); do
+        local state
+        state=$($COMPOSE exec -T "$container" psql -U postgres -tAc \
+            "SELECT pg_is_in_recovery()::text || ',' || COALESCE((SELECT status FROM pg_stat_wal_receiver LIMIT 1), 'none');" \
+            2>/dev/null | tr -d '[:space:]')
+        if [ "$state" = "t,streaming" ]; then
+            echo "$container is streaming as a standby after ${i}s"
+            return 0
         fi
         sleep 1
     done
+    echo "$container failed to reach streaming standby state (last=$(
+        $COMPOSE exec -T "$container" psql -U postgres -tAc \
+            "SELECT pg_is_in_recovery()::text || ',' || COALESCE((SELECT status FROM pg_stat_wal_receiver LIMIT 1), 'none');" \
+            2>/dev/null | tr -d '[:space:]'
+    ))"
+    return 1
+}
+
+if [ "${SWITCHOVER_OK:-false}" = "true" ]; then
+    echo "Converting demoted pgprimary into a live standby of pgstandby1 (pg_basebackup reclone)..."
+    if pg_reclone_as_standby pgprimary 172.30.0.21; then
+        :
+    else
+        fail "Failed to reclone pgprimary as standby of pgstandby1"
+    fi
+    echo "Waiting for pgprimary to become a healthy streaming standby..."
+    if pg_wait_streaming_standby pgprimary 60; then
+        STANDBY_READY=true
+    else
+        STANDBY_READY=false
+    fi
 
     if [ "$STANDBY_READY" != "true" ]; then
-        fail "pgprimary did not enter standby/recovery mode after restart"
+        fail "pgprimary did not enter streaming standby mode after reclone"
     else
-        pass "pgprimary restarted as a standby"
+        pass "pgprimary recloned as a streaming standby"
 
         # Let orchestrator re-discover — after pgprimary restarts as a standby,
         # it joins pgstandby1's cluster ("172.30.0.21:5432"). Poll for that.
@@ -308,20 +365,16 @@ for inst in json.load(sys.stdin):
                 fail "Round-trip incomplete: pgprimary pg_is_in_recovery='$BACK_PROMOTED' (expected f)"
             fi
 
-            # After round-trip, pgstandby1 is the demoted primary — reactivate
-            # it as a live standby so the downstream failover-kill test has a
-            # replica to promote.
+            # After round-trip, pgstandby1 is the demoted primary. Its entrypoint
+            # (init-standby.sh) always basebackups from 172.30.0.20 on start —
+            # restart is enough once pgprimary is primary again.
             echo "Reactivating pgstandby1 as a live standby of pgprimary..."
-            $COMPOSE exec -T pgstandby1 bash -c 'touch /var/lib/postgresql/data/standby.signal && chown postgres:postgres /var/lib/postgresql/data/standby.signal' || true
-            $COMPOSE restart pgstandby1
-            for i in $(seq 1 60); do
-                IN_RECOVERY=$($COMPOSE exec -T pgstandby1 psql -U postgres -tAc "SELECT pg_is_in_recovery();" 2>/dev/null | tr -d '[:space:]')
-                if [ "$IN_RECOVERY" = "t" ]; then
-                    echo "pgstandby1 is streaming as a standby after ${i}s"
-                    break
-                fi
-                sleep 1
-            done
+            $COMPOSE restart pgstandby1 >/dev/null
+            if pg_wait_streaming_standby pgstandby1 60; then
+                pass "pgstandby1 restarted as a streaming standby of pgprimary"
+            else
+                fail "pgstandby1 did not become a streaming standby after restart"
+            fi
             sleep 5
             curl -s --max-time 10 "$ORC_URL/api/discover/172.30.0.20/5432" > /dev/null 2>&1
             curl -s --max-time 10 "$ORC_URL/api/discover/172.30.0.21/5432" > /dev/null 2>&1
