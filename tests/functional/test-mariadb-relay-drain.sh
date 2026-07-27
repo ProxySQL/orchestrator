@@ -9,6 +9,7 @@ COMPOSE="docker compose -f tests/functional/docker-compose.yml"
 if mysql_is_mariadb 2>/dev/null; then
     COMPOSE="docker compose -f tests/functional/docker-compose.yml -f tests/functional/docker-compose.mariadb.yml"
 fi
+export COMPOSE
 
 echo "=== MARIADB / RELAY DRAIN FAILOVER TESTS (issue #106) ==="
 echo "Version: $(mysql_full_version 2>/dev/null || echo unknown)"
@@ -47,12 +48,50 @@ replica_status_fields() {
     echo "${io}|${sql}|${readpos}|${execpos}"
 }
 
+replica_threads_ok() {
+    local r="$1"
+    local fields io sql
+    fields=$(replica_status_fields "$r")
+    io=$(echo "$fields" | cut -d'|' -f1)
+    sql=$(echo "$fields" | cut -d'|' -f2)
+    [ "$io" = "Yes" ] && [ "$sql" = "Yes" ]
+}
+
+# Soft-start SQL/IO if already pointed at mysql1.
+nudge_replica_threads() {
+    local r="$1"
+    $COMPOSE exec -T "$r" mysql -uroot -ptestpass -e "$START_SQL_THREAD" 2>/dev/null || true
+    $COMPOSE exec -T "$r" mysql -uroot -ptestpass -e "$START_REPLICA" 2>/dev/null || true
+}
+
+# Full reconfigure: point r at mysql1 with GTID auto-position / MariaDB slave_pos.
+repoint_replica_to_mysql1() {
+    local r="$1"
+    $COMPOSE exec -T "$r" mysql -uroot -ptestpass -e "STOP REPLICA; STOP SLAVE;" 2>/dev/null || true
+    # Skip RESET when possible — RESET wipes GTID state and often leaves SQL=No on MariaDB
+    # until positions are re-established. Prefer CHANGE + START first.
+    if ! $COMPOSE exec -T "$r" mysql -uroot -ptestpass -e "
+        $CHANGE_TO_MYSQL1
+        SET GLOBAL read_only=1;
+        $START_REPLICA
+    " 2>/dev/null; then
+        $COMPOSE exec -T "$r" mysql -uroot -ptestpass -e "
+            $STOP_REPLICA
+            $RESET_REPLICA
+            $CHANGE_TO_MYSQL1
+            SET GLOBAL read_only=1;
+            $START_REPLICA
+        " 2>/dev/null || true
+    fi
+    nudge_replica_threads "$r"
+}
+
 # Ensure mysql1 is master and mysql2/mysql3 are healthy direct replicas.
 # Required after earlier failover suites that promote mysql2 and stop mysql1.
 ensure_flat_topology() {
     echo "Ensuring flat topology (mysql1 master, mysql2/mysql3 replicas)..."
     $COMPOSE start mysql1 mysql2 mysql3 >/dev/null 2>&1 || true
-    sleep 3
+    sleep 2
 
     for HOST in mysql1 mysql2 mysql3; do
         for i in $(seq 1 30); do
@@ -68,18 +107,20 @@ ensure_flat_topology() {
         SET GLOBAL super_read_only=0;
     " 2>/dev/null || true
 
+    # Fast path: already healthy — common on MariaDB job (only smoke ran before us).
+    if replica_threads_ok mysql2 && replica_threads_ok mysql3; then
+        RO1=$($COMPOSE exec -T mysql1 mysql -uroot -ptestpass -Nse "SELECT @@read_only" 2>/dev/null | tr -d '[:space:]')
+        if [ "$RO1" = "0" ]; then
+            pass "Flat topology already healthy"
+            return 0
+        fi
+    fi
+
     for r in mysql2 mysql3; do
-        # Best-effort stop (syntax differs MySQL 5.7/8+/MariaDB)
-        $COMPOSE exec -T "$r" mysql -uroot -ptestpass -e "STOP REPLICA; STOP SLAVE;" 2>/dev/null || true
-        $COMPOSE exec -T "$r" mysql -uroot -ptestpass -e "
-            $RESET_REPLICA
-            $CHANGE_TO_MYSQL1
-            SET GLOBAL read_only=1;
-            $START_REPLICA
-        " 2>/dev/null || true
+        repoint_replica_to_mysql1 "$r"
     done
 
-    # ProxySQL writer back to mysql1 (best-effort; may not exist on MariaDB-only job)
+    # ProxySQL writer back to mysql1 (best-effort)
     docker compose -f tests/functional/docker-compose.yml exec -T proxysql \
         mysql -h127.0.0.1 -P6032 -uradmin -pradmin -e \
         "DELETE FROM mysql_servers WHERE hostgroup_id IN (10,20); INSERT INTO mysql_servers (hostgroup_id,hostname,port) VALUES (10,'mysql1',3306),(20,'mysql2',3306),(20,'mysql3',3306); LOAD MYSQL SERVERS TO RUNTIME; SAVE MYSQL SERVERS TO DISK;" \
@@ -89,27 +130,35 @@ ensure_flat_topology() {
     curl -s --max-time 10 "$ORC_URL/api/discover/mysql1/3306" >/dev/null 2>&1
     curl -s --max-time 10 "$ORC_URL/api/discover/mysql2/3306" >/dev/null 2>&1
     curl -s --max-time 10 "$ORC_URL/api/discover/mysql3/3306" >/dev/null 2>&1
-    discover_topology "mysql1" || true
 
     for r in mysql2 mysql3; do
         OK=false
-        for i in $(seq 1 45); do
-            fields=$(replica_status_fields "$r")
-            IO=$(echo "$fields" | cut -d'|' -f1)
-            SQL=$(echo "$fields" | cut -d'|' -f2)
-            if [ "$IO" = "Yes" ] && [ "$SQL" = "Yes" ]; then
+        for i in $(seq 1 60); do
+            if replica_threads_ok "$r"; then
                 OK=true
                 break
             fi
-            # Nudge replica start
-            if [ "$((i % 10))" = "0" ]; then
-                $COMPOSE exec -T "$r" mysql -uroot -ptestpass -e "$START_REPLICA" 2>/dev/null || true
+            fields=$(replica_status_fields "$r")
+            IO=$(echo "$fields" | cut -d'|' -f1)
+            SQL=$(echo "$fields" | cut -d'|' -f2)
+            # IO up but SQL down: start SQL thread (common after STOP SQL_THREAD / partial start)
+            if [ "$IO" = "Yes" ] && [ "$SQL" != "Yes" ]; then
+                nudge_replica_threads "$r"
+            elif [ -z "$IO" ] || [ "$IO" = "No" ]; then
+                # Empty status or not configured — full repoint
+                if [ "$((i % 15))" = "0" ]; then
+                    repoint_replica_to_mysql1 "$r"
+                else
+                    nudge_replica_threads "$r"
+                fi
+            else
+                nudge_replica_threads "$r"
             fi
             sleep 1
         done
         if [ "$OK" != "true" ]; then
             fail "Could not restore $r as replicating replica of mysql1 (status=$(replica_status_fields "$r"))"
-            $COMPOSE exec -T "$r" mysql -uroot -ptestpass -e "SHOW SLAVE STATUS\G; SHOW REPLICA STATUS\G;" 2>/dev/null | head -40 || true
+            $COMPOSE exec -T "$r" mysql -uroot -ptestpass -e "SHOW SLAVE STATUS\G; SHOW REPLICA STATUS\G;" 2>/dev/null | head -60 || true
             summary
         fi
     done

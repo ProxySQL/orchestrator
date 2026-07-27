@@ -120,6 +120,10 @@ jobs:
     - name: Run smoke tests
       run: bash tests/functional/test-smoke.sh
 
+    # Run before failover suites so topology is still the clean setup-replication state.
+    - name: Run relay drain / SQL-stopped failover tests
+      run: bash tests/functional/test-mariadb-relay-drain.sh
+
     - name: Run topology discovery validation
       run: bash tests/functional/test-topology-discovery.sh
 
@@ -140,9 +144,6 @@ jobs:
 
     - name: Run named channels tests
       run: bash tests/functional/test-named-channels.sh
-
-    - name: Run relay drain / SQL-stopped failover tests
-      run: bash tests/functional/test-mariadb-relay-drain.sh
 
     - name: Collect orchestrator logs
       if: always()
