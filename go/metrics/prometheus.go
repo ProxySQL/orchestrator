@@ -18,6 +18,7 @@ package metrics
 
 import (
 	"sync/atomic"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/proxysql/golib/log"
@@ -71,14 +72,28 @@ var (
 
 	HealthIsLive = prometheus.NewGaugeFunc(prometheus.GaugeOpts{
 		Name: "orchestrator_health_is_live",
-		Help: "1 if the node is live, 0 otherwise.",
+		Help: "1 if the process recently ran a health check tick (liveness), 0 otherwise.",
 	}, func() float64 {
-		return 1
+		// Liveness: health subsystem has run recently (even if the check failed).
+		// Readiness is LastContinousCheckHealthy (successful registration).
+		maxAge := time.Duration(config.HealthPollSeconds*3) * time.Second
+		if d := process.SinceLastHealthCheck(); d > 0 && d <= maxAge {
+			return 1
+		}
+		if d := process.SinceLastGoodHealthCheck(); d > 0 && d <= maxAge {
+			return 1
+		}
+		// ContinuousRegistration updates LastContinousCheckHealthy without touching
+		// SinceLastHealthCheck; treat a current healthy flag as live too.
+		if atomic.LoadInt64(&process.LastContinousCheckHealthy) == 1 {
+			return 1
+		}
+		return 0
 	})
 
 	RaftIsHealthy = prometheus.NewGaugeFunc(prometheus.GaugeOpts{
 		Name: "orchestrator_raft_is_healthy",
-		Help: "1 if the node is a healthy raft node, 0 otherwise.",
+		Help: "1 if raft is enabled and this node is healthy; 0 if unhealthy or raft disabled.",
 	}, func() float64 {
 		if orcraft.IsRaftEnabled() && orcraft.IsHealthy() {
 			return 1

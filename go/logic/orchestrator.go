@@ -631,6 +631,8 @@ func ContinuousDiscovery() {
 				if recoveries, err := ReadActiveRecoveries(); err == nil {
 					ometrics.ActiveRecoveries.Set(float64(len(recoveries)))
 				}
+				// Topology issue gauges: reuse discovery analysis. Cost is similar to a
+				// recovery tick; failures are ignored so metrics never block the loop.
 				if analysis, err := inst.GetReplicationAnalysis("", &inst.ReplicationAnalysisHints{}); err == nil {
 					issuesCount := make(map[string]int)
 					for _, a := range analysis {
