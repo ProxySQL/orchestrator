@@ -232,6 +232,11 @@ type Configuration struct {
 	PostIntermediateMasterFailoverProcesses    []string          // Processes to execute after doing a master failover (order of execution undefined). Uses same placeholders as PostFailoverProcesses
 	PostGracefulTakeoverProcesses              []string          // Processes to execute after running a graceful master takeover. Uses same placeholders as PostFailoverProcesses
 	PostTakeMasterProcesses                    []string          // Processes to execute after a successful Take-Master event has taken place
+	// FailRecoveryOnFailedPostFailoverProcesses, when true, treats a non-zero exit from
+	// PostFailoverProcesses / PostMasterFailoverProcesses / PostIntermediateMasterFailoverProcesses /
+	// PostGracefulTakeoverProcesses as a failed recovery (IsSuccessful=false, error returned).
+	// Topology changes already performed are not rolled back. Default false preserves legacy behavior.
+	FailRecoveryOnFailedPostFailoverProcesses  bool
 	RecoverNonWriteableMaster                  bool              // When 'true', orchestrator treats a read-only master as a failure scenario and attempts to make the master writeable
 	CoMasterRecoveryMustPromoteOtherCoMaster   bool              // When 'false', anything can get promoted (and candidates are preferred over others). When 'true', orchestrator will promote the other co-master or else fail
 	DetachLostSlavesAfterMasterFailover        bool              // synonym to DetachLostReplicasAfterMasterFailover
@@ -433,6 +438,7 @@ func newConfiguration() *Configuration {
 		PostUnsuccessfulFailoverProcesses:          []string{},
 		PostGracefulTakeoverProcesses:              []string{},
 		PostTakeMasterProcesses:                    []string{},
+		FailRecoveryOnFailedPostFailoverProcesses:  false,
 		RecoverNonWriteableMaster:                  false,
 		CoMasterRecoveryMustPromoteOtherCoMaster:   true,
 		DetachLostSlavesAfterMasterFailover:        true,

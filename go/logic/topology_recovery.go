@@ -234,7 +234,7 @@ func initializeTopologyRecoveryPostConfiguration() {
 }
 
 // AuditTopologyRecovery audits a single step in a topology recovery process.
-func AuditTopologyRecovery(topologyRecovery *TopologyRecovery, message string) error {
+func auditTopologyRecoveryDefault(topologyRecovery *TopologyRecovery, message string) error {
 	log.Infof("topology_recovery: %s", message)
 	if topologyRecovery == nil {
 		return nil
@@ -244,9 +244,16 @@ func AuditTopologyRecovery(topologyRecovery *TopologyRecovery, message string) e
 	if orcraft.IsRaftEnabled() {
 		_, err := orcraft.PublishCommand("write-recovery-step", recoveryStep)
 		return err
-	} else {
-		return writeTopologyRecoveryStep(recoveryStep)
 	}
+	return writeTopologyRecoveryStep(recoveryStep)
+}
+
+// auditTopologyRecoveryFn persists recovery audit steps. Overridable in unit tests
+// to avoid requiring a backend database.
+var auditTopologyRecoveryFn = auditTopologyRecoveryDefault
+
+func AuditTopologyRecovery(topologyRecovery *TopologyRecovery, message string) error {
+	return auditTopologyRecoveryFn(topologyRecovery, message)
 }
 
 func resolveRecovery(topologyRecovery *TopologyRecovery, successorInstance *inst.Instance) error {
@@ -404,6 +411,60 @@ func executeProcesses(processes []string, description string, topologyRecovery *
 		}
 	}
 	AuditTopologyRecovery(topologyRecovery, fmt.Sprintf("done running %s hooks", description))
+	return err
+}
+
+// failOnPostFailoverHookError reports whether post-success failover hooks should
+// fail the overall recovery when a hook exits non-zero.
+func failOnPostFailoverHookError() bool {
+	return config.Config.FailRecoveryOnFailedPostFailoverProcesses
+}
+
+// markRecoveryUnsuccessfulDueToHooks flips a previously successful recovery to
+// unsuccessful in memory after post-failover hooks failed. Caller persists state.
+func markRecoveryUnsuccessfulDueToHooks(topologyRecovery *TopologyRecovery, hookErr error) {
+	if topologyRecovery == nil || hookErr == nil {
+		return
+	}
+	topologyRecovery.IsSuccessful = false
+	_ = topologyRecovery.AddError(fmt.Errorf("post-failover hooks failed: %w", hookErr))
+	AuditTopologyRecovery(topologyRecovery, fmt.Sprintf("Marking recovery unsuccessful due to post-failover hook failure: %+v", hookErr))
+}
+
+// persistResolvedRecovery writes the current IsSuccessful/successor fields for a recovery.
+func persistResolvedRecovery(topologyRecovery *TopologyRecovery) error {
+	if topologyRecovery == nil {
+		return nil
+	}
+	if orcraft.IsRaftEnabled() {
+		_, err := orcraft.PublishCommand("resolve-recovery", topologyRecovery)
+		return err
+	}
+	return writeResolveRecovery(topologyRecovery)
+}
+
+// persistResolvedRecoveryFn is the persistence hook used after post-failover hooks
+// fail the recovery. Overridable in unit tests.
+var persistResolvedRecoveryFn = persistResolvedRecovery
+
+// runPostSuccessFailoverProcesses runs hooks used after a successful promotion.
+// When FailRecoveryOnFailedPostFailoverProcesses is true, a hook failure marks the
+// recovery unsuccessful, persists that state, and returns the hook error.
+// Async hooks (commands ending with &) never fail the recovery.
+func runPostSuccessFailoverProcesses(processes []string, description string, topologyRecovery *TopologyRecovery) error {
+	failOnError := failOnPostFailoverHookError()
+	err := executeProcesses(processes, description, topologyRecovery, failOnError)
+	if err == nil {
+		return nil
+	}
+	if !failOnError {
+		AuditTopologyRecovery(topologyRecovery, fmt.Sprintf("%s completed with errors (ignored for recovery success): %+v", description, err))
+		return nil
+	}
+	markRecoveryUnsuccessfulDueToHooks(topologyRecovery, err)
+	if persistErr := persistResolvedRecoveryFn(topologyRecovery); persistErr != nil {
+		return fmt.Errorf("post-failover hooks failed (%v); also failed to persist recovery state: %w", err, persistErr)
+	}
 	return err
 }
 
@@ -1016,7 +1077,9 @@ func checkAndRecoverDeadMaster(analysisEntry inst.ReplicationAnalysis, candidate
 
 		if !skipProcesses {
 			// Execute post master-failover processes
-			executeProcesses(config.Config.PostMasterFailoverProcesses, "PostMasterFailoverProcesses", topologyRecovery, false)
+			if hookErr := runPostSuccessFailoverProcesses(config.Config.PostMasterFailoverProcesses, "PostMasterFailoverProcesses", topologyRecovery); hookErr != nil {
+				return true, topologyRecovery, hookErr
+			}
 		}
 	} else {
 		recoverDeadMasterFailureCounter.Inc(1)
@@ -1324,7 +1387,9 @@ func checkAndRecoverDeadIntermediateMaster(analysisEntry inst.ReplicationAnalysi
 			// Execute post intermediate-master-failover processes
 			topologyRecovery.SuccessorKey = &promotedReplica.Key
 			topologyRecovery.SuccessorAlias = promotedReplica.InstanceAlias
-			executeProcesses(config.Config.PostIntermediateMasterFailoverProcesses, "PostIntermediateMasterFailoverProcesses", topologyRecovery, false)
+			if hookErr := runPostSuccessFailoverProcesses(config.Config.PostIntermediateMasterFailoverProcesses, "PostIntermediateMasterFailoverProcesses", topologyRecovery); hookErr != nil {
+				return true, topologyRecovery, hookErr
+			}
 		}
 	} else {
 		recoverDeadIntermediateMasterFailureCounter.Inc(1)
@@ -1486,10 +1551,12 @@ func checkAndRecoverDeadCoMaster(analysisEntry inst.ReplicationAnalysis, candida
 			_, _ = inst.SetReadOnly(&promotedReplica.Key, false)
 		}
 		if !skipProcesses {
-			// Execute post intermediate-master-failover processes
+			// Execute post master-failover processes (co-master promotion)
 			topologyRecovery.SuccessorKey = &promotedReplica.Key
 			topologyRecovery.SuccessorAlias = promotedReplica.InstanceAlias
-			executeProcesses(config.Config.PostMasterFailoverProcesses, "PostMasterFailoverProcesses", topologyRecovery, false)
+			if hookErr := runPostSuccessFailoverProcesses(config.Config.PostMasterFailoverProcesses, "PostMasterFailoverProcesses", topologyRecovery); hookErr != nil {
+				return true, topologyRecovery, hookErr
+			}
 		}
 	} else {
 		recoverDeadCoMasterFailureCounter.Inc(1)
@@ -1631,7 +1698,9 @@ func checkAndRecoverDeadGroupMemberWithReplicas(analysisEntry inst.ReplicationAn
 			topologyRecovery.SuccessorKey = &recoveredToGroupMember.Key
 			topologyRecovery.SuccessorAlias = recoveredToGroupMember.InstanceAlias
 			// For the same reasons that were mentioned above, we re-use the post intermediate master fail-over hooks
-			executeProcesses(config.Config.PostIntermediateMasterFailoverProcesses, "PostIntermediateMasterFailoverProcesses", topologyRecovery, false)
+			if hookErr := runPostSuccessFailoverProcesses(config.Config.PostIntermediateMasterFailoverProcesses, "PostIntermediateMasterFailoverProcesses", topologyRecovery); hookErr != nil {
+				return true, topologyRecovery, hookErr
+			}
 		}
 	} else {
 		recoverDeadReplicationGroupMemberFailureCounter.Inc(1)
@@ -1930,24 +1999,13 @@ func executeCheckAndRecoverFunction(analysisEntry inst.ReplicationAnalysis, cand
 	startTime := time.Now()
 	recoveryAttempted, topologyRecovery, err = checkAndRecoverFunction(analysisEntry, candidateInstanceKey, forceInstanceRecovery, skipProcesses)
 
-	if recoveryAttempted && topologyRecovery != nil {
-		duration := time.Since(startTime).Seconds()
-		ometrics.RecoveryDurationSeconds.Observe(duration)
-
-		result := "success"
-		if !topologyRecovery.IsSuccessful {
-			result = "failed"
-		}
-		ometrics.RecoveriesTotal.WithLabelValues(string(analysisEntry.Analysis), result).Inc()
-	}
-
 	if !recoveryAttempted {
 		return recoveryAttempted, topologyRecovery, err
 	}
 	if topologyRecovery == nil {
 		return recoveryAttempted, topologyRecovery, err
 	}
-	if b, err := json.Marshal(topologyRecovery); err == nil {
+	if b, marshalErr := json.Marshal(topologyRecovery); marshalErr == nil {
 		log.Infof("Topology recovery: %+v", string(b))
 	} else {
 		log.Infof("Topology recovery: %+v", topologyRecovery)
@@ -1959,9 +2017,23 @@ func executeCheckAndRecoverFunction(analysisEntry inst.ReplicationAnalysis, cand
 		} else {
 			// Execute general post failover processes
 			_, _ = inst.EndDowntime(topologyRecovery.SuccessorKey)
-			executeProcesses(config.Config.PostFailoverProcesses, "PostFailoverProcesses", topologyRecovery, false)
+			if hookErr := runPostSuccessFailoverProcesses(config.Config.PostFailoverProcesses, "PostFailoverProcesses", topologyRecovery); hookErr != nil {
+				if err == nil {
+					err = hookErr
+				}
+			}
 		}
 	}
+	// Record metrics after post-failover hooks so FailRecoveryOnFailedPostFailoverProcesses
+	// can still flip IsSuccessful before counters are emitted.
+	duration := time.Since(startTime).Seconds()
+	ometrics.RecoveryDurationSeconds.Observe(duration)
+	result := "success"
+	if !topologyRecovery.IsSuccessful {
+		result = "failed"
+	}
+	ometrics.RecoveriesTotal.WithLabelValues(string(analysisEntry.Analysis), result).Inc()
+
 	AuditTopologyRecovery(topologyRecovery, fmt.Sprintf("Waiting for %d postponed functions", topologyRecovery.Len()))
 	topologyRecovery.Wait()
 	AuditTopologyRecovery(topologyRecovery, fmt.Sprintf("Executed %d postponed functions", topologyRecovery.Len()))
@@ -2317,7 +2389,11 @@ func GracefulMasterTakeover(clusterName string, designatedKey *inst.InstanceKey,
 			AuditTopologyRecovery(topologyRecovery, fmt.Sprintf("ProxySQL post-graceful-takeover failed: %v", err))
 		}
 	}
-	executeProcesses(config.Config.PostGracefulTakeoverProcesses, "PostGracefulTakeoverProcesses", topologyRecovery, false)
+	if hookErr := runPostSuccessFailoverProcesses(config.Config.PostGracefulTakeoverProcesses, "PostGracefulTakeoverProcesses", topologyRecovery); hookErr != nil {
+		if err == nil {
+			err = hookErr
+		}
+	}
 
 	return topologyRecovery, promotedMasterCoordinates, err
 }
