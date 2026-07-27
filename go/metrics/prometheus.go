@@ -17,9 +17,14 @@
 package metrics
 
 import (
+	"sync/atomic"
+	"time"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/proxysql/golib/log"
 	"github.com/proxysql/orchestrator/go/config"
+	"github.com/proxysql/orchestrator/go/process"
+	orcraft "github.com/proxysql/orchestrator/go/raft"
 )
 
 // Prometheus metric variables, exported so other packages can update them.
@@ -54,6 +59,104 @@ var (
 		Help:    "Duration of recovery operations in seconds.",
 		Buckets: prometheus.ExponentialBuckets(0.5, 2, 12), // 0.5s to ~1024s
 	})
+
+	HealthIsReady = prometheus.NewGaugeFunc(prometheus.GaugeOpts{
+		Name: "orchestrator_health_is_ready",
+		Help: "1 if the node is ready, 0 otherwise.",
+	}, func() float64 {
+		if atomic.LoadInt64(&process.LastContinousCheckHealthy) == 1 {
+			return 1
+		}
+		return 0
+	})
+
+	HealthIsLive = prometheus.NewGaugeFunc(prometheus.GaugeOpts{
+		Name: "orchestrator_health_is_live",
+		Help: "1 if the process recently ran a health check tick (liveness), 0 otherwise.",
+	}, func() float64 {
+		// Liveness: health subsystem has run recently (even if the check failed).
+		// Readiness is LastContinousCheckHealthy (successful registration).
+		maxAge := time.Duration(config.HealthPollSeconds*3) * time.Second
+		if d := process.SinceLastHealthCheck(); d > 0 && d <= maxAge {
+			return 1
+		}
+		if d := process.SinceLastGoodHealthCheck(); d > 0 && d <= maxAge {
+			return 1
+		}
+		// ContinuousRegistration updates LastContinousCheckHealthy without touching
+		// SinceLastHealthCheck; treat a current healthy flag as live too.
+		if atomic.LoadInt64(&process.LastContinousCheckHealthy) == 1 {
+			return 1
+		}
+		return 0
+	})
+
+	RaftIsHealthy = prometheus.NewGaugeFunc(prometheus.GaugeOpts{
+		Name: "orchestrator_raft_is_healthy",
+		Help: "1 if raft is enabled and this node is healthy; 0 if unhealthy or raft disabled.",
+	}, func() float64 {
+		if orcraft.IsRaftEnabled() && orcraft.IsHealthy() {
+			return 1
+		}
+		return 0
+	})
+
+	RaftIsLeader = prometheus.NewGaugeFunc(prometheus.GaugeOpts{
+		Name: "orchestrator_raft_is_leader",
+		Help: "1 if the node is the raft leader, 0 otherwise.",
+	}, func() float64 {
+		if orcraft.IsRaftEnabled() && orcraft.IsLeader() {
+			return 1
+		}
+		return 0
+	})
+
+	DiscoveryQueueLength = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "orchestrator_discovery_queue_length",
+		Help: "Length of the discovery queue.",
+	})
+
+	DeadInstancesDiscoveryQueueLength = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "orchestrator_dead_instances_discovery_queue_length",
+		Help: "Length of the dead instances discovery queue.",
+	})
+
+	ActiveRecoveries = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "orchestrator_active_recoveries",
+		Help: "Number of active (in-progress) recoveries.",
+	})
+
+	DowntimedInstances = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "orchestrator_downtimed_instances_total",
+		Help: "Number of instances currently marked as downtimed.",
+	})
+
+	ActiveTopologyIssues = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "orchestrator_active_topology_issues",
+		Help: "Number of active topology issues, broken down by issue type.",
+	}, []string{"issue_type"})
+
+	RaftPeersTotal = prometheus.NewGaugeFunc(prometheus.GaugeOpts{
+		Name: "orchestrator_raft_peers_total",
+		Help: "Number of known raft peers.",
+	}, func() float64 {
+		if orcraft.IsRaftEnabled() {
+			if peers, err := orcraft.GetPeers(); err == nil {
+				return float64(len(peers))
+			}
+		}
+		return 0
+	})
+
+	RaftIsPartOfQuorum = prometheus.NewGaugeFunc(prometheus.GaugeOpts{
+		Name: "orchestrator_raft_is_part_of_quorum",
+		Help: "1 if the node is part of raft quorum, 0 otherwise.",
+	}, func() float64 {
+		if orcraft.IsRaftEnabled() && orcraft.IsPartOfQuorum() {
+			return 1
+		}
+		return 0
+	})
 )
 
 // InitPrometheus registers all Prometheus metrics. Should be called once at
@@ -70,5 +173,16 @@ func InitPrometheus() {
 		ClustersTotal,
 		RecoveriesTotal,
 		RecoveryDurationSeconds,
+		HealthIsReady,
+		HealthIsLive,
+		RaftIsHealthy,
+		RaftIsLeader,
+		DiscoveryQueueLength,
+		DeadInstancesDiscoveryQueueLength,
+		ActiveRecoveries,
+		DowntimedInstances,
+		ActiveTopologyIssues,
+		RaftPeersTotal,
+		RaftIsPartOfQuorum,
 	)
 }
