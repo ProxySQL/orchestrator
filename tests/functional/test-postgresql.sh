@@ -152,21 +152,28 @@ else
     curl -s --max-time 10 "$ORC_URL/api/discover/172.30.0.21/5432" > /dev/null 2>&1
     sleep 5
 
-    # Verify primary has changed
-    NEW_PRIMARY=$(curl -s --max-time 10 "$ORC_URL/api/cluster/$PG_CLUSTER" 2>/dev/null | python3 -c "
-import json, sys
-instances = json.load(sys.stdin)
-for inst in instances:
-    if not inst.get('ReadOnly', True):
-        print(inst['Key']['Hostname'] + ':' + str(inst['Key']['Port']))
-        sys.exit(0)
-print('')
-" 2>/dev/null || echo "")
+    # Verify the switchover at the PostgreSQL level, not via orchestrator's
+    # cluster view. After a PG graceful takeover the demoted primary is still
+    # running (awaiting an operator-managed restart with standby.signal), so
+    # orchestrator sees two roots — one per former cluster — and a "find RO=false
+    # in original cluster" check returns the same host both times.
+    SWITCHOVER_OK=false
 
-    if [ -n "$NEW_PRIMARY" ] && [ "$NEW_PRIMARY" != "$CURRENT_PRIMARY" ]; then
-        pass "Primary switched from $CURRENT_PRIMARY to $NEW_PRIMARY"
+    # pgstandby1 must have been promoted (no longer in recovery)
+    PROMOTED=$($COMPOSE exec -T pgstandby1 psql -U postgres -tAc "SELECT pg_is_in_recovery();" 2>/dev/null | tr -d '[:space:]')
+    if [ "$PROMOTED" = "f" ]; then
+        pass "pgstandby1 has been promoted (pg_is_in_recovery=false)"
+        SWITCHOVER_OK=true
     else
-        fail "Primary did not change: was $CURRENT_PRIMARY, now ${NEW_PRIMARY:-unknown}"
+        fail "pgstandby1 still in recovery after switchover (got: '$PROMOTED')"
+    fi
+
+    # pgprimary must have been set read-only (default_transaction_read_only=on)
+    DEMOTED_RO=$($COMPOSE exec -T pgprimary psql -U postgres -tAc "SHOW default_transaction_read_only;" 2>/dev/null | tr -d '[:space:]')
+    if [ "$DEMOTED_RO" = "on" ]; then
+        pass "pgprimary has default_transaction_read_only=on"
+    else
+        fail "pgprimary default_transaction_read_only=$DEMOTED_RO (expected on)"
     fi
 
     # Verify new primary is actually writable (not just flagged read_only=false)
@@ -217,60 +224,132 @@ echo "--- Graceful switchover round-trip (switch back) ---"
 # actually stream WAL from the new primary. Simulate what a
 # PostGracefulTakeoverProcesses hook would do.
 
-if [ -n "${NEW_PRIMARY:-}" ] && [ "${NEW_PRIMARY:-}" != "${CURRENT_PRIMARY:-}" ]; then
-    echo "Converting demoted pgprimary into a live standby of pgstandby1..."
-    $COMPOSE exec -T pgprimary bash -c 'touch /var/lib/postgresql/data/standby.signal && chown postgres:postgres /var/lib/postgresql/data/standby.signal' || true
-    $COMPOSE restart pgprimary
-    echo "Waiting for pgprimary to become a healthy standby..."
-    STANDBY_READY=false
-    for i in $(seq 1 60); do
-        IN_RECOVERY=$($COMPOSE exec -T pgprimary psql -U postgres -tAc "SELECT pg_is_in_recovery();" 2>/dev/null | tr -d '[:space:]')
-        if [ "$IN_RECOVERY" = "t" ]; then
-            STANDBY_READY=true
-            echo "pgprimary is in recovery (standby mode) after ${i}s"
-            break
-        fi
+# Reclone a demoted node as a streaming standby of $2 (IP).
+# A plain standby.signal restart is not enough: after promote the demoted
+# primary's recovery point is often past the new timeline fork, so it cannot
+# follow the promoted primary without pg_rewind or a fresh basebackup.
+# Uses named volumes so we can stop the service, rewrite datadir via a
+# one-off container, then start again.
+pg_reclone_as_standby() {
+    local container="$1"
+    local new_primary_ip="$2"
+    echo "Stopping $container for reclone onto $new_primary_ip..."
+    $COMPOSE stop "$container" >/dev/null
+    # One-off container shares the service's named volume + network.
+    if ! $COMPOSE run --rm --no-deps --entrypoint bash \
+        -e PGPASSWORD=repl_pass \
+        "$container" -c "
+set -e
+PGDATA=/var/lib/postgresql/data
+rm -rf \"\$PGDATA\"/*
+chown postgres:postgres \"\$PGDATA\"
+gosu postgres pg_basebackup \
+    -h '$new_primary_ip' -p 5432 -U repl -D \"\$PGDATA\" -Fp -Xs -P -R
+# Force IP-based primary_conninfo (Docker DNS breaks when containers stop)
+cat > \"\$PGDATA/postgresql.auto.conf\" <<EOF
+primary_conninfo = 'host=$new_primary_ip port=5432 user=repl password=repl_pass'
+EOF
+touch \"\$PGDATA/standby.signal\"
+chown -R postgres:postgres \"\$PGDATA\"
+chmod 0700 \"\$PGDATA\"
+"; then
+        echo "pg_basebackup reclone of $container failed"
+        $COMPOSE start "$container" >/dev/null || true
+        return 1
+    fi
+    $COMPOSE start "$container" >/dev/null
+}
+
+# Wait until container is in recovery AND streaming from its primary.
+pg_wait_streaming_standby() {
+    local container="$1"
+    local max_secs="${2:-60}"
+    for i in $(seq 1 "$max_secs"); do
+        local state
+        state=$($COMPOSE exec -T "$container" psql -U postgres -tAc \
+            "SELECT pg_is_in_recovery()::text || ',' || COALESCE((SELECT status FROM pg_stat_wal_receiver LIMIT 1), 'none');" \
+            2>/dev/null | tr -d '[:space:]')
+        # pg_is_in_recovery()::text is "true"/"false"; bare bool prints "t"/"f"
+        case "$state" in
+            t,streaming|true,streaming)
+                echo "$container is streaming as a standby after ${i}s"
+                return 0
+                ;;
+        esac
         sleep 1
     done
+    echo "$container failed to reach streaming standby state (last=$(
+        $COMPOSE exec -T "$container" psql -U postgres -tAc \
+            "SELECT pg_is_in_recovery()::text || ',' || COALESCE((SELECT status FROM pg_stat_wal_receiver LIMIT 1), 'none');" \
+            2>/dev/null | tr -d '[:space:]'
+    ))"
+    return 1
+}
+
+if [ "${SWITCHOVER_OK:-false}" = "true" ]; then
+    echo "Converting demoted pgprimary into a live standby of pgstandby1 (pg_basebackup reclone)..."
+    if pg_reclone_as_standby pgprimary 172.30.0.21; then
+        :
+    else
+        fail "Failed to reclone pgprimary as standby of pgstandby1"
+    fi
+    echo "Waiting for pgprimary to become a healthy streaming standby..."
+    if pg_wait_streaming_standby pgprimary 60; then
+        STANDBY_READY=true
+    else
+        STANDBY_READY=false
+    fi
 
     if [ "$STANDBY_READY" != "true" ]; then
-        fail "pgprimary did not enter standby/recovery mode after restart"
+        fail "pgprimary did not enter streaming standby mode after reclone"
     else
-        pass "pgprimary restarted as a standby"
+        pass "pgprimary recloned as a streaming standby"
 
-        # Let orchestrator re-discover the flipped topology
+        # Let orchestrator re-discover — after pgprimary restarts as a standby,
+        # it joins pgstandby1's cluster ("172.30.0.21:5432"). Poll for that.
         sleep 5
         curl -s --max-time 10 "$ORC_URL/api/discover/172.30.0.20/5432" > /dev/null 2>&1
         curl -s --max-time 10 "$ORC_URL/api/discover/172.30.0.21/5432" > /dev/null 2>&1
         sleep 8
 
-        # Verify orchestrator sees pgstandby1 as primary and pgprimary as standby
-        TOPOLOGY_OK=false
+        NEW_CLUSTER=""
         for i in $(seq 1 30); do
-            PRIMARY_HOST=$(curl -s --max-time 10 "$ORC_URL/api/cluster/$PG_CLUSTER" 2>/dev/null | python3 -c "
+            NEW_CLUSTER=$(curl -s --max-time 10 "$ORC_URL/api/all-instances" 2>/dev/null | python3 -c "
 import json, sys
 for inst in json.load(sys.stdin):
-    if not inst.get('ReadOnly', True):
-        print(inst['Key']['Hostname'])
+    if inst['Key']['Hostname'] == '172.30.0.21':
+        print(inst.get('ClusterName', ''))
         sys.exit(0)
 " 2>/dev/null || echo "")
-            if [ "$PRIMARY_HOST" = "172.30.0.21" ] || [ "$PRIMARY_HOST" = "pgstandby1" ]; then
-                TOPOLOGY_OK=true
+            # Verify pgprimary (172.30.0.20) joined the same cluster as pgstandby1
+            PRIMARY_CLUSTER=$(curl -s --max-time 10 "$ORC_URL/api/all-instances" 2>/dev/null | python3 -c "
+import json, sys
+for inst in json.load(sys.stdin):
+    if inst['Key']['Hostname'] == '172.30.0.20':
+        print(inst.get('ClusterName', ''))
+        sys.exit(0)
+" 2>/dev/null || echo "")
+            if [ -n "$NEW_CLUSTER" ] && [ "$NEW_CLUSTER" = "$PRIMARY_CLUSTER" ]; then
                 break
+            fi
+            # Re-seed periodically
+            if [ "$((i % 5))" = "0" ]; then
+                curl -s --max-time 10 "$ORC_URL/api/discover/172.30.0.20/5432" > /dev/null 2>&1
+                curl -s --max-time 10 "$ORC_URL/api/discover/172.30.0.21/5432" > /dev/null 2>&1
             fi
             sleep 1
         done
 
-        if [ "$TOPOLOGY_OK" = "true" ]; then
-            pass "Orchestrator sees pgstandby1 as primary after round-trip setup"
+        if [ -n "$NEW_CLUSTER" ] && [ "$NEW_CLUSTER" = "$PRIMARY_CLUSTER" ]; then
+            pass "Orchestrator re-unified topology under new primary (cluster=$NEW_CLUSTER)"
         else
-            fail "Orchestrator does not see pgstandby1 as primary (got: ${PRIMARY_HOST:-unknown})"
+            fail "Topology not re-unified: pgstandby1 cluster=$NEW_CLUSTER pgprimary cluster=$PRIMARY_CLUSTER"
         fi
 
-        # Now switch back: pgstandby1 → pgprimary
-        if [ "$TOPOLOGY_OK" = "true" ]; then
-            echo "Executing graceful-master-takeover-auto to switch back..."
-            BACK_RESULT=$(curl -s --max-time 60 "$ORC_URL/api/graceful-master-takeover-auto/$PG_CLUSTER" 2>/dev/null)
+        # Now switch back: pgstandby1 → pgprimary, using the NEW cluster name
+        if [ -n "$NEW_CLUSTER" ] && [ "$NEW_CLUSTER" = "$PRIMARY_CLUSTER" ]; then
+            echo "Executing graceful-master-takeover-auto on cluster $NEW_CLUSTER..."
+            BACK_RESULT=$(curl -s --max-time 60 "$ORC_URL/api/graceful-master-takeover-auto/$NEW_CLUSTER" 2>/dev/null)
             BACK_CODE=$(echo "$BACK_RESULT" | python3 -c "import json,sys; print(json.load(sys.stdin).get('Code','ERROR'))" 2>/dev/null || echo "ERROR")
 
             if [ "$BACK_CODE" = "OK" ]; then
@@ -280,38 +359,25 @@ for inst in json.load(sys.stdin):
             fi
 
             sleep 10
-            curl -s --max-time 10 "$ORC_URL/api/discover/172.30.0.20/5432" > /dev/null 2>&1
-            curl -s --max-time 10 "$ORC_URL/api/discover/172.30.0.21/5432" > /dev/null 2>&1
-            sleep 5
 
-            FINAL_PRIMARY=$(curl -s --max-time 10 "$ORC_URL/api/cluster/$PG_CLUSTER" 2>/dev/null | python3 -c "
-import json, sys
-for inst in json.load(sys.stdin):
-    if not inst.get('ReadOnly', True):
-        print(inst['Key']['Hostname'])
-        sys.exit(0)
-" 2>/dev/null || echo "")
-
-            if [ "$FINAL_PRIMARY" = "172.30.0.20" ] || [ "$FINAL_PRIMARY" = "pgprimary" ]; then
+            # Verify pgprimary is now promoted (not in recovery)
+            BACK_PROMOTED=$($COMPOSE exec -T pgprimary psql -U postgres -tAc "SELECT pg_is_in_recovery();" 2>/dev/null | tr -d '[:space:]')
+            if [ "$BACK_PROMOTED" = "f" ]; then
                 pass "Round-trip complete: pgprimary is primary again"
             else
-                fail "Round-trip incomplete: primary is '$FINAL_PRIMARY' (expected pgprimary)"
+                fail "Round-trip incomplete: pgprimary pg_is_in_recovery='$BACK_PROMOTED' (expected f)"
             fi
 
-            # After round-trip, pgstandby1 is the demoted primary — reactivate
-            # it as a live standby so the downstream failover-kill test has a
-            # replica to promote.
+            # After round-trip, pgstandby1 is the demoted primary. Its entrypoint
+            # (init-standby.sh) always basebackups from 172.30.0.20 on start —
+            # restart is enough once pgprimary is primary again.
             echo "Reactivating pgstandby1 as a live standby of pgprimary..."
-            $COMPOSE exec -T pgstandby1 bash -c 'touch /var/lib/postgresql/data/standby.signal && chown postgres:postgres /var/lib/postgresql/data/standby.signal' || true
-            $COMPOSE restart pgstandby1
-            for i in $(seq 1 60); do
-                IN_RECOVERY=$($COMPOSE exec -T pgstandby1 psql -U postgres -tAc "SELECT pg_is_in_recovery();" 2>/dev/null | tr -d '[:space:]')
-                if [ "$IN_RECOVERY" = "t" ]; then
-                    echo "pgstandby1 is streaming as a standby after ${i}s"
-                    break
-                fi
-                sleep 1
-            done
+            $COMPOSE restart pgstandby1 >/dev/null
+            if pg_wait_streaming_standby pgstandby1 60; then
+                pass "pgstandby1 restarted as a streaming standby of pgprimary"
+            else
+                fail "pgstandby1 did not become a streaming standby after restart"
+            fi
             sleep 5
             curl -s --max-time 10 "$ORC_URL/api/discover/172.30.0.20/5432" > /dev/null 2>&1
             curl -s --max-time 10 "$ORC_URL/api/discover/172.30.0.21/5432" > /dev/null 2>&1

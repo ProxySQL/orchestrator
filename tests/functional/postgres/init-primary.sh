@@ -10,6 +10,8 @@ wal_level = replica
 max_wal_senders = 10
 wal_keep_size = 256MB
 hot_standby = on
+# Required for pg_rewind if an operator rewinds a demoted primary onto a new timeline
+wal_log_hints = on
 listen_addresses = '*'
 EOF
 
@@ -19,6 +21,9 @@ cat >> "$PGDATA/pg_hba.conf" <<EOF
 host    replication     repl        all     md5
 # Allow orchestrator monitoring user
 host    all             orchestrator all     md5
+# Allow orchestrator to act as a replication client when graceful-switchover
+# sets primary_conninfo on a demoted primary using orchestrator's credentials
+host    replication     orchestrator all     md5
 EOF
 
 # ---- Create users ----
