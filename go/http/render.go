@@ -17,9 +17,11 @@
 package http
 
 import (
+	"bytes"
 	"encoding/json"
 	"html/template"
 	"net/http"
+	"os"
 	"path/filepath"
 	"sync"
 
@@ -35,50 +37,94 @@ func renderJSON(w http.ResponseWriter, status int, data interface{}) {
 	}
 }
 
-// templateCache caches parsed templates.
-var templateCache = struct {
+// contentTemplateCache caches parsed content templates (without layout).
+var contentTemplateCache = struct {
 	sync.RWMutex
 	m map[string]*template.Template
 }{m: make(map[string]*template.Template)}
 
+var (
+	layoutOnce    sync.Once
+	layoutSource  string
+	layoutLoadErr error
+)
+
 const templateDir = "resources"
 const layoutFile = "templates/layout"
 
-// getTemplate returns a cached template or parses and caches it.
-func getTemplate(name string) (*template.Template, error) {
-	templateCache.RLock()
-	if t, ok := templateCache.m[name]; ok {
-		templateCache.RUnlock()
+func loadLayoutSource() {
+	layoutPath := filepath.Join(templateDir, layoutFile+".tmpl")
+	b, err := os.ReadFile(layoutPath)
+	if err != nil {
+		layoutLoadErr = err
+		return
+	}
+	layoutSource = string(b)
+}
+
+// getContentTemplate returns a cached content template or parses and caches it.
+func getContentTemplate(name string) (*template.Template, error) {
+	contentTemplateCache.RLock()
+	if t, ok := contentTemplateCache.m[name]; ok {
+		contentTemplateCache.RUnlock()
 		return t, nil
 	}
-	templateCache.RUnlock()
+	contentTemplateCache.RUnlock()
 
-	layoutPath := filepath.Join(templateDir, layoutFile+".tmpl")
 	tmplPath := filepath.Join(templateDir, name+".tmpl")
-	t, err := template.ParseFiles(layoutPath, tmplPath)
+	t, err := template.ParseFiles(tmplPath)
 	if err != nil {
 		return nil, err
 	}
 
-	templateCache.Lock()
-	templateCache.m[name] = t
-	templateCache.Unlock()
+	contentTemplateCache.Lock()
+	contentTemplateCache.m[name] = t
+	contentTemplateCache.Unlock()
 	return t, nil
 }
 
 // renderHTML renders an HTML template with the given data.
 // The template name should be like "templates/clusters".
+// Content is injected into layout.tmpl via {{yield}}, matching the
+// martini-contrib/render convention used by the existing templates.
 func renderHTML(w http.ResponseWriter, status int, name string, data interface{}) {
-	t, err := getTemplate(name)
+	content, err := getContentTemplate(name)
 	if err != nil {
 		_ = log.Errorf("Error parsing template %s: %+v", name, err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
+
+	var contentBuf bytes.Buffer
+	if err := content.Execute(&contentBuf, data); err != nil {
+		_ = log.Errorf("Error executing template %s: %+v", name, err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	layoutOnce.Do(loadLayoutSource)
+	if layoutLoadErr != nil {
+		_ = log.Errorf("Error loading layout template: %+v", layoutLoadErr)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	// Per-request layout parse so the yield closure is concurrent-safe.
+	layout, err := template.New("layout").Funcs(template.FuncMap{
+		"yield": func() template.HTML {
+			return template.HTML(contentBuf.String())
+		},
+	}).Parse(layoutSource)
+	if err != nil {
+		_ = log.Errorf("Error parsing layout template for %s: %+v", name, err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
 	w.Header().Set("Content-Type", "text/html; charset=UTF-8")
 	w.WriteHeader(status)
-	if err := t.Execute(w, data); err != nil {
-		_ = log.Errorf("Error executing template %s: %+v", name, err)
+	if err := layout.Execute(w, data); err != nil {
+		_ = log.Errorf("Error executing layout for template %s: %+v", name, err)
 	}
 }
 
