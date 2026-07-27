@@ -29,9 +29,17 @@ for REPLICA in mysql2 mysql3; do
     echo "Configuring $REPLICA to replicate from mysql1..."
     for i in $(seq 1 30); do
         $COMPOSE exec -T "$REPLICA" mysql -uroot -ptestpass -e "
+            SET GLOBAL super_read_only=0;
+            SET GLOBAL read_only=0;
+            STOP REPLICA; STOP SLAVE;
+        " 2>/dev/null || true
+        if $COMPOSE exec -T "$REPLICA" mysql -uroot -ptestpass -e "
             $CHANGE_SOURCE_CMD;
+            SET GLOBAL read_only=1;
             $START_REPLICA_CMD;
-        " 2>/dev/null && break
+        " 2>/dev/null; then
+            break
+        fi
         sleep 1
     done
 done

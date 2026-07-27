@@ -78,18 +78,22 @@ nudge_replica_threads() {
 # Full reconfigure: point r at mysql1 with GTID auto-position / MariaDB slave_pos.
 repoint_replica_to_mysql1() {
     local r="$1"
-    $COMPOSE exec -T "$r" mysql -uroot -ptestpass -e "STOP REPLICA; STOP SLAVE;" 2>/dev/null || true
+    local out
+    # Clear read-only so reconfiguration is allowed after a prior promotion.
+    $COMPOSE exec -T "$r" mysql -uroot -ptestpass -e "SET GLOBAL super_read_only=0; SET GLOBAL read_only=0;" 2>/dev/null || true
+    $COMPOSE exec -T "$r" mysql -uroot -ptestpass -e "STOP REPLICA;" 2>/dev/null || true
+    $COMPOSE exec -T "$r" mysql -uroot -ptestpass -e "STOP SLAVE;" 2>/dev/null || true
     # RESET drops errant/local GTID history from prior failover tests.
     # MariaDB errno 1950: out-of-order GTID when gtid_slave_pos / strict mode conflict.
     $COMPOSE exec -T "$r" mysql -uroot -ptestpass -e "$RESET_REPLICA" 2>/dev/null || true
     if mysql_is_mariadb; then
         $COMPOSE exec -T "$r" mysql -uroot -ptestpass -e "SET GLOBAL gtid_slave_pos=''; SET GLOBAL gtid_strict_mode=OFF;" 2>/dev/null || true
     fi
-    $COMPOSE exec -T "$r" mysql -uroot -ptestpass -e "
+    out=$($COMPOSE exec -T "$r" mysql -uroot -ptestpass -e "
         $CHANGE_TO_MYSQL1
         SET GLOBAL read_only=1;
         $START_REPLICA
-    " 2>/dev/null || true
+    " 2>&1) || echo "$r: CHANGE/START failed: $out"
     nudge_replica_threads "$r"
 }
 
@@ -123,9 +127,16 @@ ensure_flat_topology() {
         fi
     fi
 
-    for r in mysql2 mysql3; do
-        repoint_replica_to_mysql1 "$r"
-    done
+    echo "Rebuilding replication via setup-replication.sh (handles MySQL 9 / MariaDB dialects)..."
+    # Prefer the shared setup path — it is what CI uses after containers start and
+    # is known to work on MySQL 9.x. Individual CHANGE statements often leave
+    # SHOW REPLICA STATUS empty after RESET on 9.5/9.6 if any clause fails.
+    if ! COMPOSE="$COMPOSE" bash tests/functional/setup-replication.sh; then
+        echo "setup-replication.sh failed; falling back to per-replica repoint"
+        for r in mysql2 mysql3; do
+            repoint_replica_to_mysql1 "$r"
+        done
+    fi
 
     # ProxySQL writer back to mysql1 (best-effort)
     docker compose -f tests/functional/docker-compose.yml exec -T proxysql \
