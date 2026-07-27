@@ -3,6 +3,6 @@ server-id=1
 log-bin=mysql-bin
 binlog-format=ROW
 log-slave-updates=ON
-gtid_strict_mode=ON
+gtid_strict_mode=OFF
 binlog-row-image=MINIMAL
 report-host=mysql1

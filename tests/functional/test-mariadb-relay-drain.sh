@@ -79,21 +79,17 @@ nudge_replica_threads() {
 repoint_replica_to_mysql1() {
     local r="$1"
     $COMPOSE exec -T "$r" mysql -uroot -ptestpass -e "STOP REPLICA; STOP SLAVE;" 2>/dev/null || true
-    # Skip RESET when possible — RESET wipes GTID state and often leaves SQL=No on MariaDB
-    # until positions are re-established. Prefer CHANGE + START first.
-    if ! $COMPOSE exec -T "$r" mysql -uroot -ptestpass -e "
+    # RESET drops errant/local GTID history from prior failover tests.
+    # MariaDB errno 1950: out-of-order GTID when gtid_slave_pos / strict mode conflict.
+    $COMPOSE exec -T "$r" mysql -uroot -ptestpass -e "$RESET_REPLICA" 2>/dev/null || true
+    if mysql_is_mariadb; then
+        $COMPOSE exec -T "$r" mysql -uroot -ptestpass -e "SET GLOBAL gtid_slave_pos=''; SET GLOBAL gtid_strict_mode=OFF;" 2>/dev/null || true
+    fi
+    $COMPOSE exec -T "$r" mysql -uroot -ptestpass -e "
         $CHANGE_TO_MYSQL1
         SET GLOBAL read_only=1;
         $START_REPLICA
-    " 2>/dev/null; then
-        $COMPOSE exec -T "$r" mysql -uroot -ptestpass -e "
-            $STOP_REPLICA
-            $RESET_REPLICA
-            $CHANGE_TO_MYSQL1
-            SET GLOBAL read_only=1;
-            $START_REPLICA
-        " 2>/dev/null || true
-    fi
+    " 2>/dev/null || true
     nudge_replica_threads "$r"
 }
 

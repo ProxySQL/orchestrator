@@ -40,10 +40,12 @@ echo "Verifying replication..."
 for REPLICA in mysql2 mysql3; do
     for i in $(seq 1 60); do
         if echo "$MYSQL_FULL_VERSION" | grep -qi mariadb; then
-            STATUS=$($COMPOSE exec -T "$REPLICA" mysql -uroot -ptestpass -e \
-                "SHOW SLAVE STATUS\G" 2>/dev/null | awk '/Slave_IO_Running:/{print $2; exit}' | tr -d '[:space:]')
-            if [ "$STATUS" = "Yes" ]; then
-                echo "$REPLICA: replication OK (IO thread Yes)"
+            IO=$($COMPOSE exec -T "$REPLICA" mysql -uroot -ptestpass -e \
+                "SHOW SLAVE STATUS\G" 2>/dev/null | awk -F': *' '/Slave_IO_Running:/{print $2; exit}' | tr -d '[:space:]')
+            SQL=$($COMPOSE exec -T "$REPLICA" mysql -uroot -ptestpass -e \
+                "SHOW SLAVE STATUS\G" 2>/dev/null | awk -F': *' '/Slave_SQL_Running:/{print $2; exit}' | tr -d '[:space:]')
+            if [ "$IO" = "Yes" ] && [ "$SQL" = "Yes" ]; then
+                echo "$REPLICA: replication OK (IO+SQL Yes)"
                 break
             fi
         else
