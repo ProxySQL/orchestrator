@@ -12,9 +12,13 @@ cd "$(dirname "$0")/.."
 mkdir -p bin
 bindir="$PWD"/bin
 
-version=$(git rev-parse HEAD)
-describe=$(git describe --tags --always --dirty)
+commit=$(git rev-parse HEAD)
+if [ -f RELEASE_VERSION ]; then
+  version=$(tr -d '[:space:]' < RELEASE_VERSION)
+else
+  version=$(git describe --tags --always --dirty)
+fi
 
-go build -o "$bindir/orchestrator" -ldflags "-X main.AppVersion=${version} -X main.BuildDescribe=${describe}" ./go/cmd/orchestrator/main.go
+go build -o "$bindir/orchestrator" -ldflags "-X main.AppVersion=${version} -X main.GitCommit=${commit}" ./go/cmd/orchestrator/main.go
 
 rsync -qa ./resources $bindir/

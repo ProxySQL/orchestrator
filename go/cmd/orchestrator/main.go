@@ -30,7 +30,28 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
+// AppVersion and GitCommit are normally injected via -ldflags by build.sh / script/build.
+// When building with plain `go build` they are empty; defaultAppVersion (kept in sync with
+// RELEASE_VERSION) is used so `orchestrator -version` is never blank (#109).
 var AppVersion, GitCommit string
+
+// defaultAppVersion must match the contents of the repo-root RELEASE_VERSION file.
+const defaultAppVersion = "4.30.0"
+
+func resolvedAppVersion() string {
+	if AppVersion != "" {
+		return AppVersion
+	}
+	return defaultAppVersion
+}
+
+func versionOutput() string {
+	if AppVersion != "" {
+		return AppVersion
+	}
+	// Plain `go build` without -ldflags: still report the tree version, marked devel.
+	return defaultAppVersion + " (devel)"
+}
 
 // main is the application's entry point. It will either spawn a CLI or HTTP interfaces.
 func main() {
@@ -95,15 +116,19 @@ func main() {
 		log.SetPrintStackTrace(*stack)
 	}
 	if *config.RuntimeCLIFlags.Version {
-		fmt.Println(AppVersion)
-		fmt.Println(GitCommit)
+		fmt.Println(versionOutput())
+		if GitCommit != "" {
+			fmt.Println(GitCommit)
+		}
 		return
 	}
 
-	startText := "starting orchestrator"
-	if AppVersion != "" {
-		startText += ", version: " + AppVersion
+	// Ensure runtime always has a non-empty version (API/status, backend deploy checks).
+	if AppVersion == "" {
+		AppVersion = resolvedAppVersion()
 	}
+
+	startText := "starting orchestrator, version: " + AppVersion
 	if GitCommit != "" {
 		startText += ", git commit: " + GitCommit
 	}
