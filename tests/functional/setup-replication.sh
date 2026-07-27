@@ -57,10 +57,20 @@ for REPLICA in mysql2 mysql3; do
                 break
             fi
         else
-            STATUS=$($COMPOSE exec -T "$REPLICA" mysql -uroot -ptestpass -Nse \
-                "SELECT SERVICE_STATE FROM performance_schema.replication_connection_status" 2>/dev/null | tr -d '[:space:]')
-            if [ "$STATUS" = "ON" ]; then
-                echo "$REPLICA: replication OK (IO thread ON)"
+            IO=$($COMPOSE exec -T "$REPLICA" mysql -uroot -ptestpass -Nse \
+                "SELECT SERVICE_STATE FROM performance_schema.replication_connection_status WHERE CHANNEL_NAME='' LIMIT 1" 2>/dev/null | tr -d '[:space:]')
+            SQL=$($COMPOSE exec -T "$REPLICA" mysql -uroot -ptestpass -Nse \
+                "SELECT SERVICE_STATE FROM performance_schema.replication_applier_status WHERE CHANNEL_NAME='' LIMIT 1" 2>/dev/null | tr -d '[:space:]')
+            if [ -z "$IO" ]; then
+                IO=$($COMPOSE exec -T "$REPLICA" mysql -uroot -ptestpass -Nse \
+                    "SELECT SERVICE_STATE FROM performance_schema.replication_connection_status LIMIT 1" 2>/dev/null | tr -d '[:space:]')
+            fi
+            if [ -z "$SQL" ]; then
+                SQL=$($COMPOSE exec -T "$REPLICA" mysql -uroot -ptestpass -Nse \
+                    "SELECT SERVICE_STATE FROM performance_schema.replication_applier_status LIMIT 1" 2>/dev/null | tr -d '[:space:]')
+            fi
+            if [ "$IO" = "ON" ] && [ "$SQL" = "ON" ]; then
+                echo "$REPLICA: replication OK (IO+SQL ON)"
                 break
             fi
         fi

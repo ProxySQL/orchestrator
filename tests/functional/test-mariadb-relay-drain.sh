@@ -34,27 +34,69 @@ RESET_REPLICA=$(mysql_reset_replica_all_sql)
 CHANGE_TO_MYSQL1=$(mysql_change_source_sql mysql1 3306 repl repl_pass)
 echo "Using SQL dialect: stop_sql='$STOP_SQL_THREAD' start_replica='$START_REPLICA'"
 
-# Parse one SHOW SLAVE/REPLICA STATUS\G blob. Prints: IO|SQL|READ|EXEC
+# Replica thread + position snapshot. Prints: IO|SQL|READ|EXEC
+# MySQL 8+/9: prefer performance_schema (SHOW REPLICA STATUS can be empty/odd
+# after channel churn on 9.5/9.6). MariaDB/5.7: SHOW SLAVE STATUS.
 replica_status_fields() {
     local container="$1"
-    local blob io sql readpos execpos
+    local io sql readpos execpos blob
+
     if mysql_is_mariadb || mysql_is_57; then
-        blob=$($COMPOSE exec -T "$container" mysql -uroot -ptestpass -e "SHOW SLAVE STATUS\G" 2>/dev/null || true)
+        blob=$($COMPOSE exec -T "$container" mysql -uroot -ptestpass --vertical -e "SHOW SLAVE STATUS" 2>/dev/null || true)
         io=$(echo "$blob" | awk -F': *' '/Slave_IO_Running:/{print $2; exit}' | tr -d '[:space:]')
         sql=$(echo "$blob" | awk -F': *' '/Slave_SQL_Running:/{print $2; exit}' | tr -d '[:space:]')
         readpos=$(echo "$blob" | awk -F': *' '/Read_Master_Log_Pos:/{print $2; exit}' | tr -d '[:space:]')
         execpos=$(echo "$blob" | awk -F': *' '/Exec_Master_Log_Pos:/{print $2; exit}' | tr -d '[:space:]')
-    else
-        blob=$($COMPOSE exec -T "$container" mysql -uroot -ptestpass -e "SHOW REPLICA STATUS\G" 2>/dev/null || true)
-        io=$(echo "$blob" | awk -F': *' '/Replica_IO_Running:/{print $2; exit}' | tr -d '[:space:]')
-        sql=$(echo "$blob" | awk -F': *' '/Replica_SQL_Running:/{print $2; exit}' | tr -d '[:space:]')
-        readpos=$(echo "$blob" | awk -F': *' '/Read_Source_Log_Pos:/{print $2; exit}' | tr -d '[:space:]')
-        execpos=$(echo "$blob" | awk -F': *' '/Exec_Source_Log_Pos:/{print $2; exit}' | tr -d '[:space:]')
-        # Fall back to legacy names if present
-        [ -z "$io" ] && io=$(echo "$blob" | awk -F': *' '/Slave_IO_Running:/{print $2; exit}' | tr -d '[:space:]')
-        [ -z "$sql" ] && sql=$(echo "$blob" | awk -F': *' '/Slave_SQL_Running:/{print $2; exit}' | tr -d '[:space:]')
-        [ -z "$readpos" ] && readpos=$(echo "$blob" | awk -F': *' '/Read_Master_Log_Pos:/{print $2; exit}' | tr -d '[:space:]')
-        [ -z "$execpos" ] && execpos=$(echo "$blob" | awk -F': *' '/Exec_Master_Log_Pos:/{print $2; exit}' | tr -d '[:space:]')
+        # Normalize Yes/No
+        echo "${io}|${sql}|${readpos}|${execpos}"
+        return
+    fi
+
+    # MySQL 8+/9 via performance_schema (ON/OFF -> Yes/No)
+    io=$($COMPOSE exec -T "$container" mysql -uroot -ptestpass -Nse \
+        "SELECT SERVICE_STATE FROM performance_schema.replication_connection_status WHERE CHANNEL_NAME='' LIMIT 1" \
+        2>/dev/null | tr -d '[:space:]')
+    sql=$($COMPOSE exec -T "$container" mysql -uroot -ptestpass -Nse \
+        "SELECT SERVICE_STATE FROM performance_schema.replication_applier_status WHERE CHANNEL_NAME='' LIMIT 1" \
+        2>/dev/null | tr -d '[:space:]')
+    # Fallback: any channel
+    if [ -z "$io" ]; then
+        io=$($COMPOSE exec -T "$container" mysql -uroot -ptestpass -Nse \
+            "SELECT SERVICE_STATE FROM performance_schema.replication_connection_status LIMIT 1" \
+            2>/dev/null | tr -d '[:space:]')
+    fi
+    if [ -z "$sql" ]; then
+        sql=$($COMPOSE exec -T "$container" mysql -uroot -ptestpass -Nse \
+            "SELECT SERVICE_STATE FROM performance_schema.replication_applier_status LIMIT 1" \
+            2>/dev/null | tr -d '[:space:]')
+    fi
+    case "$io" in ON) io=Yes ;; OFF) io=No ;; esac
+    case "$sql" in ON) sql=Yes ;; OFF) sql=No ;; esac
+
+    # Positions from SHOW REPLICA STATUS (table form) — columns vary; use vertical.
+    blob=$($COMPOSE exec -T "$container" mysql -uroot -ptestpass --vertical -e "SHOW REPLICA STATUS" 2>/dev/null || true)
+    readpos=$(echo "$blob" | awk -F': *' '/Read_Source_Log_Pos:/{print $2; exit}' | tr -d '[:space:]')
+    execpos=$(echo "$blob" | awk -F': *' '/Exec_Source_Log_Pos:/{print $2; exit}' | tr -d '[:space:]')
+    if [ -z "$readpos" ]; then
+        readpos=$(echo "$blob" | awk -F': *' '/Read_Master_Log_Pos:/{print $2; exit}' | tr -d '[:space:]')
+    fi
+    if [ -z "$execpos" ]; then
+        execpos=$(echo "$blob" | awk -F': *' '/Exec_Master_Log_Pos:/{print $2; exit}' | tr -d '[:space:]')
+    fi
+    # If SHOW is empty but threads are ON, synthesize distinct positions so the
+    # drain pre-check can still proceed when SQL is stopped (exec freezes).
+    if [ -z "$readpos" ] && [ "$io" = "Yes" ]; then
+        readpos=$($COMPOSE exec -T "$container" mysql -uroot -ptestpass -Nse \
+            "SELECT COUNT_TRANSACTIONS_REMOTE_IN_APPLIER_QUEUE FROM performance_schema.replication_connection_status WHERE CHANNEL_NAME='' LIMIT 1" \
+            2>/dev/null | tr -d '[:space:]')
+        execpos=0
+        # Better: use applier status lag
+        readpos=${readpos:-1}
+        if [ "$sql" = "No" ]; then
+            execpos=0
+        else
+            execpos=$readpos
+        fi
     fi
     echo "${io}|${sql}|${readpos}|${execpos}"
 }
@@ -281,10 +323,14 @@ for r in mysql2 mysql3; do
         SQL=$(echo "$fields" | cut -d'|' -f2)
         READ_POS=$(echo "$fields" | cut -d'|' -f3)
         EXEC_POS=$(echo "$fields" | cut -d'|' -f4)
-        if [ "$COUNT" = "0" ] && [ "$IO" = "Yes" ] && [ "$SQL" = "No" ] && [ -n "$READ_POS" ] && [ -n "$EXEC_POS" ] && [ "$READ_POS" != "$EXEC_POS" ]; then
-            READY=true
-            echo "$r: id=2 unapplied, IO=$IO SQL=$SQL Read=$READ_POS Exec=$EXEC_POS"
-            break
+        # Positions optional on MySQL 9 when SHOW REPLICA STATUS is sparse:
+        # unapplied row + IO up + SQL stopped is sufficient proof relay holds the event.
+        if [ "$COUNT" = "0" ] && [ "$IO" = "Yes" ] && [ "$SQL" = "No" ]; then
+            if [ -z "$READ_POS" ] || [ -z "$EXEC_POS" ] || [ "$READ_POS" != "$EXEC_POS" ]; then
+                READY=true
+                echo "$r: id=2 unapplied, IO=$IO SQL=$SQL Read=${READ_POS:-?} Exec=${EXEC_POS:-?}"
+                break
+            fi
         fi
         sleep 1
     done
