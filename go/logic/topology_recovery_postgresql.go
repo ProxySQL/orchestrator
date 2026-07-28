@@ -99,8 +99,12 @@ func checkAndRecoverDeadPrimary(analysisEntry inst.ReplicationAnalysis, candidat
 		AuditTopologyRecovery(topologyRecovery, fmt.Sprintf("RecoverDeadPrimary: successfully promoted %+v", promotedInstance.Key))
 		if !skipProcesses {
 			topologyRecovery.SuccessorKey = &promotedInstance.Key
-			executeProcesses(config.Config.PostMasterFailoverProcesses, "PostMasterFailoverProcesses", topologyRecovery, false)
-			executeProcesses(config.Config.PostFailoverProcesses, "PostFailoverProcesses", topologyRecovery, false)
+			if hookErr := runPostSuccessFailoverProcesses(config.Config.PostMasterFailoverProcesses, "PostMasterFailoverProcesses", topologyRecovery); hookErr != nil {
+				return true, topologyRecovery, hookErr
+			}
+			if hookErr := runPostSuccessFailoverProcesses(config.Config.PostFailoverProcesses, "PostFailoverProcesses", topologyRecovery); hookErr != nil {
+				return true, topologyRecovery, hookErr
+			}
 		}
 	} else {
 		if !skipProcesses {
@@ -246,7 +250,9 @@ func PostgreSQLGracefulPrimarySwitchover(clusterName string, designatedKey *inst
 	resolveRecovery(topologyRecovery, promotedInstance)
 
 	// --- Execute PostGracefulTakeoverProcesses ---
-	executeProcesses(config.Config.PostGracefulTakeoverProcesses, "PostGracefulTakeoverProcesses", topologyRecovery, false)
+	if hookErr := runPostSuccessFailoverProcesses(config.Config.PostGracefulTakeoverProcesses, "PostGracefulTakeoverProcesses", topologyRecovery); hookErr != nil {
+		return topologyRecovery, hookErr
+	}
 
 	AuditTopologyRecovery(topologyRecovery, fmt.Sprintf("PostgreSQLGracefulPrimarySwitchover: completed. New primary: %+v", promotedInstance.Key))
 	return topologyRecovery, nil

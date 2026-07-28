@@ -76,8 +76,15 @@ These hooks are available for recoveries:
 - `PostFailoverProcesses`: executed at the end of any successful recovery (including and adding to the above two).
 - `PostUnsuccessfulFailoverProcesses`: executed at the end of any unsuccessful recovery.
 - `PostGracefulTakeoverProcesses`: executed on planned, graceful master takeover, after the old master is positioned under the newly promoted master.
+- `FailRecoveryOnFailedPostFailoverProcesses`: when `true` (default `false`), a non-zero exit from the successful-path
+  post hooks above (`PostFailoverProcesses`, `PostMasterFailoverProcesses`, `PostIntermediateMasterFailoverProcesses`,
+  `PostGracefulTakeoverProcesses`) marks the recovery as **unsuccessful** in orchestrator's recovery history, returns
+  an error to the caller, and counts the recovery as failed in metrics. Topology changes already performed are **not**
+  rolled back. Use this when external hooks (for example service discovery updates) are part of your recovery SLO.
+  When `false`, hook failures are audited/logged but the recovery remains successful (legacy behavior).
 
-Any process command that ends with `"&"` will be executed asynchronously, and a failure for such process is ignored.
+Any process command that ends with `"&"` will be executed asynchronously, and a failure for such process is ignored
+(including when `FailRecoveryOnFailedPostFailoverProcesses` is `true`).
 
 All of the above are lists of commands which `orchestrator` executes sequentially, in order of definition.
 
