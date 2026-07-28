@@ -237,56 +237,56 @@ type Configuration struct {
 	// PostGracefulTakeoverProcesses as a failed recovery (IsSuccessful=false, error returned).
 	// Topology changes already performed are not rolled back. Default false preserves legacy behavior.
 	FailRecoveryOnFailedPostFailoverProcesses  bool
-	RecoverNonWriteableMaster                  bool              // When 'true', orchestrator treats a read-only master as a failure scenario and attempts to make the master writeable
-	CoMasterRecoveryMustPromoteOtherCoMaster   bool              // When 'false', anything can get promoted (and candidates are preferred over others). When 'true', orchestrator will promote the other co-master or else fail
-	DetachLostSlavesAfterMasterFailover        bool              // synonym to DetachLostReplicasAfterMasterFailover
-	DetachLostReplicasAfterMasterFailover      bool              // Should replicas that are not to be lost in master recovery (i.e. were more up-to-date than promoted replica) be forcibly detached
-	ApplyMySQLPromotionAfterMasterFailover     bool              // Should orchestrator take upon itself to apply MySQL master promotion: set read_only=0, detach replication, etc.
-	PreventCrossDataCenterMasterFailover       bool              // When true (default: false), cross-DC master failover are not allowed, orchestrator will do all it can to only fail over within same DC, or else not fail over at all.
-	PreventCrossRegionMasterFailover           bool              // When true (default: false), cross-region master failover are not allowed, orchestrator will do all it can to only fail over within same region, or else not fail over at all.
-	MasterFailoverLostInstancesDowntimeMinutes uint              // Number of minutes to downtime any server that was lost after a master failover (including failed master & lost replicas). 0 to disable
-	MasterFailoverDetachSlaveMasterHost        bool              // synonym to MasterFailoverDetachReplicaMasterHost
-	MasterFailoverDetachReplicaMasterHost      bool              // Should orchestrator issue a detach-replica-master-host on newly promoted master (this makes sure the new master will not attempt to replicate old master if that comes back to life). Defaults 'false'. Meaningless if ApplyMySQLPromotionAfterMasterFailover is 'true'.
-	FailMasterPromotionOnLagMinutes            uint              // when > 0, fail a master promotion if the candidate replica is lagging >= configured number of minutes.
-	FailMasterPromotionIfSQLThreadNotUpToDate  bool              // when true, and a master failover takes place, if candidate master has not consumed all relay logs, promotion is aborted with error
-	DelayMasterPromotionIfSQLThreadNotUpToDate bool              // when true, and a master failover takes place, if candidate master has not consumed all relay logs, delay promotion until the sql thread has caught up
-	PostponeSlaveRecoveryOnLagMinutes          uint              // Synonym to PostponeReplicaRecoveryOnLagMinutes
-	PostponeReplicaRecoveryOnLagMinutes        uint              // On crash recovery, replicas that are lagging more than given minutes are only resurrected late in the recovery process, after master/IM has been elected and processes executed. Value of 0 disables this feature
-	OSCIgnoreHostnameFilters                   []string          // OSC replicas recommendation will ignore replica hostnames matching given patterns
-	GraphiteAddr                               string            // Optional; address of graphite port. If supplied, metrics will be written here
-	GraphitePath                               string            // Prefix for graphite path. May include {hostname} magic placeholder
-	GraphiteConvertHostnameDotsToUnderscores   bool              // If true, then hostname's dots are converted to underscores before being used in graphite path
-	GraphitePollSeconds                        int               // Graphite writes interval. 0 disables.
-	URLPrefix                                  string            // URL prefix to run orchestrator on non-root web path, e.g. /orchestrator to put it behind nginx.
-	DiscoveryIgnoreReplicaHostnameFilters      []string          // Regexp filters to apply to prevent auto-discovering new replicas. Usage: unreachable servers due to firewalls, applications which trigger binlog dumps
-	DiscoveryIgnoreMasterHostnameFilters       []string          // Regexp filters to apply to prevent auto-discovering a master. Usage: pointing your master temporarily to replicate some data from external host
-	DiscoveryIgnoreHostnameFilters             []string          // Regexp filters to apply to prevent discovering instances of any kind
-	DiscoveryIgnoreReplicationUsernameFilters  []string          // Regexp filters to apply to prevent discovering instances that use a matching replication username
-	EnableDiscoveryFiltersLogs                 bool              // Should Orchestrator log the fact of filtered instance during discovery
-	ConsulAddress                              string            // Address where Consul HTTP api is found. Example: 127.0.0.1:8500
-	ConsulScheme                               string            // Scheme (http or https) for Consul
-	ConsulAclToken                             string            // ACL token used to write to Consul KV
-	ConsulCrossDataCenterDistribution          bool              // should orchestrator automatically auto-deduce all consul DCs and write KVs in all DCs
-	ConsulKVStoreProvider                      string            // Consul KV store provider (consul or consul-txn), default: "consul"
-	ConsulMaxKVsPerTransaction                 int               // Maximum number of KV operations to perform in a single Consul Transaction. Requires the "consul-txn" ConsulKVStoreProvider
-	ZkAddress                                  string            // UNSUPPERTED YET. Address where (single or multiple) ZooKeeper servers are found, in `srv1[:port1][,srv2[:port2]...]` format. Default port is 2181. Example: srv-a,srv-b:12181,srv-c
-	KVClusterMasterPrefix                      string            // Prefix to use for clusters' masters entries in KV stores (internal, consul, ZK), default: "mysql/master"
-	WebMessage                                 string            // If provided, will be shown on all web pages below the title bar
-	MaxConcurrentReplicaOperations             int               // Maximum number of concurrent operations on replicas
-	EnforceExactSemiSyncReplicas               bool              // If true, semi-sync replicas will be enabled/disabled to match the wait count in the desired priority order; this applies to LockedSemiSyncMaster and MasterWithTooManySemiSyncReplicas
-	RecoverLockedSemiSyncMaster                bool              // If true, orchestrator will recover from a LockedSemiSync state by enabling semi-sync on replicas to match the wait count; this behavior can be overridden by EnforceExactSemiSyncReplicas
-	ReasonableLockedSemiSyncMasterSeconds      uint              // Time to evaluate the LockedSemiSyncHypothesis before triggering the LockedSemiSync analysis; falls back to ReasonableReplicationLagSeconds if not set
-	PrependMessagesWithOrcIdentity             string            // use FQDN/hostname/custom to prefix error message returned to the client. Empty string (default)/none skips prefixing.
-	CustomOrcIdentity                          string            // use if PrependMessagesWithOrcIdentity is 'custom'
-	ProxySQLAdminAddress                       string            // Address of ProxySQL Admin interface. Example: 127.0.0.1
-	ProxySQLAdminPort                          int               // Port of ProxySQL Admin interface. Default: 6032
-	ProxySQLAdminUser                          string            // Username for ProxySQL Admin. Default: admin
-	ProxySQLAdminPassword                      string            // Password for ProxySQL Admin
-	ProxySQLAdminUseTLS                        bool              // Use TLS for ProxySQL Admin connection
-	ProxySQLWriterHostgroup                    int               // ProxySQL hostgroup ID for the writer (master). 0 means unconfigured.
-	ProxySQLReaderHostgroup                    int               // ProxySQL hostgroup ID for readers (replicas). 0 means unconfigured.
-	ProxySQLPreFailoverAction                  string            // Action on old master before failover: "offline_soft" (default), "weight_zero", "none"
-	PrometheusEnabled                          bool              // When true (default), expose Prometheus metrics on /metrics endpoint
+	RecoverNonWriteableMaster                  bool     // When 'true', orchestrator treats a read-only master as a failure scenario and attempts to make the master writeable
+	CoMasterRecoveryMustPromoteOtherCoMaster   bool     // When 'false', anything can get promoted (and candidates are preferred over others). When 'true', orchestrator will promote the other co-master or else fail
+	DetachLostSlavesAfterMasterFailover        bool     // synonym to DetachLostReplicasAfterMasterFailover
+	DetachLostReplicasAfterMasterFailover      bool     // Should replicas that are not to be lost in master recovery (i.e. were more up-to-date than promoted replica) be forcibly detached
+	ApplyMySQLPromotionAfterMasterFailover     bool     // Should orchestrator take upon itself to apply MySQL master promotion: set read_only=0, detach replication, etc.
+	PreventCrossDataCenterMasterFailover       bool     // When true (default: false), cross-DC master failover are not allowed, orchestrator will do all it can to only fail over within same DC, or else not fail over at all.
+	PreventCrossRegionMasterFailover           bool     // When true (default: false), cross-region master failover are not allowed, orchestrator will do all it can to only fail over within same region, or else not fail over at all.
+	MasterFailoverLostInstancesDowntimeMinutes uint     // Number of minutes to downtime any server that was lost after a master failover (including failed master & lost replicas). 0 to disable
+	MasterFailoverDetachSlaveMasterHost        bool     // synonym to MasterFailoverDetachReplicaMasterHost
+	MasterFailoverDetachReplicaMasterHost      bool     // Should orchestrator issue a detach-replica-master-host on newly promoted master (this makes sure the new master will not attempt to replicate old master if that comes back to life). Defaults 'false'. Meaningless if ApplyMySQLPromotionAfterMasterFailover is 'true'.
+	FailMasterPromotionOnLagMinutes            uint     // when > 0, fail a master promotion if the candidate replica is lagging >= configured number of minutes.
+	FailMasterPromotionIfSQLThreadNotUpToDate  bool     // when true, and a master failover takes place, if candidate master has not consumed all relay logs, promotion is aborted with error
+	DelayMasterPromotionIfSQLThreadNotUpToDate bool     // when true, and a master failover takes place, if candidate master has not consumed all relay logs, delay promotion until the sql thread has caught up
+	PostponeSlaveRecoveryOnLagMinutes          uint     // Synonym to PostponeReplicaRecoveryOnLagMinutes
+	PostponeReplicaRecoveryOnLagMinutes        uint     // On crash recovery, replicas that are lagging more than given minutes are only resurrected late in the recovery process, after master/IM has been elected and processes executed. Value of 0 disables this feature
+	OSCIgnoreHostnameFilters                   []string // OSC replicas recommendation will ignore replica hostnames matching given patterns
+	GraphiteAddr                               string   // Optional; address of graphite port. If supplied, metrics will be written here
+	GraphitePath                               string   // Prefix for graphite path. May include {hostname} magic placeholder
+	GraphiteConvertHostnameDotsToUnderscores   bool     // If true, then hostname's dots are converted to underscores before being used in graphite path
+	GraphitePollSeconds                        int      // Graphite writes interval. 0 disables.
+	URLPrefix                                  string   // URL prefix to run orchestrator on non-root web path, e.g. /orchestrator to put it behind nginx.
+	DiscoveryIgnoreReplicaHostnameFilters      []string // Regexp filters to apply to prevent auto-discovering new replicas. Usage: unreachable servers due to firewalls, applications which trigger binlog dumps
+	DiscoveryIgnoreMasterHostnameFilters       []string // Regexp filters to apply to prevent auto-discovering a master. Usage: pointing your master temporarily to replicate some data from external host
+	DiscoveryIgnoreHostnameFilters             []string // Regexp filters to apply to prevent discovering instances of any kind
+	DiscoveryIgnoreReplicationUsernameFilters  []string // Regexp filters to apply to prevent discovering instances that use a matching replication username
+	EnableDiscoveryFiltersLogs                 bool     // Should Orchestrator log the fact of filtered instance during discovery
+	ConsulAddress                              string   // Address where Consul HTTP api is found. Example: 127.0.0.1:8500
+	ConsulScheme                               string   // Scheme (http or https) for Consul
+	ConsulAclToken                             string   // ACL token used to write to Consul KV
+	ConsulCrossDataCenterDistribution          bool     // should orchestrator automatically auto-deduce all consul DCs and write KVs in all DCs
+	ConsulKVStoreProvider                      string   // Consul KV store provider (consul or consul-txn), default: "consul"
+	ConsulMaxKVsPerTransaction                 int      // Maximum number of KV operations to perform in a single Consul Transaction. Requires the "consul-txn" ConsulKVStoreProvider
+	ZkAddress                                  string   // UNSUPPERTED YET. Address where (single or multiple) ZooKeeper servers are found, in `srv1[:port1][,srv2[:port2]...]` format. Default port is 2181. Example: srv-a,srv-b:12181,srv-c
+	KVClusterMasterPrefix                      string   // Prefix to use for clusters' masters entries in KV stores (internal, consul, ZK), default: "mysql/master"
+	WebMessage                                 string   // If provided, will be shown on all web pages below the title bar
+	MaxConcurrentReplicaOperations             int      // Maximum number of concurrent operations on replicas
+	EnforceExactSemiSyncReplicas               bool     // If true, semi-sync replicas will be enabled/disabled to match the wait count in the desired priority order; this applies to LockedSemiSyncMaster and MasterWithTooManySemiSyncReplicas
+	RecoverLockedSemiSyncMaster                bool     // If true, orchestrator will recover from a LockedSemiSync state by enabling semi-sync on replicas to match the wait count; this behavior can be overridden by EnforceExactSemiSyncReplicas
+	ReasonableLockedSemiSyncMasterSeconds      uint     // Time to evaluate the LockedSemiSyncHypothesis before triggering the LockedSemiSync analysis; falls back to ReasonableReplicationLagSeconds if not set
+	PrependMessagesWithOrcIdentity             string   // use FQDN/hostname/custom to prefix error message returned to the client. Empty string (default)/none skips prefixing.
+	CustomOrcIdentity                          string   // use if PrependMessagesWithOrcIdentity is 'custom'
+	ProxySQLAdminAddress                       string   // Address of ProxySQL Admin interface. Example: 127.0.0.1
+	ProxySQLAdminPort                          int      // Port of ProxySQL Admin interface. Default: 6032
+	ProxySQLAdminUser                          string   // Username for ProxySQL Admin. Default: admin
+	ProxySQLAdminPassword                      string   // Password for ProxySQL Admin
+	ProxySQLAdminUseTLS                        bool     // Use TLS for ProxySQL Admin connection
+	ProxySQLWriterHostgroup                    int      // ProxySQL hostgroup ID for the writer (master). 0 means unconfigured.
+	ProxySQLReaderHostgroup                    int      // ProxySQL hostgroup ID for readers (replicas). 0 means unconfigured.
+	ProxySQLPreFailoverAction                  string   // Action on old master before failover: "offline_soft" (default), "weight_zero", "none"
+	PrometheusEnabled                          bool     // When true (default), expose Prometheus metrics on /metrics endpoint
 }
 
 // ToJSONString will marshal this configuration as JSON

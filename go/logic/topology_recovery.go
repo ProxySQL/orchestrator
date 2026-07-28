@@ -428,7 +428,7 @@ func markRecoveryUnsuccessfulDueToHooks(topologyRecovery *TopologyRecovery, hook
 	}
 	topologyRecovery.IsSuccessful = false
 	_ = topologyRecovery.AddError(fmt.Errorf("post-failover hooks failed: %w", hookErr))
-	AuditTopologyRecovery(topologyRecovery, fmt.Sprintf("Marking recovery unsuccessful due to post-failover hook failure: %+v", hookErr))
+	_ = AuditTopologyRecovery(topologyRecovery, fmt.Sprintf("Marking recovery unsuccessful due to post-failover hook failure: %+v", hookErr))
 }
 
 // persistResolvedRecovery writes the current IsSuccessful/successor fields for a recovery.
@@ -458,7 +458,7 @@ func runPostSuccessFailoverProcesses(processes []string, description string, top
 		return nil
 	}
 	if !failOnError {
-		AuditTopologyRecovery(topologyRecovery, fmt.Sprintf("%s completed with errors (ignored for recovery success): %+v", description, err))
+		_ = AuditTopologyRecovery(topologyRecovery, fmt.Sprintf("%s completed with errors (ignored for recovery success): %+v", description, err))
 		return nil
 	}
 	markRecoveryUnsuccessfulDueToHooks(topologyRecovery, err)
