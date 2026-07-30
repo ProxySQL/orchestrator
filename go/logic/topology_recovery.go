@@ -1439,8 +1439,14 @@ func RecoverDeadCoMaster(topologyRecovery *TopologyRecovery, skipProcesses bool)
 
 	mustPromoteOtherCoMaster := config.Config.CoMasterRecoveryMustPromoteOtherCoMaster
 	if !otherCoMaster.ReadOnly {
-		AuditTopologyRecovery(topologyRecovery, fmt.Sprintf("RecoverDeadCoMaster: other co-master %+v is writeable hence has to be promoted", otherCoMaster.Key))
-		mustPromoteOtherCoMaster = true
+		if mustPromoteOtherCoMaster {
+			AuditTopologyRecovery(topologyRecovery, fmt.Sprintf("RecoverDeadCoMaster: other co-master %+v is writeable hence has to be promoted", otherCoMaster.Key))
+		} else {
+			// CoMasterRecoveryMustPromoteOtherCoMaster=false: the admin has explicitly opted out of
+			// forcing co-master promotion. Respect the config rather than overriding it based on
+			// the co-master's read_only state.
+			AuditTopologyRecovery(topologyRecovery, fmt.Sprintf("RecoverDeadCoMaster: other co-master %+v is writeable; CoMasterRecoveryMustPromoteOtherCoMaster=false overrides writeable check, will not force promotion", otherCoMaster.Key))
+		}
 	}
 	AuditTopologyRecovery(topologyRecovery, fmt.Sprintf("RecoverDeadCoMaster: mustPromoteOtherCoMaster? %+v", mustPromoteOtherCoMaster))
 
