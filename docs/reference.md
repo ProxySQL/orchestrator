@@ -326,7 +326,7 @@ All process hook fields accept a list of shell commands. Placeholders available:
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `CoMasterRecoveryMustPromoteOtherCoMaster` | bool | `true` | When true, only the other co-master can be promoted. When false, any instance is eligible. |
+| `CoMasterRecoveryMustPromoteOtherCoMaster` | bool | `true` | When true, only the other co-master can be promoted. When false, any instance is eligible; this holds even if the surviving co-master is writable, so the operator accepts responsibility for a possible split-brain with a still-writable co-master. |
 | `DetachLostSlavesAfterMasterFailover` | bool | `true` | Synonym for `DetachLostReplicasAfterMasterFailover` |
 | `DetachLostReplicasAfterMasterFailover` | bool | `false` | Forcibly detach replicas that were more up-to-date than the promoted replica |
 | `ApplyMySQLPromotionAfterMasterFailover` | bool | `true` | Should orchestrator apply MySQL master promotion: `set read_only=0`, detach replication, etc. |
