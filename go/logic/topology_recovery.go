@@ -1439,8 +1439,14 @@ func RecoverDeadCoMaster(topologyRecovery *TopologyRecovery, skipProcesses bool)
 
 	mustPromoteOtherCoMaster := config.Config.CoMasterRecoveryMustPromoteOtherCoMaster
 	if !otherCoMaster.ReadOnly {
-		AuditTopologyRecovery(topologyRecovery, fmt.Sprintf("RecoverDeadCoMaster: other co-master %+v is writeable hence has to be promoted", otherCoMaster.Key))
-		mustPromoteOtherCoMaster = true
+		if mustPromoteOtherCoMaster {
+			_ = AuditTopologyRecovery(topologyRecovery, fmt.Sprintf("RecoverDeadCoMaster: other co-master %+v is writeable hence has to be promoted", otherCoMaster.Key))
+		} else {
+			// CoMasterRecoveryMustPromoteOtherCoMaster=false: the admin has explicitly opted out of
+			// forcing co-master promotion. Respect the config rather than overriding it based on
+			// the co-master's read_only state.
+			_ = AuditTopologyRecovery(topologyRecovery, fmt.Sprintf("RecoverDeadCoMaster: other co-master %+v is writeable; CoMasterRecoveryMustPromoteOtherCoMaster=false overrides writeable check, will not force promotion", otherCoMaster.Key))
+		}
 	}
 	AuditTopologyRecovery(topologyRecovery, fmt.Sprintf("RecoverDeadCoMaster: mustPromoteOtherCoMaster? %+v", mustPromoteOtherCoMaster))
 
@@ -1457,7 +1463,7 @@ func RecoverDeadCoMaster(topologyRecovery *TopologyRecovery, skipProcesses bool)
 	}
 	if promotedReplica != nil {
 		if mustPromoteOtherCoMaster && !promotedReplica.Key.Equals(otherCoMasterKey) {
-			_ = topologyRecovery.AddError(log.Errorf("RecoverDeadCoMaster: could not manage to promote other-co-master %+v; was only able to promote %+v; mustPromoteOtherCoMaster is true (either CoMasterRecoveryMustPromoteOtherCoMaster is true, or co-master is writeable), therefore failing", *otherCoMasterKey, promotedReplica.Key))
+			_ = topologyRecovery.AddError(log.Errorf("RecoverDeadCoMaster: could not manage to promote other-co-master %+v; was only able to promote %+v; CoMasterRecoveryMustPromoteOtherCoMaster is true, therefore failing", *otherCoMasterKey, promotedReplica.Key))
 			promotedReplica = nil
 		}
 	}
