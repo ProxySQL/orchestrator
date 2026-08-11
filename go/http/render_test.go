@@ -158,6 +158,35 @@ func TestRenderHTMLUsesLocalBootstrapAssets(t *testing.T) {
 	}
 }
 
+func TestRenderedNavigationUsesRegisteredClusterRoutes(t *testing.T) {
+	chdirToRepoRoot(t)
+	clearContentTemplateCache()
+
+	rec := httptest.NewRecorder()
+	renderHTML(rec, http.StatusOK, "templates/clusters", sampleTemplateData())
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, body = %s", rec.Code, rec.Body.String())
+	}
+	body := rec.Body.String()
+	for _, expected := range []string{
+		`href="/web/clusters"`,
+		`href="/web/clusters-analysis"`,
+	} {
+		if !strings.Contains(body, expected) {
+			t.Errorf("rendered navigation is missing registered route %q", expected)
+		}
+	}
+	for _, broken := range []string{
+		`href="/web/clusters/"`,
+		`href="/web/clusters-analysis/"`,
+	} {
+		if strings.Contains(body, broken) {
+			t.Errorf("rendered navigation links to unregistered route %q", broken)
+		}
+	}
+}
+
 func TestRenderClustersWorkspace(t *testing.T) {
 	chdirToRepoRoot(t)
 	clearContentTemplateCache()

@@ -1,3 +1,11 @@
+function clusterAnalysisTopologyPath(cluster, compact) {
+  var path = '/web/cluster/' + cluster.ClusterName;
+  if (cluster.ClusterAlias && cluster.ClusterAlias != cluster.ClusterName) {
+    path = '/web/cluster/alias/' + encodeURIComponent(cluster.ClusterAlias);
+  }
+  return path + (compact ? '?compact=true' : '');
+}
+
 $(document).ready(function() {
   showLoader();
 
@@ -101,10 +109,12 @@ $(document).ready(function() {
         var title = cluster.ClusterName.replace(removeTextFromHostnameDisplay(), '');
         popoverElement.find("h3 .pull-left a span").html(title);
       }
-      if (cluster.ClusterAlias != "") {
+      if (cluster.ClusterAlias && cluster.ClusterAlias != cluster.ClusterName) {
         popoverElement.find("h3 .pull-left a span").addClass("small");
         popoverElement.find("h3 .pull-left").prepend('<a href="' + appUrl('/web/cluster/alias/' + encodeURIComponent(cluster.ClusterAlias)) + '"><strong>' + cluster.ClusterAlias + '</strong></a><br/>');
-        popoverElement.find("h3 .pull-right").append('<a href="' + appUrl('/web/cluster/alias/' + encodeURIComponent(cluster.ClusterAlias) + '?compact=true') + '"><span class="glyphicon glyphicon-compressed" title="Compact display"></span></a>');
+      }
+      if (cluster.ClusterAlias) {
+        popoverElement.find("h3 .pull-right").append('<a href="' + appUrl(clusterAnalysisTopologyPath(cluster, true)) + '"><span class="glyphicon glyphicon-compressed" title="Compact display"></span></a>');
       }
       displayInstancesBadge(popoverElement, "Instances", cluster.CountInstances, "label-primary", "Total instances in cluster");
 
