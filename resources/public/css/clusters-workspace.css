@@ -309,28 +309,24 @@
 
 #clusters_workspace #clusters .popover-content > div {
   align-items: center;
-  color: transparent;
   display: grid;
-  font-size: 0;
   gap: 7px 12px;
   grid-template-columns: auto minmax(0, 1fr);
   width: 100%;
 }
 
-#clusters_workspace #clusters .popover-content > div::before {
+#clusters_workspace #clusters .cluster-members-label {
   color: var(--clusters-muted);
-  content: "Members";
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
-#clusters_workspace #clusters .popover-content > div::after {
+#clusters_workspace #clusters .cluster-health-label {
   background: #e5f1e8;
   border-radius: 9px;
   color: #2f6b3b;
-  content: "No problems";
   font-size: 9px;
   font-weight: 700;
   grid-column: 1 / -1;
@@ -341,39 +337,26 @@
   text-transform: uppercase;
 }
 
-#clusters_workspace #clusters .popover-content > div:has(.badge:not(.label-primary))::after {
-  background: #f7dfb7;
-  color: #70480d;
-  content: "Problems";
-}
-
-#clusters_workspace #clusters .popover.instance:has(.popover-title .pull-left > .text-muted) .popover-content > div::after,
-#clusters_workspace #clusters .popover-content > div:has(.badge.label-info)::after {
+#clusters_workspace #clusters .popover.instance[data-health-state="maintenance"] .cluster-health-label {
   background: #e4e9ed;
   color: #4d5c69;
-  content: "Maintenance";
 }
 
-#clusters_workspace #clusters .popover-content > div:has(.badge.label-stale)::after {
+#clusters_workspace #clusters .popover.instance[data-health-state="stale"] .cluster-health-label {
   background: #dce2e7;
   color: #465461;
-  content: "Stale";
 }
 
-#clusters_workspace #clusters .popover.instance:has(.popover-title .pull-left > .text-warning) .popover-content > div::after,
-#clusters_workspace #clusters .popover-content > div:has(.badge.label-warning)::after,
-#clusters_workspace #clusters .popover-content > div:has(.badge.label-errant)::after {
+#clusters_workspace #clusters .popover.instance[data-health-state="warning"] .cluster-health-label,
+#clusters_workspace #clusters .popover.instance[data-health-state="errant"] .cluster-health-label {
   background: #f7dfb7;
   color: #70480d;
-  content: "Problems";
 }
 
-#clusters_workspace #clusters .popover.instance:has(.popover-title .pull-left > .text-danger) .popover-content > div::after,
-#clusters_workspace #clusters .popover-content > div:has(.badge.label-danger)::after,
-#clusters_workspace #clusters .popover-content > div:has(.badge.label-fatal)::after {
+#clusters_workspace #clusters .popover.instance[data-health-state="danger"] .cluster-health-label,
+#clusters_workspace #clusters .popover.instance[data-health-state="fatal"] .cluster-health-label {
   background: #8d3333;
   color: #ffffff;
-  content: "Problems";
 }
 
 #clusters_workspace #clusters .popover-content .pull-right {
@@ -478,7 +461,7 @@
     grid-template-columns: auto minmax(0, 1fr) auto;
   }
 
-  #clusters_workspace #clusters .popover-content > div::after {
+  #clusters_workspace #clusters .cluster-health-label {
     grid-column: auto;
     justify-self: end;
   }
@@ -503,7 +486,7 @@
     grid-template-columns: auto minmax(0, 1fr);
   }
 
-  #clusters_workspace #clusters .popover-content > div::after {
+  #clusters_workspace #clusters .cluster-health-label {
     grid-column: 1 / -1;
     justify-self: start;
   }

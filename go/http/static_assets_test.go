@@ -95,6 +95,54 @@ func TestStaticClusterWorkspaceAssets(t *testing.T) {
 	}
 }
 
+func TestStaticClustersLandingAssets(t *testing.T) {
+	chdirToRepoRoot(t)
+
+	cssPath := filepath.Join("resources", "public", "css", "clusters-workspace.css")
+	css, err := os.ReadFile(cssPath)
+	if err != nil {
+		t.Fatalf("clusters landing stylesheet is not shipped: %v", err)
+	}
+	selectors := workspaceCSSSelectors(string(css))
+	if len(selectors) == 0 {
+		t.Fatal("clusters landing stylesheet does not contain any scoped rules")
+	}
+	for _, selector := range selectors {
+		for _, part := range strings.Split(selector, ",") {
+			if !isWorkspaceSelector(part, "#clusters_workspace") {
+				t.Errorf("clusters landing selector must be scoped below #clusters_workspace: %q", strings.TrimSpace(part))
+			}
+		}
+	}
+	for _, snippet := range []string{
+		`var(--bs-gutter-x`,
+		`.badge.label-info`,
+		`.badge.label-warning`,
+		`.badge.label-danger`,
+		`.badge.label-stale`,
+		`.badge.label-fatal`,
+		`.badge.label-errant`,
+	} {
+		if !strings.Contains(string(css), snippet) {
+			t.Errorf("clusters landing stylesheet is missing %q", snippet)
+		}
+	}
+
+	source, err := os.ReadFile(filepath.Join("resources", "public", "js", "clusters.js"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, snippet := range []string{
+		`resolveClusterHealthSummary(`,
+		`data-health-state`,
+		`cluster-health-label`,
+	} {
+		if !strings.Contains(string(source), snippet) {
+			t.Errorf("clusters.js does not emit explicit landing health state %q", snippet)
+		}
+	}
+}
+
 func TestClusterTopologyRendererUsesWorkspaceCanvasViewport(t *testing.T) {
 	chdirToRepoRoot(t)
 
@@ -217,6 +265,10 @@ func TestIsClusterWorkspaceSelector(t *testing.T) {
 }
 
 func isClusterWorkspaceSelector(selector string) bool {
+	return isWorkspaceSelector(selector, "#cluster_workspace")
+}
+
+func isWorkspaceSelector(selector string, workspaceID string) bool {
 	selector = stripCSSComments(selector)
 	brackets := 0
 	parentheses := 0
@@ -243,7 +295,6 @@ func isClusterWorkspaceSelector(selector string) bool {
 		case ')':
 			parentheses--
 		case '#':
-			const workspaceID = "#cluster_workspace"
 			if brackets == 0 && parentheses == 0 && strings.HasPrefix(selector[i:], workspaceID) {
 				end := i + len(workspaceID)
 				if end == len(selector) || !isCSSIdentifierCharacter(selector[end]) {
