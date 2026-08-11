@@ -200,17 +200,46 @@ func TestRenderClusterWorkspacePreservesLegacyHooks(t *testing.T) {
 		`id="cluster_sidebar"`,
 		`id="cluster_container"`,
 		`id="node_modal"`,
+		`id="cluster_view_toggle"`,
+		`data-bs-toggle="dropdown"`,
+		`aria-controls="cluster_view_menu"`,
 		`>View</button>`,
-		`data-command="info"`,
-		`data-command="colorize-dc"`,
-		`data-command="compact-display"`,
-		`data-command="pool-indicator"`,
-		`data-command="anonymize"`,
-		`data-command="alias"`,
-		`data-command="silent-ui"`,
+		`id="cluster_view_menu"`,
 	} {
 		if !strings.Contains(body, expected) {
 			t.Fatalf("expected preserved cluster hook %q, body snippet: %s", expected, truncate(body, 500))
+		}
+	}
+
+	headerEnd := strings.Index(body, `</header>`)
+	viewMenu := strings.Index(body, `id="cluster_sidebar"`)
+	if headerEnd == -1 || viewMenu == -1 || viewMenu > headerEnd {
+		t.Fatal("expected cluster View menu to remain inline with the cluster header")
+	}
+	infoCommand := strings.Index(body, `data-command="info"`)
+	if infoCommand == -1 {
+		t.Fatal("expected rendered cluster information command")
+	}
+	infoCommandEnd := strings.Index(body[infoCommand:], `</a>`)
+	if infoCommandEnd == -1 {
+		t.Fatal("expected rendered cluster information command")
+	}
+	if count := strings.Count(body[infoCommand:infoCommand+infoCommandEnd], `<span`); count != 1 {
+		t.Fatalf("cluster information command rendered %d spans, want one legacy glyphicon target", count)
+	}
+
+	for _, command := range []string{
+		"info",
+		"colorize-dc",
+		"compact-display",
+		"pool-indicator",
+		"anonymize",
+		"alias",
+		"silent-ui",
+	} {
+		hook := `data-command="` + command + `"`
+		if count := strings.Count(body, hook); count != 1 {
+			t.Errorf("cluster View menu command %q rendered %d times, want exactly once", command, count)
 		}
 	}
 }
