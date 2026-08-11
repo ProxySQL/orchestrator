@@ -384,6 +384,10 @@ body {
     color: #ffffff;
 }
 
+#instance_problems .problem-indicator-symbol {
+    font-weight: 800;
+}
+
 #instance_problems ul.dropdown-menu {
     height: auto;
     max-height: 600px;

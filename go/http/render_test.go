@@ -134,6 +134,30 @@ func TestRenderHTMLYield(t *testing.T) {
 	}
 }
 
+func TestRenderHTMLUsesLocalBootstrapAssets(t *testing.T) {
+	chdirToRepoRoot(t)
+	clearContentTemplateCache()
+
+	rec := httptest.NewRecorder()
+	renderHTML(rec, http.StatusOK, "templates/clusters", sampleTemplateData())
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, body = %s", rec.Code, rec.Body.String())
+	}
+	body := rec.Body.String()
+	for _, expected := range []string{
+		`href="/bootstrap5/css/bootstrap.min.css"`,
+		`src="/bootstrap5/js/bootstrap.bundle.min.js"`,
+	} {
+		if !strings.Contains(body, expected) {
+			t.Fatalf("expected locally served Bootstrap asset %q, body snippet: %s", expected, truncate(body, 500))
+		}
+	}
+	if strings.Contains(body, "cdn.jsdelivr.net/npm/bootstrap") {
+		t.Fatal("rendered layout still depends on the external Bootstrap CDN")
+	}
+}
+
 func TestRenderClustersWorkspace(t *testing.T) {
 	chdirToRepoRoot(t)
 	clearContentTemplateCache()

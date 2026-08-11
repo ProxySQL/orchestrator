@@ -1,3 +1,7 @@
+function shouldAutoShowProblemDropdown(problemCount, configured, anonymized, clusterWorkspace) {
+  return problemCount > 0 && configured && !anonymized && !clusterWorkspace;
+}
+
 $(document).ready(function() {
   showLoader();
 
@@ -56,7 +60,12 @@ $(document).ready(function() {
         countProblemInstances += 1;
       }
     });
-    if (countProblemInstances > 0 && (autoshowProblems() == "true") && ($.cookie("anonymize") != "true")) {
+    if (shouldAutoShowProblemDropdown(
+      countProblemInstances,
+      autoshowProblems() == "true",
+      $.cookie("anonymize") == "true",
+      $("#cluster_workspace").length > 0
+    )) {
       $("#instance_problems .dropdown-toggle").dropdown('toggle');
     }
     if (countProblemInstances == 0) {

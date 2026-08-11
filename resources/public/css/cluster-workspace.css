@@ -10,7 +10,7 @@
   grid-template-columns: minmax(0, 1fr);
   grid-template-rows: auto minmax(0, 1fr);
   isolation: isolate;
-  margin: -15px;
+  margin: -15px calc(-0.5 * var(--bs-gutter-x, 1.5rem)) 0;
   min-height: calc(100vh - 50px);
 }
 
@@ -38,7 +38,7 @@
 }
 
 #cluster_workspace #cluster_name {
-  color: #ffffff;
+  color: #ffffff !important;
   font-size: 20px;
   line-height: 1.2;
 }
@@ -75,6 +75,7 @@
 }
 
 #cluster_workspace #cluster_sidebar {
+  background: transparent;
   flex: 0 0 auto;
   float: none;
   height: auto;

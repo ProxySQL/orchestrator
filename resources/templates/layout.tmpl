@@ -15,9 +15,9 @@
 	<script type="text/javascript" src="{{.prefix}}/js/corex-jquery.js"></script>
 	<script src="{{.prefix}}/js/md5.js"></script>
 	<script src="{{.prefix}}/js/common.js"></script>
-	<script src="{{.prefix}}/js/orchestrator.js"></script>
+	<script src="{{.prefix}}/js/orchestrator.js?v=20260812-ui"></script>
 	<script src="{{.prefix}}/js/custom.js"></script>
-	<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YcnS/1p8FjY20lOFFCB6Uf8ECZTI2bPZCmL" crossorigin="anonymous">
+	<link href="{{.prefix}}/bootstrap5/css/bootstrap.min.css" rel="stylesheet">
 	<link href="{{.prefix}}/css/orchestrator.css" rel="stylesheet">
 	<link href="{{.prefix}}/css/custom.css" rel="stylesheet">
 
@@ -123,7 +123,7 @@
 		<div class="pull-right" id="instance_problems">
 			<div class="dropdown pull-right">
 				<button type="button" id="instance_problems_button" class="btn btn-secondary dropdown-toggle" data-bs-toggle="dropdown" title="Problems">
-					<span class="glyphicon glyphicon-exclamation-sign"></span> <span class="caret"></span>
+					<span class="problem-indicator-symbol" aria-hidden="true">!</span><span class="visually-hidden">Problems</span> <span class="caret"></span>
 				</button>
 				<ul class="dropdown-menu" role="menu" aria-labelledby="dLabel">
 				</ul>
@@ -227,7 +227,7 @@
 
 	</div>
 
-	<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+	<script src="{{.prefix}}/bootstrap5/js/bootstrap.bundle.min.js"></script>
 	<!-- Bootstrap 5 compatibility: map legacy data-toggle/data-dismiss attributes -->
 	<script>
 		document.addEventListener('DOMContentLoaded', function() {
@@ -280,7 +280,7 @@
 			return "{{.webMessage}}";
 		}
 	</script>
-	<script src="{{.prefix}}/js/instance-problems.js"></script>
+	<script src="{{.prefix}}/js/instance-problems.js?v=20260812-ui"></script>
 </body>
 
 </html>
