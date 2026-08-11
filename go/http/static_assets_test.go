@@ -57,3 +57,27 @@ func TestBundledJQueryMeetsSecurityFloor(t *testing.T) {
 	}
 	t.Logf("bundled jQuery %d.%d.%d", major, minor, patch)
 }
+
+func TestStaticClusterWorkspaceAssets(t *testing.T) {
+	chdirToRepoRoot(t)
+
+	if _, err := os.Stat(filepath.Join("resources", "public", "css", "cluster-workspace.css")); err != nil {
+		t.Fatalf("cluster workspace stylesheet is not shipped: %v", err)
+	}
+
+	source, err := os.ReadFile(filepath.Join("resources", "public", "js", "orchestrator.js"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, hook := range []string{
+		"instance-identity",
+		"instance-role",
+		"instance-health",
+		"instance-replication",
+		"instance-actions",
+	} {
+		if !strings.Contains(string(source), hook) {
+			t.Errorf("orchestrator.js does not ship semantic card hook %q", hook)
+		}
+	}
+}

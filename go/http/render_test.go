@@ -134,6 +134,28 @@ func TestRenderHTMLYield(t *testing.T) {
 	}
 }
 
+func TestRenderClusterWorkspace(t *testing.T) {
+	chdirToRepoRoot(t)
+	clearContentTemplateCache()
+
+	rec := httptest.NewRecorder()
+	renderHTML(rec, http.StatusOK, "templates/cluster", sampleTemplateData())
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, body = %s", rec.Code, rec.Body.String())
+	}
+	body := rec.Body.String()
+	for _, expected := range []string{
+		`id="cluster_workspace"`,
+		`id="cluster_canvas"`,
+		`/css/cluster-workspace.css`,
+	} {
+		if !strings.Contains(body, expected) {
+			t.Fatalf("expected cluster workspace contract %q, body snippet: %s", expected, truncate(body, 500))
+		}
+	}
+}
+
 // TestLayoutRequiresYield guards the martini-contrib/render contract: layout.tmpl
 // uses {{yield}} to inject page content. Parsing layout without that FuncMap must fail.
 func TestLayoutRequiresYield(t *testing.T) {
