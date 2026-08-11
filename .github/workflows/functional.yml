@@ -191,7 +191,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        mariadb_version: ['10.6', '10.11']
+        mariadb_version: ['10.6', '10.11', '12.3']
 
     steps:
     - uses: actions/checkout@v4
@@ -273,6 +273,12 @@ jobs:
         MYSQL_IMAGE: mariadb:${{ matrix.mariadb_version }}
         COMPOSE: docker compose -f tests/functional/docker-compose.yml -f tests/functional/docker-compose.mariadb.yml
       run: bash tests/functional/test-smoke.sh
+
+    - name: Run read_only discovery tests
+      env:
+        MYSQL_IMAGE: mariadb:${{ matrix.mariadb_version }}
+        COMPOSE: docker compose -f tests/functional/docker-compose.yml -f tests/functional/docker-compose.mariadb.yml
+      run: bash tests/functional/test-mariadb-read-only.sh
 
     - name: Run relay drain / SQL-stopped failover tests
       env:
