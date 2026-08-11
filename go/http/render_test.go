@@ -134,6 +134,28 @@ func TestRenderHTMLYield(t *testing.T) {
 	}
 }
 
+func TestRenderClustersWorkspace(t *testing.T) {
+	chdirToRepoRoot(t)
+	clearContentTemplateCache()
+
+	rec := httptest.NewRecorder()
+	renderHTML(rec, http.StatusOK, "templates/clusters", sampleTemplateData())
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, body = %s", rec.Code, rec.Body.String())
+	}
+	body := rec.Body.String()
+	for _, expected := range []string{
+		`id="clusters_workspace"`,
+		`id="clusters_list"`,
+		`/css/clusters-workspace.css`,
+	} {
+		if !strings.Contains(body, expected) {
+			t.Fatalf("expected clusters workspace contract %q, body snippet: %s", expected, truncate(body, 500))
+		}
+	}
+}
+
 func TestRenderClusterWorkspace(t *testing.T) {
 	chdirToRepoRoot(t)
 	clearContentTemplateCache()
@@ -171,6 +193,7 @@ func TestRenderClusterWorkspacePreservesLegacyHooks(t *testing.T) {
 		`id="cluster_sidebar"`,
 		`id="cluster_container"`,
 		`id="node_modal"`,
+		`>View</button>`,
 		`data-command="info"`,
 		`data-command="colorize-dc"`,
 		`data-command="compact-display"`,
