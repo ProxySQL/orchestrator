@@ -36,6 +36,9 @@ echo "--- Web UI ---"
 test_endpoint "Web UI root" "$ORC_URL/" "302"
 test_endpoint "Static CSS" "$ORC_URL/css/orchestrator.css" "200"
 test_endpoint "Static JS" "$ORC_URL/js/orchestrator.js" "200"
+test_endpoint "Cluster workspace" "$ORC_URL/web/cluster/mysql1:3306" "200"
+test_body_contains "Cluster workspace shell" "$ORC_URL/web/cluster/mysql1:3306" 'id="cluster_workspace"'
+test_body_contains "Cluster workspace stylesheet" "$ORC_URL/web/cluster/mysql1:3306" 'cluster-workspace\.css'
 
 echo ""
 echo "--- API v1 ---"
