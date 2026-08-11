@@ -95,6 +95,20 @@ func TestStaticClusterWorkspaceAssets(t *testing.T) {
 	}
 }
 
+func TestClusterWorkspaceCommandsPreventAnchorNavigation(t *testing.T) {
+	chdirToRepoRoot(t)
+
+	source, err := os.ReadFile(filepath.Join("resources", "public", "js", "cluster.js"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(source), `$("#cluster_sidebar").on("click", "a[data-command]", function(event) {
+      event.preventDefault();
+    });`) {
+		t.Fatal("cluster workspace command rail does not prevent href default navigation")
+	}
+}
+
 func TestIsClusterWorkspaceSelector(t *testing.T) {
 	for _, test := range []struct {
 		selector string

@@ -1806,6 +1806,10 @@ function Cluster() {
     });
     $("#instance_problems_button").attr("title", "Cluster Problems");
 
+    $("#cluster_sidebar").on("click", "a[data-command]", function(event) {
+      event.preventDefault();
+    });
+
     $("body").on("click", "a[data-command=change-cluster-alias]", function(event) {
       promptForAlias($(event.target).attr("data-alias"));
     });
