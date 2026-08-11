@@ -1,0 +1,188 @@
+#cluster_workspace {
+  --cluster-chrome: #202b36;
+  --cluster-chrome-muted: #91a1b2;
+  --cluster-canvas: #f4f6f8;
+  --cluster-rail: #e7ebef;
+  --cluster-border: #cfd7df;
+  --cluster-text: #263442;
+  background: var(--cluster-canvas);
+  color: var(--cluster-text);
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
+  isolation: isolate;
+  margin: -15px;
+  min-height: calc(100vh - 50px);
+}
+
+#cluster_workspace .cluster-workspace-header {
+  align-items: center;
+  background: var(--cluster-chrome);
+  color: #ffffff;
+  display: flex;
+  grid-column: 1 / -1;
+  justify-content: space-between;
+  min-height: 56px;
+  padding: 9px 20px;
+  position: relative;
+  z-index: 60;
+}
+
+#cluster_workspace #cluster_name_info {
+  background: transparent;
+  min-width: 0;
+  padding: 0;
+  position: static;
+}
+
+#cluster_workspace #cluster_name {
+  color: #ffffff;
+  font-size: 20px;
+  line-height: 1.2;
+}
+
+#cluster_workspace #cluster_subtitle {
+  color: var(--cluster-chrome-muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+#cluster_workspace #cluster_live_status {
+  color: var(--cluster-chrome-muted);
+  font-size: 12px;
+  letter-spacing: 0.01em;
+  margin-left: 20px;
+  text-align: right;
+}
+
+#cluster_workspace #cluster_info {
+  background: #ffffff;
+  border: 1px solid var(--cluster-border);
+  box-shadow: 0 12px 24px rgba(20, 31, 43, 0.18);
+  color: var(--cluster-text);
+  height: auto;
+  left: 0;
+  margin: 0;
+  max-height: min(70vh, 560px);
+  overflow: auto;
+  padding: 12px 18px;
+  position: absolute;
+  top: 100%;
+  width: min(480px, calc(100vw - 24px));
+  z-index: 70;
+}
+
+#cluster_workspace #cluster_sidebar {
+  background: var(--cluster-rail);
+  border-right: 1px solid var(--cluster-border);
+  float: none;
+  grid-column: 1;
+  grid-row: 2;
+  height: auto;
+  left: auto;
+  padding: 12px 0;
+  position: relative;
+  z-index: 40;
+}
+
+#cluster_workspace #cluster_sidebar .navbar {
+  margin: 0;
+  min-height: 0;
+}
+
+#cluster_workspace #cluster_sidebar .nav {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+}
+
+#cluster_workspace #cluster_sidebar .nav li {
+  line-height: 1;
+}
+
+#cluster_workspace #cluster_sidebar .nav li > div {
+  align-items: center;
+  display: flex;
+  height: 36px;
+  justify-content: center;
+  width: 56px;
+}
+
+#cluster_workspace #cluster_sidebar .nav li > div > a {
+  border-radius: 4px;
+  color: #627181;
+  display: block;
+  padding: 7px 12px;
+}
+
+#cluster_workspace #cluster_sidebar .nav li > div > a:hover,
+#cluster_workspace #cluster_sidebar .nav li > div > a:focus {
+  background: #d8e0e7;
+  color: #24313e;
+  outline: 0;
+}
+
+#cluster_workspace #cluster_sidebar li[data-bullet] span.glyphicon {
+  font-size: 17px;
+  margin-bottom: 0;
+}
+
+#cluster_workspace #cluster_sidebar li .popover {
+  max-width: min(480px, calc(100vw - 80px));
+  width: 480px;
+}
+
+#cluster_workspace #cluster_canvas {
+  background: var(--cluster-canvas);
+  grid-column: 2;
+  grid-row: 2;
+  min-width: 0;
+  overflow: auto;
+}
+
+#cluster_workspace #cluster_wrapper {
+  min-width: min-content;
+  padding: 24px;
+}
+
+#cluster_workspace #cluster_container {
+  background: #ffffff;
+  border: 1px solid var(--cluster-border);
+  box-shadow: 0 2px 5px rgba(20, 31, 43, 0.06);
+}
+
+#cluster_workspace #cluster_legend {
+  color: #627181;
+  margin-top: 12px;
+}
+
+@media (max-width: 640px) {
+  #cluster_workspace {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto minmax(0, 1fr);
+  }
+
+  #cluster_workspace #cluster_sidebar {
+    border-bottom: 1px solid var(--cluster-border);
+    border-right: 0;
+    grid-column: 1;
+    grid-row: 2;
+    overflow-x: auto;
+    padding: 4px 8px;
+  }
+
+  #cluster_workspace #cluster_sidebar .nav {
+    flex-direction: row;
+    justify-content: flex-start;
+    min-width: max-content;
+  }
+
+  #cluster_workspace #cluster_canvas {
+    grid-column: 1;
+    grid-row: 3;
+  }
+
+  #cluster_workspace #cluster_wrapper {
+    padding: 16px;
+  }
+}

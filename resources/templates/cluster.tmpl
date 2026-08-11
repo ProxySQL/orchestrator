@@ -1,55 +1,64 @@
-<div id="cluster_sidebar">
-	<div class="navbar" role="navigation">
-		<ul class="nav">
-			<li data-bullet="info">
-				<div>
-					<a data-command="info"><span class="glyphicon glyphicon-time"></span></a>
-				</div>
-			</li>
-			<li data-bullet="colorize-dc">
-				<div>
-					<a data-command="colorize-dc"><span class="glyphicon glyphicon-adjust"></span></a>
-				</div>
-			</li>
-			<li data-bullet="compact-display">
-				<div>
-					<a data-command="compact-display"><span class="glyphicon glyphicon-compressed"></span></a>
-				</div>
-			</li>
-			<li data-bullet="pool-indicator">
-				<div>
-					<a data-command="pool-indicator"><span class="glyphicon glyphicon-tint"></span></a>
-				</div>
-			</li>
-			<li data-bullet="anonymize">
-				<div>
-					<a data-command="anonymize"><span class="glyphicon glyphicon-user"></span></a>
-				</div>
-			</li>
-			<li data-bullet="alias">
-				<div>
-					<a data-command="alias"><span class="glyphicon glyphicon-tag"></span></a>
-				</div>
-			</li>
-			<li data-bullet="silent-ui">
-				<div>
-					<a data-command="silent-ui"><span class="glyphicon glyphicon-volume-off"></span></a>
-				</div>
-			</li>
-		</ul>
-	</div>
-</div>
+<link href="{{.prefix}}/css/cluster-workspace.css" rel="stylesheet">
 
-<div id="cluster_name_info">
-	<div id="cluster_name" class="text-muted"></div>
-	<div id="cluster_subtitle"></div>
-	<div id="cluster_info"></div>
-</div>
+<div id="cluster_workspace">
+	<header class="cluster-workspace-header" aria-label="Cluster overview">
+		<div id="cluster_name_info">
+			<div id="cluster_name" class="text-muted"></div>
+			<div id="cluster_subtitle"></div>
+			<div id="cluster_info"></div>
+		</div>
+		<div id="cluster_live_status" role="status" aria-live="polite" aria-atomic="true" aria-label="Topology status"></div>
+	</header>
 
-<div id="cluster_wrapper">
-	<div id="cluster_container" class="cluster-graph">
-	</div>
-	<div id="cluster_legend"></div>
+	<aside id="cluster_sidebar" aria-label="Cluster display controls">
+		<div class="navbar" role="navigation">
+			<ul class="nav">
+				<li data-bullet="info">
+					<div>
+						<a href="#" data-command="info" aria-label="Cluster information"><span class="glyphicon glyphicon-time"></span></a>
+					</div>
+				</li>
+				<li data-bullet="colorize-dc">
+					<div>
+						<a href="#" data-command="colorize-dc" aria-label="Color by data center"><span class="glyphicon glyphicon-adjust"></span></a>
+					</div>
+				</li>
+				<li data-bullet="compact-display">
+					<div>
+						<a href="#" data-command="compact-display" aria-label="Toggle compact display"><span class="glyphicon glyphicon-compressed"></span></a>
+					</div>
+				</li>
+				<li data-bullet="pool-indicator">
+					<div>
+						<a href="#" data-command="pool-indicator" aria-label="Toggle pool indicator"><span class="glyphicon glyphicon-tint"></span></a>
+					</div>
+				</li>
+				<li data-bullet="anonymize">
+					<div>
+						<a href="#" data-command="anonymize" aria-label="Anonymize display"><span class="glyphicon glyphicon-user"></span></a>
+					</div>
+				</li>
+				<li data-bullet="alias">
+					<div>
+						<a href="#" data-command="alias" aria-label="Toggle instance aliases"><span class="glyphicon glyphicon-tag"></span></a>
+					</div>
+				</li>
+				<li data-bullet="silent-ui">
+					<div>
+						<a href="#" data-command="silent-ui" aria-label="Toggle silent interface"><span class="glyphicon glyphicon-volume-off"></span></a>
+					</div>
+				</li>
+			</ul>
+		</div>
+	</aside>
+
+	<main id="cluster_canvas" aria-label="Cluster topology">
+		<div id="cluster_wrapper">
+			<div id="cluster_container" class="cluster-graph">
+			</div>
+			<div id="cluster_legend"></div>
+		</div>
+	</main>
 </div>
 
 <li id="li-move-instance-method" data-nav-page="relocate method" style="display:none">
