@@ -61,8 +61,21 @@ func TestBundledJQueryMeetsSecurityFloor(t *testing.T) {
 func TestStaticClusterWorkspaceAssets(t *testing.T) {
 	chdirToRepoRoot(t)
 
-	if _, err := os.Stat(filepath.Join("resources", "public", "css", "cluster-workspace.css")); err != nil {
+	cssPath := filepath.Join("resources", "public", "css", "cluster-workspace.css")
+	css, err := os.ReadFile(cssPath)
+	if err != nil {
 		t.Fatalf("cluster workspace stylesheet is not shipped: %v", err)
+	}
+	selectors := workspaceCSSSelectors(string(css))
+	if len(selectors) == 0 {
+		t.Fatal("cluster workspace stylesheet does not contain any scoped rules")
+	}
+	for _, selector := range selectors {
+		for _, part := range strings.Split(selector, ",") {
+			if !strings.Contains(part, "#cluster_workspace") {
+				t.Errorf("cluster workspace selector must be scoped below #cluster_workspace: %q", strings.TrimSpace(part))
+			}
+		}
 	}
 
 	source, err := os.ReadFile(filepath.Join("resources", "public", "js", "orchestrator.js"))
@@ -80,4 +93,43 @@ func TestStaticClusterWorkspaceAssets(t *testing.T) {
 			t.Errorf("orchestrator.js does not ship semantic card hook %q", hook)
 		}
 	}
+}
+
+func workspaceCSSSelectors(css string) []string {
+	var selectors []string
+	for len(css) > 0 {
+		open := strings.IndexByte(css, '{')
+		if open < 0 {
+			break
+		}
+		header := strings.TrimSpace(css[:open])
+		close := matchingCSSBrace(css, open)
+		if close < 0 {
+			return append(selectors, header)
+		}
+		contents := css[open+1 : close]
+		if strings.HasPrefix(header, "@media") || strings.HasPrefix(header, "@supports") || strings.HasPrefix(header, "@container") || strings.HasPrefix(header, "@layer") {
+			selectors = append(selectors, workspaceCSSSelectors(contents)...)
+		} else {
+			selectors = append(selectors, header)
+		}
+		css = css[close+1:]
+	}
+	return selectors
+}
+
+func matchingCSSBrace(css string, open int) int {
+	depth := 0
+	for i := open; i < len(css); i++ {
+		switch css[i] {
+		case '{':
+			depth++
+		case '}':
+			depth--
+			if depth == 0 {
+				return i
+			}
+		}
+	}
+	return -1
 }
