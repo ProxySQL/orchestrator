@@ -41,3 +41,17 @@ test("a cluster without analysis or problem signals reports no problems", functi
   assert.equal(summary.state, "healthy");
   assert.equal(summary.label, "No problems");
 });
+
+test("default alias uses the working cluster-name topology route", function() {
+  assert.equal(sandbox.clusterTopologyPath({
+    ClusterName: "mysql1:3306",
+    ClusterAlias: "mysql1:3306",
+  }), "/web/cluster/mysql1:3306?compact=true");
+});
+
+test("a distinct alias uses the encoded alias topology route", function() {
+  assert.equal(sandbox.clusterTopologyPath({
+    ClusterName: "mysql1:3306",
+    ClusterAlias: "production east",
+  }), "/web/cluster/alias/production%20east?compact=true");
+});

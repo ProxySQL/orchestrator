@@ -231,6 +231,30 @@ func TestNonClusterDetailsTriggerOpensNodeModal(t *testing.T) {
 	}
 }
 
+func TestOpenNodeModalExplicitlyShowsBootstrapModal(t *testing.T) {
+	chdirToRepoRoot(t)
+
+	source, err := os.ReadFile(filepath.Join("resources", "public", "js", "orchestrator.js"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(source), `$('#node_modal').modal('show');`) {
+		t.Fatal("openNodeModal must explicitly show the Bootstrap modal")
+	}
+}
+
+func TestClusterProblemsMoveIntoWorkspaceHeader(t *testing.T) {
+	chdirToRepoRoot(t)
+
+	source, err := os.ReadFile(filepath.Join("resources", "public", "js", "cluster.js"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(source), `$("#instance_problems").appendTo(".cluster-workspace-header").addClass("cluster-workspace-problems");`) {
+		t.Fatal("cluster problems control must be placed in the workspace header")
+	}
+}
+
 func TestErrantGTIDCardIsNotHealthy(t *testing.T) {
 	chdirToRepoRoot(t)
 

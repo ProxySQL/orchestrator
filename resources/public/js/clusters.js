@@ -38,6 +38,13 @@ function resolveClusterHealthSummary(analysisState, problemBadgeClasses) {
   return {state: state, label: label};
 }
 
+function clusterTopologyPath(cluster) {
+  if (cluster.ClusterAlias && cluster.ClusterAlias != cluster.ClusterName) {
+    return '/web/cluster/alias/' + encodeURIComponent(cluster.ClusterAlias) + '?compact=true';
+  }
+  return '/web/cluster/' + cluster.ClusterName + '?compact=true';
+}
+
 $(document).ready(function() {
   showLoader();
 
@@ -148,11 +155,10 @@ $(document).ready(function() {
         var title = cluster.ClusterName.replace(removeTextFromHostnameDisplay(), '');
         popoverElement.find("h3 .pull-left a span").html(title);
       }
-      var compactClusterUri = appUrl('/web/cluster/' + cluster.ClusterName + '?compact=true');
-      if (cluster.ClusterAlias) {
+      var compactClusterUri = appUrl(clusterTopologyPath(cluster));
+      if (cluster.ClusterAlias && cluster.ClusterAlias != cluster.ClusterName) {
         popoverElement.find("h3 .pull-left a span").addClass("small");
         popoverElement.find("h3 .pull-left").prepend('<a href="' + appUrl('/web/cluster/alias/' + encodeURIComponent(cluster.ClusterAlias)) + '"><strong>' + cluster.ClusterAlias + '</strong></a><br/>');
-        compactClusterUri = appUrl('/web/cluster/alias/' + encodeURIComponent(cluster.ClusterAlias) + '?compact=true');
       }
       if (clustersAnalysisProblems[cluster.ClusterName]) {
         var mutedMsg = ""

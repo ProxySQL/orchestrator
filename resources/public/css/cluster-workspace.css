@@ -85,6 +85,22 @@
   z-index: 80;
 }
 
+#cluster_workspace #instance_problems.cluster-workspace-problems {
+  flex: 0 0 auto;
+  padding: 0;
+  position: relative;
+  right: auto;
+  z-index: 85;
+}
+
+#cluster_workspace #instance_problems.cluster-workspace-problems > .dropdown {
+  float: none !important;
+}
+
+#cluster_workspace #instance_problems.cluster-workspace-problems .dropdown-menu {
+  max-height: min(60vh, 480px);
+}
+
 #cluster_workspace #cluster_sidebar .cluster-view-toggle {
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.32);

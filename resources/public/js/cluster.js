@@ -1808,6 +1808,7 @@ function Cluster() {
       });
     });
     $("#instance_problems_button").attr("title", "Cluster Problems");
+    $("#instance_problems").appendTo(".cluster-workspace-header").addClass("cluster-workspace-problems");
 
     $("#cluster_sidebar").on("click", "a[data-command]", function(event) {
       event.preventDefault();

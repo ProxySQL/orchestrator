@@ -621,7 +621,7 @@ function openNodeModal(node) {
     $('#node_modal [data-btn-group]').hide();
   }
 
-  $('#node_modal').modal({})
+  $('#node_modal').modal('show');
   $('#node_modal').unbind('hidden.bs.modal');
   $('#node_modal').on('hidden.bs.modal', function() {
     nodeModalVisible = false;
