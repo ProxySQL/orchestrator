@@ -147,7 +147,14 @@ func TestRenderClustersWorkspace(t *testing.T) {
 	body := rec.Body.String()
 	for _, expected := range []string{
 		`id="clusters_workspace"`,
+		`aria-labelledby="clusters_workspace_title"`,
+		`id="clusters_workspace_title"`,
+		`id="clusters_known_count"`,
+		`role="status"`,
+		`href="/web/discover"`,
+		`>Discover instance</a>`,
 		`id="clusters_list"`,
+		`id="clusters"`,
 		`/css/clusters-workspace.css`,
 	} {
 		if !strings.Contains(body, expected) {
