@@ -1,17 +1,31 @@
 # Override for MariaDB functional tests (use with docker-compose.yml)
 # MYSQL_IMAGE=mariadb:10.11 docker compose -f docker-compose.yml -f docker-compose.mariadb.yml up -d
+x-mariadb-client-compat: &mariadb-client-compat
+  command: mariadbd
+  entrypoint:
+    - /bin/sh
+    - -c
+    - |
+      ln -sf /usr/bin/mariadb /usr/local/bin/mysql
+      ln -sf /usr/bin/mariadb-admin /usr/local/bin/mysqladmin
+      exec docker-entrypoint.sh "$@"
+    - --
+
 services:
   mysql1:
+    <<: *mariadb-client-compat
     image: ${MYSQL_IMAGE:-mariadb:10.11}
     volumes:
       - ./mysql/mariadb-master.cnf:/etc/mysql/conf.d/repl.cnf
       - ./mysql/init-master.sql:/docker-entrypoint-initdb.d/init.sql
   mysql2:
+    <<: *mariadb-client-compat
     image: ${MYSQL_IMAGE:-mariadb:10.11}
     volumes:
       - ./mysql/mariadb-replica.cnf:/etc/mysql/conf.d/repl.cnf
       - ./mysql/init-replica.sql:/docker-entrypoint-initdb.d/init.sql
   mysql3:
+    <<: *mariadb-client-compat
     image: ${MYSQL_IMAGE:-mariadb:10.11}
     volumes:
       - ./mysql/mariadb-replica2.cnf:/etc/mysql/conf.d/repl.cnf
