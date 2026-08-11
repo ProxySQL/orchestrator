@@ -72,7 +72,7 @@ func TestStaticClusterWorkspaceAssets(t *testing.T) {
 	}
 	for _, selector := range selectors {
 		for _, part := range strings.Split(selector, ",") {
-			if !strings.Contains(part, "#cluster_workspace") {
+			if !isClusterWorkspaceSelector(part) {
 				t.Errorf("cluster workspace selector must be scoped below #cluster_workspace: %q", strings.TrimSpace(part))
 			}
 		}
@@ -95,7 +95,85 @@ func TestStaticClusterWorkspaceAssets(t *testing.T) {
 	}
 }
 
+func TestIsClusterWorkspaceSelector(t *testing.T) {
+	for _, test := range []struct {
+		selector string
+		want     bool
+	}{
+		{selector: "#cluster_workspace", want: true},
+		{selector: "#cluster_workspace .instance-card", want: true},
+		{selector: "#cluster_workspace:hover", want: true},
+		{selector: "#cluster_workspace-other", want: false},
+		{selector: "[data-target=\"#cluster_workspace\"]", want: false},
+		{selector: "/* #cluster_workspace */ .instance-card", want: false},
+	} {
+		t.Run(test.selector, func(t *testing.T) {
+			if got := isClusterWorkspaceSelector(test.selector); got != test.want {
+				t.Fatalf("isClusterWorkspaceSelector(%q) = %t, want %t", test.selector, got, test.want)
+			}
+		})
+	}
+}
+
+func isClusterWorkspaceSelector(selector string) bool {
+	selector = stripCSSComments(selector)
+	brackets := 0
+	parentheses := 0
+	var quote byte
+	for i := 0; i < len(selector); i++ {
+		c := selector[i]
+		if quote != 0 {
+			if c == '\\' {
+				i++
+			} else if c == quote {
+				quote = 0
+			}
+			continue
+		}
+		switch c {
+		case '\'', '"':
+			quote = c
+		case '[':
+			brackets++
+		case ']':
+			brackets--
+		case '(':
+			parentheses++
+		case ')':
+			parentheses--
+		case '#':
+			const workspaceID = "#cluster_workspace"
+			if brackets == 0 && parentheses == 0 && strings.HasPrefix(selector[i:], workspaceID) {
+				end := i + len(workspaceID)
+				if end == len(selector) || !isCSSIdentifierCharacter(selector[end]) {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
+func isCSSIdentifierCharacter(c byte) bool {
+	return c == '-' || c == '_' || c == '\\' || ('0' <= c && c <= '9') || ('A' <= c && c <= 'Z') || ('a' <= c && c <= 'z')
+}
+
+func stripCSSComments(css string) string {
+	for {
+		start := strings.Index(css, "/*")
+		if start < 0 {
+			return css
+		}
+		end := strings.Index(css[start+2:], "*/")
+		if end < 0 {
+			return css[:start]
+		}
+		css = css[:start] + css[start+end+4:]
+	}
+}
+
 func workspaceCSSSelectors(css string) []string {
+	css = stripCSSComments(css)
 	var selectors []string
 	for len(css) > 0 {
 		open := strings.IndexByte(css, '{')
