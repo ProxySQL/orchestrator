@@ -104,6 +104,7 @@ func TestIsClusterWorkspaceSelector(t *testing.T) {
 		{selector: "#cluster_workspace .instance-card", want: true},
 		{selector: "#cluster_workspace:hover", want: true},
 		{selector: "#cluster_workspace-other", want: false},
+		{selector: "#cluster_workspaceé", want: false},
 		{selector: "[data-target=\"#cluster_workspace\"]", want: false},
 		{selector: "/* #cluster_workspace */ .instance-card", want: false},
 	} {
@@ -155,7 +156,7 @@ func isClusterWorkspaceSelector(selector string) bool {
 }
 
 func isCSSIdentifierCharacter(c byte) bool {
-	return c == '-' || c == '_' || c == '\\' || ('0' <= c && c <= '9') || ('A' <= c && c <= 'Z') || ('a' <= c && c <= 'z')
+	return c >= 0x80 || c == '-' || c == '_' || c == '\\' || ('0' <= c && c <= '9') || ('A' <= c && c <= 'Z') || ('a' <= c && c <= 'z')
 }
 
 func stripCSSComments(css string) string {
