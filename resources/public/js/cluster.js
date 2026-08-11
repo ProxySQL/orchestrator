@@ -161,7 +161,7 @@ function Cluster() {
     var opts = {
       addClasses: true,
       opacity: 1,
-      cancel: "button,a,span, .instance-trailer",
+      cancel: "button,a,.instance-glyphs,.instance-trailer",
       snap: "#cluster_container .instance",
       snapMode: "inner",
       snapTolerance: 10,

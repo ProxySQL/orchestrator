@@ -1027,7 +1027,7 @@ function renderInstanceElement(popoverElement, instance, renderType) {
     if (instance.renderHint != "") {
       popoverElement.find("h3").addClass("label-" + instance.renderHint);
     }
-    var healthState = instance.renderHint || (instance.inMaintenanceProblem() ? "maintenance" : "healthy");
+    var healthState = instance.renderHint || (instance.inMaintenanceProblem() ? "maintenance" : instance.errantGTIDProblem() ? "warning" : "healthy");
     var healthLabel = {
       "fatal": "Fatal",
       "stale": "Stale",
@@ -1091,6 +1091,14 @@ function renderInstanceElement(popoverElement, instance, renderType) {
     popoverElement.addClass("instance-state-" + healthState);
     if (instance.problemDescription) {
       popoverElement.find(".instance-health").attr("title", instance.problemDescription);
+    }
+    if (renderType != "cluster") {
+      popoverElement.find("[data-node-details]").click(function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        openNodeModal(instance);
+        return false;
+      });
     }
   }
 }

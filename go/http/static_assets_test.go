@@ -109,6 +109,56 @@ func TestClusterWorkspaceCommandsPreventAnchorNavigation(t *testing.T) {
 	}
 }
 
+func TestClusterNodeCardDragCancelKeepsSemanticTextDraggable(t *testing.T) {
+	chdirToRepoRoot(t)
+
+	source, err := os.ReadFile(filepath.Join("resources", "public", "js", "cluster.js"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	match := regexp.MustCompile(`cancel:\s*"([^"]+)"`).FindStringSubmatch(string(source))
+	if match == nil {
+		t.Fatal("cluster instance draggable does not define a cancel selector")
+	}
+	cancelled := make(map[string]bool)
+	for _, selector := range strings.Split(match[1], ",") {
+		cancelled[strings.TrimSpace(selector)] = true
+	}
+	if cancelled["span"] {
+		t.Fatal("semantic card text spans must remain draggable")
+	}
+	for _, selector := range []string{"button", "a", ".instance-glyphs", ".instance-trailer"} {
+		if !cancelled[selector] {
+			t.Errorf("cluster instance draggable must cancel actual control %q", selector)
+		}
+	}
+}
+
+func TestNonClusterDetailsTriggerOpensNodeModal(t *testing.T) {
+	chdirToRepoRoot(t)
+
+	source, err := os.ReadFile(filepath.Join("resources", "public", "js", "orchestrator.js"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := regexp.MustCompile(`(?s)if \(renderType != "cluster"\) \{\s*popoverElement\.find\("\[data-node-details\]"\)\.click\(function\(e\) \{\s*e\.preventDefault\(\);\s*e\.stopPropagation\(\);\s*openNodeModal\(instance\);`)
+	if !want.Match(source) {
+		t.Fatal("non-cluster details trigger does not open the existing node modal")
+	}
+}
+
+func TestErrantGTIDCardIsNotHealthy(t *testing.T) {
+	chdirToRepoRoot(t)
+
+	source, err := os.ReadFile(filepath.Join("resources", "public", "js", "orchestrator.js"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(source), `instance.errantGTIDProblem() ? "warning" : "healthy"`) {
+		t.Fatal("errant-GTID-only instances must receive a non-healthy semantic state")
+	}
+}
+
 func TestIsClusterWorkspaceSelector(t *testing.T) {
 	for _, test := range []struct {
 		selector string
