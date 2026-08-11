@@ -883,7 +883,11 @@ function renderInstanceElement(popoverElement, instance, renderType) {
   // $(this).find("h3 .pull-left").html(anonymizeInstanceId(instanceId));
   // $(this).find("h3").attr("title", anonymizeInstanceId(instanceId));
   var anonymizedInstanceId = anonymizeInstanceId(instance.id);
+  var displayedInstanceTitle = isAnonymized() ? anonymizedInstanceId : isAliased() ? instance.InstanceAlias : instance.canonicalTitle;
   popoverElement.attr("data-nodeid", instance.id);
+  if (renderType == "cluster") {
+    popoverElement.addClass("instance-card");
+  }
   var tooltip = "";
   if (isAnonymized()) {
     tooltip = anonymizedInstanceId;
@@ -894,17 +898,19 @@ function renderInstanceElement(popoverElement, instance, renderType) {
     if (instance.PhysicalEnvironment) { tooltip += "\nPhysical environment: " + instance.PhysicalEnvironment; }
   }
   popoverElement.find("h3").attr('title', tooltip);
-  popoverElement.find("h3").html('&nbsp;<div class="pull-left">' +
-    (isAnonymized() ? anonymizedInstanceId : isAliased() ? instance.InstanceAlias : instance.canonicalTitle) +
-    '</div><div class="pull-right instance-glyphs"><span class="glyphicon glyphicon-cog" title="Open config dialog"></span></div>');
+  popoverElement.find("h3").html('<div class="pull-left instance-identity">' + displayedInstanceTitle +
+    '</div><div class="pull-right instance-glyphs" aria-label="Instance attributes"></div>');
   var indicateLastSeenInStatus = false;
 
   if (instance.isAggregate) {
-    popoverElement.find("h3 div.pull-right span").remove();
-    popoverElement.find(".instance-content").append('<div>Instances: <div class="pull-right"></div></div>');
+    popoverElement.find(".instance-content").html(
+      '<div class="instance-role"><span class="instance-role-badge instance-role-aggregate">Aggregate</span></div>' +
+      '<div class="instance-health" data-state="summary"><span class="instance-state-label">Summary</span></div>' +
+      '<div class="instance-replication">Instances: <div class="pull-right"></div></div>' +
+      '<div class="instance-actions"></div>');
 
     function addInstancesBadge(count, badgeClass, title) {
-      popoverElement.find(".instance-content .pull-right").append('<span class="badge ' + badgeClass + '" data-toggle="tooltip" data-placement="bottom" data-html="true" title="' + title + '">' + count + '</span> ');
+      popoverElement.find(".instance-replication .pull-right").append('<span class="badge ' + badgeClass + '" data-toggle="tooltip" data-placement="bottom" data-html="true" title="' + title + '">' + count + '</span> ');
       popoverElement.find('[data-toggle="tooltip"]').tooltip();
     }
     var instancesHint = instance.aggregatedProblems[""].join("<br>");
@@ -1021,6 +1027,16 @@ function renderInstanceElement(popoverElement, instance, renderType) {
     if (instance.renderHint != "") {
       popoverElement.find("h3").addClass("label-" + instance.renderHint);
     }
+    var healthState = instance.renderHint || (instance.inMaintenanceProblem() ? "maintenance" : "healthy");
+    var healthLabel = {
+      "fatal": "Fatal",
+      "stale": "Stale",
+      "danger": "Error",
+      "warning": "Warning",
+      "maintenance": "Maintenance",
+      "healthy": "Healthy"
+    }[healthState];
+    var healthDescription = instance.problem ? instance.problem.replace(/_/g, ' ') : "Reachable";
     var statusMessage = formattedInterval(instance.ReplicationLagSeconds.Int64) + ' lag';
     if (indicateLastSeenInStatus) {
       statusMessage = 'seen ' + formattedInterval(instance.SecondsSinceLastSeen.Int64) + ' ago';
@@ -1042,12 +1058,25 @@ function renderInstanceElement(popoverElement, instance, renderType) {
       identityHtml += ', ' + instance.FlavorName;
     }
 
-    var contentHtml = '' + '<div class="pull-right">' + statusMessage + ' </div>' + '<p class="instance-basic-info">' + identityHtml + '</p>';
+    var roleName = "Replica";
+    var roleClass = "instance-role-replica";
     if (instance.isCoMaster) {
-      contentHtml += '<p><strong>Co master</strong></p>';
+      roleName = "Co-master";
+      roleClass = "instance-role-primary";
     } else if (instance.isMaster) {
-      contentHtml += '<p><strong>Master</strong></p>';
+      roleName = "Primary";
+      roleClass = "instance-role-primary";
     }
+    var accessLabel = instance.ReadOnly ? "Read only" : "Writable";
+    var contentHtml = '' +
+      '<div class="instance-role"><span class="instance-role-badge ' + roleClass + '">' + roleName + '</span>' +
+        '<span class="instance-access">' + accessLabel + '</span></div>' +
+      '<div class="instance-health" data-state="' + healthState + '">' +
+        '<span class="instance-state-label">' + healthLabel + '</span>' +
+        '<span class="instance-health-description">' + healthDescription + '</span></div>' +
+      '<div class="instance-replication"><span class="instance-replication-status">' + statusMessage + '</span>' +
+        '<span class="instance-basic-info">' + identityHtml + '</span></div>' +
+      '<div class="instance-actions"><button type="button" class="instance-details" data-node-details="true">Details</button></div>';
     if (renderType == "search") {
       if (instance.SuggestedClusterAlias) {
         contentHtml += '<p>' + 'Cluster: <a href="' + appUrl('/web/cluster/alias/' + instance.SuggestedClusterAlias) + '">' + instance.SuggestedClusterAlias + '</a>' + '</p>';
@@ -1059,12 +1088,11 @@ function renderInstanceElement(popoverElement, instance, renderType) {
       contentHtml += '<p>' + 'Problem: <strong title="' + instance.problemDescription + '">' + instance.problem.replace(/_/g, ' ') + '</strong>' + '</p>';
     }
     popoverElement.find(".instance-content").html(contentHtml);
+    popoverElement.addClass("instance-state-" + healthState);
+    if (instance.problemDescription) {
+      popoverElement.find(".instance-health").attr("title", instance.problemDescription);
+    }
   }
-
-  popoverElement.find("h3 .instance-glyphs").click(function() {
-    openNodeModal(instance);
-    return false;
-  });
 }
 
 var onClustersListeners = [];

@@ -282,12 +282,15 @@ function Cluster() {
 
 
   function wireInstanceCommands() {
-    $("body").on("click", ".instance h3 .instance-glyphs", function(e) {
-      var target = $(e.target);
-      e.draggedNodeId = target.attr("data-nodeid");
-      if (e.draggedNodeId == $(".instance").attr("data-nodeid"))
+    $("body").on("click", ".instance [data-node-details]", function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      var instanceEl = $(e.currentTarget).closest(".instance");
+      var nodeId = instanceEl.attr("data-nodeid");
+      var node = _instancesMap[nodeId];
+      if (!node)
         return;
-      openNodeModal(_instancesMap[draggedNodeId]);
+      openNodeModal(node);
       return false;
     });
 
