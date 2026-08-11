@@ -411,9 +411,16 @@
   #cluster_workspace #cluster_canvas {
     grid-column: 1;
     grid-row: 3;
+    overflow-x: auto;
   }
 
   #cluster_workspace #cluster_wrapper {
+    min-width: 960px;
     padding: 16px;
+  }
+
+  #cluster_workspace .instance.instance-diagram {
+    min-width: 276px;
+    width: 276px;
   }
 }

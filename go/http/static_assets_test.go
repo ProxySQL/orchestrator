@@ -95,6 +95,42 @@ func TestStaticClusterWorkspaceAssets(t *testing.T) {
 	}
 }
 
+func TestClusterTopologyRendererUsesWorkspaceCanvasViewport(t *testing.T) {
+	chdirToRepoRoot(t)
+
+	source, err := os.ReadFile(filepath.Join("resources", "public", "js", "cluster-tree.js"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, snippet := range []string{
+		`var viewport = $("#cluster_canvas");`,
+		`viewport = $("#cluster_container");`,
+		`var svgWidth = Math.max(viewport.width() - margin.right - margin.left, topologyWidth);`,
+		`var topologyWidth = (maxDepth + 1) * horizontalSpacing;`,
+		`var svgHeight = viewport.height() - margin.top - margin.bottom;`,
+	} {
+		if !strings.Contains(string(source), snippet) {
+			t.Errorf("cluster-tree.js must size the topology from the workspace viewport: missing %q", snippet)
+		}
+	}
+
+	css, err := os.ReadFile(filepath.Join("resources", "public", "css", "cluster-workspace.css"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, snippet := range []string{
+		`#cluster_workspace #cluster_canvas`,
+		`overflow: auto;`,
+		`#cluster_workspace #cluster_wrapper`,
+		`min-width: 960px;`,
+		`#cluster_workspace .instance.instance-diagram`,
+	} {
+		if !strings.Contains(string(css), snippet) {
+			t.Errorf("cluster workspace must retain explorable topology cards on narrow screens: missing %q", snippet)
+		}
+	}
+}
+
 func TestClusterWorkspaceCommandsPreventAnchorNavigation(t *testing.T) {
 	chdirToRepoRoot(t)
 

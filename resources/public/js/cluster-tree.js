@@ -71,9 +71,13 @@ function visualizeInstances(nodesMap, onSvgInstanceWrapper, clusterControl) {
   };
   var horizontalSpacing = 320;
   var verticalSpacing = 100;
-  var svgWidth = $("#cluster_container").width() - margin.right - margin.left;
-  svgWidth = Math.min(svgWidth, (maxDepth + 1) * horizontalSpacing);
-  var svgHeight = $("#cluster_container").height() - margin.top - margin.bottom;
+  var viewport = $("#cluster_canvas");
+  if (viewport.length == 0 || viewport.width() == 0 || viewport.height() == 0) {
+    viewport = $("#cluster_container");
+  }
+  var topologyWidth = (maxDepth + 1) * horizontalSpacing;
+  var svgWidth = Math.max(viewport.width() - margin.right - margin.left, topologyWidth);
+  var svgHeight = viewport.height() - margin.top - margin.bottom;
   svgHeight = Math.max(svgHeight, maxNodesAtDepth * verticalSpacing);
 
   var i = 0;
