@@ -22,8 +22,11 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/go-chi/chi/v5"
 )
 
 // chdirToRepoRoot finds the repository root (directory containing resources/templates)
@@ -131,6 +134,44 @@ func TestRenderHTMLYield(t *testing.T) {
 	}
 	if !strings.Contains(body, "Orchestrator - clusters") {
 		t.Fatalf("expected title from layout data, body snippet: %s", truncate(body, 300))
+	}
+}
+
+func TestLayoutWebLinksHaveRegisteredRoutes(t *testing.T) {
+	chdirToRepoRoot(t)
+	clearContentTemplateCache()
+
+	rec := httptest.NewRecorder()
+	renderHTML(rec, http.StatusOK, "templates/clusters", sampleTemplateData())
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, body = %s", rec.Code, rec.Body.String())
+	}
+
+	router := chi.NewRouter()
+	web := HttpWeb{}
+	web.RegisterRequests(router)
+
+	registeredGETRoutes := make(map[string]struct{})
+	err := chi.Walk(router, func(method, route string, _ http.Handler, _ ...func(http.Handler) http.Handler) error {
+		if method == http.MethodGet {
+			registeredGETRoutes[route] = struct{}{}
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	hrefPattern := regexp.MustCompile(`href="(/web/[^"#?]+)"`)
+	matches := hrefPattern.FindAllStringSubmatch(rec.Body.String(), -1)
+	if len(matches) == 0 {
+		t.Fatal("rendered layout contains no constant /web/ links")
+	}
+	for _, match := range matches {
+		href := match[1]
+		if _, ok := registeredGETRoutes[href]; !ok {
+			t.Errorf("navbar link %q has no matching GET route", href)
+		}
 	}
 }
 
