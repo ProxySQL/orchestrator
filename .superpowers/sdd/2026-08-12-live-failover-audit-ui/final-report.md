@@ -11,6 +11,8 @@ Commits created before this handoff:
 - `52bbe45f test(ui): verify functional audit persistence`
 - `e722ba7c test(ui): exercise populated audit history`
 
+Initial report commit: `d3c81f67 docs(ui): record populated audit verification`.
+
 No production UI correction was required after browser review.
 
 ## Recovery and audit evidence
@@ -53,13 +55,19 @@ All prescribed commands were run fresh and exited zero:
 | Command / suite | Result |
 | --- | --- |
 | `go test ./go/http -count=1` | 1 package passed; fresh JSON run counted 77 passing Go tests |
-| `go/http/testdata/*_test.js` | 4 Node test files; 23/23 tests passed |
+| `for file in go/http/testdata/*_test.js; do node --test "$file" \|\| exit 1; done` | 4 Node test files; 23/23 tests passed |
 | `node --check resources/public/js/*.js` | 30/30 JavaScript files parsed successfully |
 | `bash tests/functional/test-smoke.sh` | 35 passed, 0 failed, 0 skipped |
 | `git diff --check` | no whitespace errors |
 
 The smoke run rediscovered all three instances and passed its audit-persistence,
 web/API, health, metrics, and ProxySQL checks.
+
+## Commit hygiene
+
+After the initial report commit `d3c81f67`, `git status --short` produced no
+output. The tracked worktree was clean; this report was the only file staged
+and committed for that handoff.
 
 ## Browser evidence
 
