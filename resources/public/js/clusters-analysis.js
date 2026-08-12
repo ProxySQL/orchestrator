@@ -6,6 +6,107 @@ function clusterAnalysisTopologyPath(cluster, compact) {
   return path + (compact ? '?compact=true' : '');
 }
 
+function clustersAnalysisBlockedKey(hostname, port, analysis) {
+  return hostname + ":" + port + ":" + analysis;
+}
+
+function buildClustersAnalysisModel(clusters, replicationAnalysis, blockedRecoveries, interestingAnalysisMap) {
+  var blocked = {};
+  (blockedRecoveries || []).forEach(function(recovery) {
+    var key = clustersAnalysisBlockedKey(
+      recovery.FailedInstanceKey.Hostname,
+      recovery.FailedInstanceKey.Port,
+      recovery.Analysis
+    );
+    blocked[key] = true;
+  });
+
+  var byName = {};
+  (clusters || []).forEach(function(cluster) {
+    byName[cluster.ClusterName] = {
+      clusterName: cluster.ClusterName,
+      displayName: cluster.ClusterName,
+      alias: cluster.ClusterAlias && cluster.ClusterAlias != cluster.ClusterName ? cluster.ClusterAlias : "",
+      topologyPath: clusterAnalysisTopologyPath(cluster, true),
+      countInstances: cluster.CountInstances,
+      allDowntimed: true,
+      state: "downtimed",
+      entries: [],
+    };
+  });
+
+  function appendEntry(apiEntry, analysis, structural) {
+    var cluster = byName[apiEntry.ClusterDetails.ClusterName];
+    if (!cluster) {
+      return;
+    }
+    var isBlocked = !!blocked[clustersAnalysisBlockedKey(
+      apiEntry.AnalyzedInstanceKey.Hostname,
+      apiEntry.AnalyzedInstanceKey.Port,
+      analysis
+    )];
+    var state = structural ? "warning" : (isBlocked ? "blocked" : (apiEntry.IsDowntimed ? "downtimed" : "actionable"));
+    var labels = {
+      actionable: "Requires attention",
+      blocked: "Recovery blocked",
+      downtimed: "Downtimed",
+      warning: "Structural warning",
+    };
+    cluster.entries.push({
+      analysis: analysis,
+      instance: apiEntry.AnalyzedInstanceKey.Hostname + ":" + apiEntry.AnalyzedInstanceKey.Port,
+      state: state,
+      statusLabel: labels[state],
+      impactLabel: structural ? "Participating replicas" : "Affected replicas",
+      replicaCount: apiEntry.CountReplicas,
+      downtimeEndTimestamp: apiEntry.IsDowntimed ? (apiEntry.DowntimeEndTimestamp || "") : "",
+    });
+    if (!apiEntry.IsDowntimed) {
+      cluster.allDowntimed = false;
+    }
+  }
+
+  ((replicationAnalysis && replicationAnalysis.Details) || []).forEach(function(entry) {
+    if (Object.prototype.hasOwnProperty.call(interestingAnalysisMap, entry.Analysis)) {
+      appendEntry(entry, entry.Analysis, false);
+    }
+    (entry.StructureAnalysis || []).forEach(function(analysis) {
+      appendEntry(entry, analysis, true);
+    });
+  });
+
+  var precedence = {blocked: 4, actionable: 3, warning: 2, downtimed: 1};
+  var affected = Object.keys(byName).map(function(name) {
+    var cluster = byName[name];
+    cluster.entries.forEach(function(entry) {
+      if (precedence[entry.state] > precedence[cluster.state]) {
+        cluster.state = entry.state;
+      }
+    });
+    return cluster;
+  }).filter(function(cluster) {
+    return cluster.entries.length > 0;
+  });
+
+  affected.forEach(function(cluster) {
+    if (typeof removeTextFromHostnameDisplay != "undefined" && removeTextFromHostnameDisplay()) {
+      cluster.displayName = cluster.displayName.replace(removeTextFromHostnameDisplay(), '');
+    }
+  });
+
+  affected.sort(function(a, b) {
+    if (a.allDowntimed != b.allDowntimed) {
+      return a.allDowntimed ? 1 : -1;
+    }
+    return (b.countInstances - a.countInstances) || a.clusterName.localeCompare(b.clusterName);
+  });
+
+  return {
+    clusters: affected,
+    incidentCount: affected.reduce(function(total, cluster) { return total + cluster.entries.length; }, 0),
+  };
+}
+
 $(document).ready(function() {
   showLoader();
 
