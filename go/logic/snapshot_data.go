@@ -22,6 +22,7 @@ import (
 	"encoding/json"
 	"io"
 
+	"github.com/proxysql/orchestrator/go/config"
 	"github.com/proxysql/orchestrator/go/db"
 	"github.com/proxysql/orchestrator/go/inst"
 
@@ -152,13 +153,26 @@ func (s *SnapshotDataCreatorApplier) Restore(rc io.ReadCloser) error {
 		}
 
 		discardedKeys := 0
-		// Forget instances that were not in snapshot
+		// Forget instances that were not in snapshot.
+		// Guard: only forget an instance absent from the snapshot if it is ALSO stale
+		// locally (not seen within UnseenInstanceForgetHours). A freshly discovered
+		// instance may legitimately exist in our local backend but not yet be captured
+		// in the (older) snapshot we are restoring; deleting it here races with discovery
+		// and can wipe recent discoveries cluster-wide on restart/leader-change. Genuine
+		// decommissions age out and are removed both here and by ForgetLongUnseenInstances(),
+		// and explicit forgets arrive via the replicated "forget" command.
 		existingKeys, _ := inst.ReadAllInstanceKeys()
+		recentlySeenKeys, _ := inst.ReadRecentlySeenInstanceKeyMap(config.Config.UnseenInstanceForgetHours)
 		for _, existingKey := range existingKeys {
-			if !snapshotInstanceKeyMap.HasKey(existingKey) {
-				_ = inst.ForgetInstance(&existingKey)
-				discardedKeys++
+			if snapshotInstanceKeyMap.HasKey(existingKey) {
+				continue
 			}
+			if recentlySeenKeys.HasKey(existingKey) {
+				log.Debugf("raft snapshot restore: retaining recently-seen instance %+v absent from snapshot", existingKey)
+				continue
+			}
+			_ = inst.ForgetInstance(&existingKey)
+			discardedKeys++
 		}
 		log.Debugf("raft snapshot restore: discarded %+v keys", discardedKeys)
 		existingKeysMap := inst.NewInstanceKeyMap()
