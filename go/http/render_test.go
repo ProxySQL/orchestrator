@@ -234,7 +234,6 @@ func TestRenderClustersAnalysisWorkspace(t *testing.T) {
 		`role="status"`,
 		`id="clusters_analysis_loading"`,
 		`id="clusters_analysis_list"`,
-		`id="clusters_analysis"`,
 		`href="/web/clusters"`,
 		`/css/clusters-analysis-workspace.css`,
 	} {

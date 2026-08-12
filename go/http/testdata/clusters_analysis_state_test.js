@@ -107,3 +107,136 @@ test("incident model reports a downtimed analysis without mutating API input", f
   assert.equal(entry.IsStructureAnalysis, undefined);
   assert.equal(entry.Analysis, "DeadMaster");
 });
+
+test("incident markup is semantic, escaped, and contains one clear topology action", function() {
+  const html = sandbox.renderClustersAnalysisMarkup({incidentCount: 1, clusters: [{
+    clusterName: "mysql1:3306",
+    displayName: "<mysql1>",
+    alias: "",
+    topologyPath: "/web/cluster/mysql1:3306?compact=true",
+    countInstances: 3,
+    allDowntimed: false,
+    state: "actionable",
+    entries: [{
+      analysis: "DeadMaster",
+      instance: "mysql1:3306",
+      state: "actionable",
+      statusLabel: "Requires attention",
+      impactLabel: "Affected replicas",
+      replicaCount: 2,
+      downtimeEndTimestamp: "",
+    }],
+  }]});
+
+  assert.match(html, /<article[^>]+data-cluster-name="mysql1:3306"/);
+  assert.match(html, /&lt;mysql1&gt;/);
+  assert.doesNotMatch(html, /<mysql1>/);
+  assert.match(html, /DeadMaster/);
+  assert.match(html, /Affected replicas/);
+  assert.match(html, /href="\/web\/cluster\/mysql1:3306\?compact=true"/);
+  assert.equal((html.match(/Open topology/g) || []).length, 1);
+  assert.doesNotMatch(html, /popover|popover-title|popover-content/);
+});
+
+test("empty and unavailable states cannot be confused", function() {
+  const empty = sandbox.renderClustersAnalysisEmptyState();
+  const unavailable = sandbox.renderClustersAnalysisUnavailableState();
+
+  assert.match(empty, /No active failover incidents/);
+  assert.doesNotMatch(empty, /DeadMaster|interestingAnalysis/);
+  assert.match(unavailable, /Failure analysis is temporarily unavailable/);
+  assert.match(unavailable, /Reload page/);
+});
+
+test("document adapter requests each incident source as JSON", function() {
+  let ready;
+  const requests = [];
+  const adapterSandbox = {
+    document: {},
+    addAlert: function() {},
+    appUrl: function(path) { return path; },
+    hideLoader: function() {},
+    interestingAnalysis: {},
+    isAuthorizedForAction: function() { return false; },
+    showLoader: function() {},
+  };
+  function jquery(target) {
+    if (target === adapterSandbox.document) {
+      return {ready: function(callback) { ready = callback; }};
+    }
+    return {hide: function() {}, html: function() {}, text: function() {}};
+  }
+  jquery.get = function() {
+    requests.push(Array.from(arguments));
+    return {};
+  };
+  jquery.when = function() {
+    return {
+      done: function() {
+        return {fail: function() {}};
+      },
+    };
+  };
+  adapterSandbox.$ = jquery;
+
+  vm.runInNewContext(source, adapterSandbox, {filename: sourcePath});
+  ready();
+
+  assert.deepEqual(
+    JSON.parse(JSON.stringify(requests.slice(0, 3).map(function(request) {
+      return [request[0], request[3]];
+    }))),
+    [
+      ["/api/clusters-info", "json"],
+      ["/api/replication-analysis", "json"],
+      ["/api/blocked-recoveries", "json"],
+    ]
+  );
+});
+
+test("blocked-recovery alerts escape API-derived text and audit URLs", function() {
+  let ready;
+  let alert;
+  const adapterSandbox = {
+    document: {},
+    addAlert: function(html) { alert = html; },
+    appUrl: function(path) { return path; },
+    getInstanceTitle: function(hostname, port) { return hostname + ":" + port; },
+    hideLoader: function() {},
+    interestingAnalysis: {},
+    isAuthorizedForAction: function() { return false; },
+    showLoader: function() {},
+  };
+  function jquery(target) {
+    if (target === adapterSandbox.document) {
+      return {ready: function(callback) { ready = callback; }};
+    }
+    return {hide: function() {}, html: function() {}, text: function() {}};
+  }
+  jquery.get = function(url, callback) {
+    if (typeof callback == "function") {
+      callback([{
+        Analysis: "<script>",
+        FailedInstanceKey: {Hostname: "<host>", Port: "3306\" onclick=\"bad"},
+        BlockingRecoveryId: "recovery?x=\"bad",
+      }]);
+    }
+    return {};
+  };
+  jquery.when = function() {
+    return {
+      done: function() {
+        return {fail: function() {}};
+      },
+    };
+  };
+  adapterSandbox.$ = jquery;
+
+  vm.runInNewContext(source, adapterSandbox, {filename: sourcePath});
+  ready();
+
+  assert.match(alert, /&lt;script&gt;/);
+  assert.match(alert, /&lt;host&gt;:3306&quot; onclick=&quot;bad/);
+  assert.match(alert, /id\/recovery%3Fx%3D%22bad/);
+  assert.doesNotMatch(alert, /<script>|onclick="bad/);
+});
