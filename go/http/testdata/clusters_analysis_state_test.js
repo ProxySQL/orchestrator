@@ -15,6 +15,46 @@ const sandbox = {
 
 vm.runInNewContext(source, sandbox, {filename: sourcePath});
 
+function renderAdapterWithResponses(clusters, replicationAnalysis, blockedRecoveries) {
+  let ready;
+  const rendered = {};
+  const adapterSandbox = {
+    document: {},
+    addAlert: function() {},
+    appUrl: function(path) { return path; },
+    hideLoader: function() {},
+    interestingAnalysis: {DeadMaster: true},
+    isAuthorizedForAction: function() { return false; },
+    showLoader: function() {},
+  };
+  function jquery(target) {
+    if (target === adapterSandbox.document) {
+      return {ready: function(callback) { ready = callback; }};
+    }
+    return {
+      hide: function() { rendered.loadingHidden = true; },
+      html: function(markup) { rendered.markup = markup; },
+      text: function(summary) { rendered.summary = summary; },
+    };
+  }
+  jquery.get = function() {
+    return {};
+  };
+  jquery.when = function() {
+    return {
+      done: function(callback) {
+        callback(clusters, replicationAnalysis, blockedRecoveries);
+        return {fail: function() {}};
+      },
+    };
+  };
+  adapterSandbox.$ = jquery;
+
+  vm.runInNewContext(source, adapterSandbox, {filename: sourcePath});
+  ready();
+  return rendered;
+}
+
 test("analysis links use the cluster-name route when the alias is the default", function() {
   const cluster = {
     ClusterName: "mysql1:3306",
@@ -239,4 +279,17 @@ test("blocked-recovery alerts escape API-derived text and audit URLs", function(
   assert.match(alert, /&lt;host&gt;:3306&quot; onclick=&quot;bad/);
   assert.match(alert, /id\/recovery%3Fx%3D%22bad/);
   assert.doesNotMatch(alert, /<script>|onclick="bad/);
+});
+
+test("document adapter renders unavailable state for invalid successful incident payloads", function() {
+  [
+    [null, {Details: []}, []],
+    [[], {}, []],
+    [[], {Details: []}, {}],
+  ].forEach(function(responses) {
+    const rendered = renderAdapterWithResponses(responses[0], responses[1], responses[2]);
+
+    assert.equal(rendered.summary, "Analysis unavailable");
+    assert.match(rendered.markup, /Failure analysis is temporarily unavailable/);
+  });
 });

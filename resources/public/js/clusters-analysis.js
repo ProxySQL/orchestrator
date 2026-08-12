@@ -173,6 +173,12 @@ $(document).ready(function() {
     return Array.isArray(result) && typeof result[1] == "string" ? result[0] : result;
   }
 
+  function hasValidClustersAnalysisResponses(clusters, replicationAnalysis, blockedRecoveries) {
+    return Array.isArray(clusters) &&
+      replicationAnalysis && Array.isArray(replicationAnalysis.Details) &&
+      Array.isArray(blockedRecoveries);
+  }
+
   function renderClustersAnalysisState(markup, summary) {
     hideLoader();
     $("#clusters_analysis_loading").hide();
@@ -182,10 +188,17 @@ $(document).ready(function() {
 
   $.when(clustersRequest, replicationAnalysisRequest, blockedRecoveriesRequest)
     .done(function(clustersResult, replicationAnalysisResult, blockedRecoveriesResult) {
+      var clusters = requestData(clustersResult);
+      var replicationAnalysis = requestData(replicationAnalysisResult);
+      var blockedRecoveries = requestData(blockedRecoveriesResult);
+      if (!hasValidClustersAnalysisResponses(clusters, replicationAnalysis, blockedRecoveries)) {
+        renderClustersAnalysisState(renderClustersAnalysisUnavailableState(), "Analysis unavailable");
+        return;
+      }
       var model = buildClustersAnalysisModel(
-        requestData(clustersResult) || [],
-        requestData(replicationAnalysisResult) || {},
-        requestData(blockedRecoveriesResult) || [],
+        clusters,
+        replicationAnalysis,
+        blockedRecoveries,
         interestingAnalysis
       );
       model.clusters.forEach(function(cluster) {
