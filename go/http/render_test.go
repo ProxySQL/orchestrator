@@ -243,6 +243,27 @@ func TestRenderClustersAnalysisWorkspace(t *testing.T) {
 	}
 }
 
+func TestRenderClustersAnalysisWorkspaceUsesCurrentAssetRevision(t *testing.T) {
+	chdirToRepoRoot(t)
+	clearContentTemplateCache()
+
+	rec := httptest.NewRecorder()
+	renderHTML(rec, http.StatusOK, "templates/clusters_analysis", sampleTemplateData())
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, body = %s", rec.Code, rec.Body.String())
+	}
+	body := rec.Body.String()
+	for _, expected := range []string{
+		`href="/css/clusters-analysis-workspace.css?v=20260812-failure-analysis-v2"`,
+		`src="/js/clusters-analysis.js?v=20260812-failure-analysis-v2"`,
+	} {
+		if !strings.Contains(body, expected) {
+			t.Errorf("expected current failure analysis asset revision %q", expected)
+		}
+	}
+}
+
 func TestRenderClusterWorkspace(t *testing.T) {
 	chdirToRepoRoot(t)
 	clearContentTemplateCache()

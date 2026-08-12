@@ -39,6 +39,9 @@ test_endpoint "Static JS" "$ORC_URL/js/orchestrator.js" "200"
 test_endpoint "Cluster workspace" "$ORC_URL/web/cluster/mysql1:3306" "200"
 test_body_contains "Cluster workspace shell" "$ORC_URL/web/cluster/mysql1:3306" 'id="cluster_workspace"'
 test_body_contains "Cluster workspace stylesheet" "$ORC_URL/web/cluster/mysql1:3306" 'cluster-workspace\.css'
+test_endpoint "Failure analysis workspace" "$ORC_URL/web/clusters-analysis" "200"
+test_body_contains "Failure analysis shell" "$ORC_URL/web/clusters-analysis" 'id="clusters_analysis_workspace"'
+test_body_contains "Failure analysis stylesheet" "$ORC_URL/web/clusters-analysis" 'clusters-analysis-workspace\.css'
 
 echo ""
 echo "--- API v1 ---"
