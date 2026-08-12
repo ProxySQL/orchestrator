@@ -1,44 +1,39 @@
-<div class="container" id="audit">
-  <div class="card">
-    <div class="card-body">
-      <ul class="pager">
-        <li class="previous small"><a href="#"><span class="glyphicon glyphicon-chevron-left"></span></a></li>
-        <li class="next small"><a href="#"><span class="glyphicon glyphicon-chevron-right"></span></a></li>
-      </ul>
-      <table class="table table-striped table-bordered table-condensed">
-        <thead>
-          <tr>
-            <th>Analysis</th>
-            <th>Failed instance</th>
-            <th>Affected</th>
-            <th>Cluster name</th>
-            <th>Cluster alias</th>
-            <th>Detect time</th>
-          </tr>
-        </thead>
-        <tbody>
-        </tbody>
-      </table>
-      <ul class="pager">
-        <li class="previous small"><a href="#"><span class="glyphicon glyphicon-chevron-left"></span></a></li>
-        <li class="next small"><a href="#"><span class="glyphicon glyphicon-chevron-right"></span></a></li>
+<section class="legacy-workspace" id="audit" aria-labelledby="audit_title">
+  <header class="legacy-workspace-header">
+    <div>
+      <p class="legacy-workspace-eyebrow">History</p>
+      <h1 id="audit_title">Failure detections</h1>
+      <p>Inspect detected replication failures and the analysis state recorded at detection time.</p>
+    </div>
+  </header>
+  <article class="legacy-panel">
+    <div class="legacy-toolbar">
+      <p>Open an analysis name to inspect its recorded context.</p>
+      <ul class="pager" aria-label="Failure detection pages">
+        <li class="previous small"><a href="#" aria-label="Previous page">← Previous</a></li>
+        <li class="next small"><a href="#" aria-label="Next page">Next →</a></li>
       </ul>
     </div>
-  </div>
-</div>
-
+    <div id="audit_empty" class="legacy-state" role="status">
+      <h2>No failure detections recorded</h2>
+      <p>Detected topology failures will appear here with their affected instances and cluster context.</p>
+    </div>
+    <div id="audit_unavailable" class="legacy-state legacy-state--error" role="alert" style="display:none">
+      <h2>Failure history is unavailable</h2>
+      <p>Orchestrator could not load failure detections.</p>
+    </div>
+    <div id="audit_table_container" class="legacy-table-shell" style="display:none">
+      <table class="table table-striped table-condensed">
+        <thead><tr><th>Analysis</th><th>Failed instance</th><th>Affected</th><th>Cluster name</th><th>Cluster alias</th><th>Detect time</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </article>
+</section>
 
 <script>
-  function currentPage() {
-    return parseInt("{{.page}}");
-  }
-
-  function detectionId() {
-    return parseInt("{{.detectionId}}");
-  }
-
-  function clusterAlias() {
-    return "{{.clusterAlias}}";
-  }
+  function currentPage() { return parseInt("{{.page}}"); }
+  function detectionId() { return parseInt("{{.detectionId}}"); }
+  function clusterAlias() { return "{{.clusterAlias}}"; }
 </script>
-<script src="{{.prefix}}/js/audit-failure-detection.js"></script>
+<script src="{{.prefix}}/js/audit-failure-detection.js?v=20260812-legacy-v1"></script>

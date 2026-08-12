@@ -24,6 +24,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/proxysql/orchestrator/go/config"
 )
 
 // chdirToRepoRoot finds the repository root (directory containing resources/templates)
@@ -103,6 +105,185 @@ func sampleTemplateData() map[string]interface{} {
 		"recoveryUid":                   "",
 		"pseudoGTIDModeEnabled":         false,
 		"contextMenuVisible":            false,
+		"providerName":                  "MySQL",
+		"defaultInstancePort":           3306,
+	}
+}
+
+func TestRenderedNavigationUsesCurrentProjectDestinations(t *testing.T) {
+	chdirToRepoRoot(t)
+	clearContentTemplateCache()
+
+	rec := httptest.NewRecorder()
+	renderHTML(rec, http.StatusOK, "templates/about", sampleTemplateData())
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, body = %s", rec.Code, rec.Body.String())
+	}
+	body := rec.Body.String()
+	for _, expected := range []string{
+		`href="https://github.com/ProxySQL/orchestrator"`,
+		`href="https://proxysql.github.io/orchestrator/"`,
+		`href="https://github.com/ProxySQL/orchestrator/blob/master/docs/faq.md"`,
+		`>Documentation</a>`,
+		`>Operations</a>`,
+		`>Failure detections</a>`,
+		`>Recoveries</a>`,
+	} {
+		if !strings.Contains(body, expected) {
+			t.Errorf("rendered navigation is missing %q", expected)
+		}
+	}
+	if strings.Contains(strings.ToLower(body), "github.com/openark/orchestrator") {
+		t.Fatal("rendered navigation still links to the archived openark repository")
+	}
+	if strings.Contains(body, `href="/web/agents"`) || strings.Contains(body, `href="/web/seeds"`) {
+		t.Fatal("agent-only navigation must be hidden while the agent HTTP service is disabled")
+	}
+}
+
+func TestRenderedNavigationShowsAgentToolsWhenEnabled(t *testing.T) {
+	chdirToRepoRoot(t)
+	clearContentTemplateCache()
+
+	data := sampleTemplateData()
+	data["agentsHttpActive"] = true
+	rec := httptest.NewRecorder()
+	renderHTML(rec, http.StatusOK, "templates/about", data)
+	body := rec.Body.String()
+	for _, expected := range []string{`href="/web/agents"`, `href="/web/seeds"`} {
+		if !strings.Contains(body, expected) {
+			t.Errorf("agent-enabled navigation is missing %q", expected)
+		}
+	}
+}
+
+func TestRenderAboutDescribesCurrentProject(t *testing.T) {
+	chdirToRepoRoot(t)
+	clearContentTemplateCache()
+
+	rec := httptest.NewRecorder()
+	renderHTML(rec, http.StatusOK, "templates/about", sampleTemplateData())
+	body := rec.Body.String()
+	for _, expected := range []string{
+		`id="about_workspace"`,
+		`MySQL 9.7`,
+		`PostgreSQL 12`,
+		`ProxySQL/orchestrator`,
+		`Apache License 2.0`,
+		`/css/legacy-workspace.css`,
+	} {
+		if !strings.Contains(body, expected) {
+			t.Errorf("modern About page is missing %q", expected)
+		}
+	}
+}
+
+func TestRenderOperationalPagesHaveIntentionalStates(t *testing.T) {
+	chdirToRepoRoot(t)
+	clearContentTemplateCache()
+
+	tests := []struct {
+		template string
+		hook     string
+		message  string
+	}{
+		{template: "templates/status", hook: `id="status_workspace"`, message: "Loading node status"},
+		{template: "templates/audit", hook: `id="audit_empty"`, message: "No audit operations recorded"},
+		{template: "templates/audit_failure_detection", hook: `id="audit_empty"`, message: "No failure detections recorded"},
+		{template: "templates/audit_recovery", hook: `id="audit_empty"`, message: "No recoveries recorded"},
+		{template: "templates/agents", hook: `id="agents_disabled"`, message: "Agent HTTP service is disabled"},
+		{template: "templates/seeds", hook: `id="seeds_disabled"`, message: "Agent HTTP service is disabled"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.template, func(t *testing.T) {
+			rec := httptest.NewRecorder()
+			renderHTML(rec, http.StatusOK, tt.template, sampleTemplateData())
+			body := rec.Body.String()
+			for _, expected := range []string{tt.hook, tt.message, `/css/legacy-workspace.css`} {
+				if !strings.Contains(body, expected) {
+					t.Errorf("rendered page is missing %q", expected)
+				}
+			}
+		})
+	}
+}
+
+func TestRenderStatusWorkspaceHasStructuredHealthTable(t *testing.T) {
+	chdirToRepoRoot(t)
+	clearContentTemplateCache()
+
+	rec := httptest.NewRecorder()
+	renderHTML(rec, http.StatusOK, "templates/status", sampleTemplateData())
+	body := rec.Body.String()
+	for _, expected := range []string{
+		`id="status_summary"`,
+		`<thead>`,
+		`<tbody>`,
+		`<th scope="col">Node</th>`,
+		`<th scope="col">Hostname</th>`,
+		`id="status_actions"`,
+	} {
+		if !strings.Contains(body, expected) {
+			t.Errorf("structured Status workspace is missing %q", expected)
+		}
+	}
+}
+
+func TestDiscoverUsesConfiguredProviderAndPort(t *testing.T) {
+	chdirToRepoRoot(t)
+	clearContentTemplateCache()
+
+	oldProvider, oldPort := config.Config.ProviderType, config.Config.DefaultInstancePort
+	config.Config.ProviderType, config.Config.DefaultInstancePort = "postgresql", 5432
+	t.Cleanup(func() {
+		config.Config.ProviderType, config.Config.DefaultInstancePort = oldProvider, oldPort
+	})
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/web/discover", nil)
+	Web.Discover(rec, req)
+	body := rec.Body.String()
+	for _, expected := range []string{
+		`id="discover_workspace"`,
+		`Enter a PostgreSQL hostname and port`,
+		`value="5432"`,
+	} {
+		if !strings.Contains(body, expected) {
+			t.Errorf("provider-aware Discover page is missing %q", expected)
+		}
+	}
+}
+
+func TestAgentDetailRoutesExplainWhenAgentHTTPIsDisabled(t *testing.T) {
+	chdirToRepoRoot(t)
+	clearContentTemplateCache()
+
+	oldServeAgents := config.Config.ServeAgentsHttp
+	config.Config.ServeAgentsHttp = false
+	t.Cleanup(func() { config.Config.ServeAgentsHttp = oldServeAgents })
+
+	tests := []struct {
+		name       string
+		path       string
+		handler    http.HandlerFunc
+		disabledID string
+		legacyJS   string
+	}{
+		{name: "agent detail", path: "/web/agent/mysql1", handler: Web.Agent, disabledID: `id="agents_disabled"`, legacyJS: `/js/agent.js`},
+		{name: "seed detail", path: "/web/seed-details/1", handler: Web.AgentSeedDetails, disabledID: `id="seeds_disabled"`, legacyJS: `/js/seed.js`},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rec := httptest.NewRecorder()
+			tt.handler(rec, httptest.NewRequest(http.MethodGet, tt.path, nil))
+			body := rec.Body.String()
+			if !strings.Contains(body, tt.disabledID) || !strings.Contains(body, "Agent HTTP service is disabled") {
+				t.Fatalf("disabled agent route did not explain its state: %s", truncate(body, 600))
+			}
+			if strings.Contains(body, tt.legacyJS) {
+				t.Errorf("disabled agent route still loads %q", tt.legacyJS)
+			}
+		})
 	}
 }
 

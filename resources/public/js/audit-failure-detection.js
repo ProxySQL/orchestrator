@@ -11,8 +11,15 @@ $(document).ready(function() {
     $.get(appUrl("/api/replication-analysis-changelog"), function(analysisChangelog) {
       analysisChangelog = analysisChangelog || [];
       displayAudit(auditEntries, analysisChangelog);
-    }, "json");
-  }, "json");
+    }, "json").fail(displayUnavailable);
+  }, "json").fail(displayUnavailable);
+
+  function displayUnavailable() {
+    hideLoader();
+    $("#audit_empty").hide();
+    $("#audit_unavailable").show();
+    $("#audit .pager li").addClass("disabled");
+  }
 
   function displayAudit(auditEntries, analysisChangelog) {
     var baseWebUri = appUrl("/web/audit-failure-detection/");
@@ -25,6 +32,10 @@ $(document).ready(function() {
     });
 
     hideLoader();
+	if (auditEntries.length > 0) {
+	  $("#audit_empty").hide();
+	  $("#audit_table_container").show();
+	}
     auditEntries.forEach(function(audit) {
       var analyzedInstanceDisplay = audit.AnalysisEntry.AnalyzedInstanceKey.Hostname + ":" + audit.AnalysisEntry.AnalyzedInstanceKey.Port;
       var row = $('<tr/>');

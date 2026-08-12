@@ -1,25 +1,28 @@
-<div class="container">
-	<div class="card">
-		<div class="card-header">
-			Discover a new instance
-		</div>
-		<div class="card-body">
-			<div class="">
-				<p>
-					Enter a MySQL hostname and a port. <i>Orchestrator</i> will try and resolve the CNAME.
-				</p>
-				<p>
-					If running in discovery mode, <i>orchestrator</i> will also attempt to discover the entire topology the instance belongs to.
-				</p>
-			</div>
+<section class="legacy-workspace" id="discover_workspace" aria-labelledby="discover_title">
+  <header class="legacy-workspace-header">
+    <div>
+      <p class="legacy-workspace-eyebrow">Topology</p>
+      <h1 id="discover_title">Discover an instance</h1>
+      <p>Add a {{.providerName}} server to Orchestrator's discovery cycle.</p>
+    </div>
+  </header>
 
-			<form role="form" class="form-inline">
-				<input type="text" class="form-control" id="discoverHostName" placeholder="Enter host name">
-				<input type="text" class="form-control" id="discoverPort" value="3306" placeholder="port">
-				<button type="submit" class="btn btn-primary" data-btn="discover-instance">Submit</button>
-			</form>
-		</div>
-	</div>
-</div>
+  <article class="legacy-panel">
+    <span class="legacy-kicker">New instance</span>
+    <h2>Enter a {{.providerName}} hostname and port</h2>
+    <p>Orchestrator resolves the host and, while discovery is active, explores the replication topology connected to it.</p>
+    <form role="form" class="legacy-form">
+      <div>
+        <label for="discoverHostName">Hostname</label>
+        <input type="text" class="form-control" id="discoverHostName" placeholder="database.example.com" autocomplete="off">
+      </div>
+      <div>
+        <label for="discoverPort">Port</label>
+        <input type="number" class="form-control" id="discoverPort" value="{{.defaultInstancePort}}" min="1" max="65535">
+      </div>
+      <button type="submit" class="btn btn-primary" data-btn="discover-instance">Discover instance</button>
+    </form>
+  </article>
+</section>
 
 <script src="{{.prefix}}/js/discover.js"></script>

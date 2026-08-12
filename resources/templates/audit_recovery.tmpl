@@ -1,73 +1,52 @@
-<div class="container" id="audit">
-  <div class="card">
-    <div class="card-body">
-      <ul class="pager">
-        <li class="previous small"><a href="#"><span class="glyphicon glyphicon-chevron-left"></span></a></li>
-        <li class="next small"><a href="#"><span class="glyphicon glyphicon-chevron-right"></span></a></li>
-      </ul>
-      <table id="audit_recovery_table" class="table table-striped table-bordered table-condensed">
-        <thead>
-          <tr>
-            <th>Analysis</th>
-            <th>Failed instance</th>
-            <th>Affected</th>
-            <th>Cluster name</th>
-            <th>Cluster alias</th>
-            <th>Start time</th>
-            <th>End time</th>
-            <th>Successor instance</th>
-          </tr>
-        </thead>
-        <tbody>
-        </tbody>
-      </table>
-      <table id="audit_recovery_details" class="table">
-        <thead>
-          <tr>
-            <th colspan="3"><h3></h3></th>
-          </tr>
-        </thead>
-        <tbody>
-        </tbody>
-      </table>
-      <table id="audit_recovery_steps" class="table">
-        <thead>
-          <tr>
-            <th colspan="2"><h3>Recovery steps</h3></th>
-          </tr>
-        </thead>
-        <tbody>
-        </tbody>
-      </table>
-      <ul class="pager">
-        <li class="previous small"><a href="#"><span class="glyphicon glyphicon-chevron-left"></span></a></li>
-        <li class="next small"><a href="#"><span class="glyphicon glyphicon-chevron-right"></span></a></li>
+<section class="legacy-workspace" id="audit" aria-labelledby="audit_title">
+  <header class="legacy-workspace-header">
+    <div>
+      <p class="legacy-workspace-eyebrow">History</p>
+      <h1 id="audit_title">Recoveries</h1>
+      <p>Review attempted and completed recovery operations, successors, acknowledgements, and execution steps.</p>
+    </div>
+  </header>
+  <article class="legacy-panel">
+    <div class="legacy-toolbar">
+      <p>Open an analysis to inspect the complete recovery record.</p>
+      <ul class="pager" aria-label="Recovery pages">
+        <li class="previous small"><a href="#" aria-label="Previous page">← Previous</a></li>
+        <li class="next small"><a href="#" aria-label="Next page">Next →</a></li>
       </ul>
     </div>
-  </div>
-</div>
-
+    <div id="audit_empty" class="legacy-state" role="status">
+      <h2>No recoveries recorded</h2>
+      <p>Manual and automated recovery attempts will appear here when they occur.</p>
+    </div>
+    <div id="audit_unavailable" class="legacy-state legacy-state--error" role="alert" style="display:none">
+      <h2>Recovery history is unavailable</h2>
+      <p>Orchestrator could not load recovery records.</p>
+    </div>
+    <div id="audit_recovery_table_container" class="legacy-table-shell" style="display:none">
+      <table id="audit_recovery_table" class="table table-striped table-condensed">
+        <thead><tr><th>Analysis</th><th>Failed instance</th><th>Affected</th><th>Cluster name</th><th>Cluster alias</th><th>Start time</th><th>End time</th><th>Successor instance</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div id="audit_recovery_details_container" class="legacy-table-shell mt-3" style="display:none">
+      <table id="audit_recovery_details" class="table">
+        <thead><tr><th colspan="3"><h3></h3></th></tr></thead><tbody></tbody>
+      </table>
+    </div>
+    <div id="audit_recovery_steps_container" class="legacy-table-shell mt-3" style="display:none">
+      <table id="audit_recovery_steps" class="table">
+        <thead><tr><th colspan="2"><h3>Recovery steps</h3></th></tr></thead><tbody></tbody>
+      </table>
+    </div>
+  </article>
+</section>
 
 <script>
-  function currentPage() {
-    return parseInt("{{.page}}");
-  }
-
-  function clusterName() {
-    return "{{.clusterName}}";
-  }
-
-  function clusterAlias() {
-    return "{{.clusterAlias}}";
-  }
-
-  function recoveryId() {
-    return "{{.recoveryId}}";
-  }
-
-  function recoveryUid() {
-    return "{{.recoveryUid}}";
-  }
+  function currentPage() { return parseInt("{{.page}}"); }
+  function clusterName() { return "{{.clusterName}}"; }
+  function clusterAlias() { return "{{.clusterAlias}}"; }
+  function recoveryId() { return "{{.recoveryId}}"; }
+  function recoveryUid() { return "{{.recoveryUid}}"; }
 </script>
-<script src="{{.prefix}}/js/audit-recovery.js"></script>
+<script src="{{.prefix}}/js/audit-recovery.js?v=20260812-legacy-v1"></script>
 <script src="{{.prefix}}/js/audit-recovery-shared.js"></script>

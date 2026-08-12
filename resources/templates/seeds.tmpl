@@ -1,34 +1,33 @@
-<style type="text/css">
-
-</style>
-
-<div class="container" id="seed">
-  <div class="card">
-    <div class="card-header">
-      Seeds
+<section class="legacy-workspace" id="seeds_workspace" aria-labelledby="seeds_title">
+  <header class="legacy-workspace-header">
+    <div>
+      <p class="legacy-workspace-eyebrow">Agent service</p>
+      <h1 id="seeds_title">Seeds</h1>
+      <p>Track active and completed agent-assisted seed operations.</p>
     </div>
-    <div class="card-body">
-      <div class="seed_details card">
-        <div class="card-header">
-          Seed details
-        </div>
-        <table class="table table-condensed table-bordered table-striped ">
-          <thead>
-            <tr>
-              <th>Status</th>
-              <th>Id</th>
-              <th>Target host</th>
-              <th>Source host</th>
-              <th>Seed start time</th>
-              <th>Seed end time</th>
-            </tr>
-          </thead>
-          <tbody data-agent="seed_details"></tbody>
-        </table>
-      </div>
+  </header>
+  {{if .agentsHttpActive}}
+  <article class="legacy-panel" id="seed">
+    <div id="seeds_loading" class="legacy-state" role="status">Loading seed operations…</div>
+    <div id="seeds_empty" class="legacy-state" role="status" style="display:none">
+      <h2>No seed operations found</h2><p>Seed operations will appear here when agents begin copying an instance.</p>
     </div>
-  </div>
-</div>
-
-<script src="{{.prefix}}/js/seeds.js"></script>
-<script src="{{.prefix}}/js/seed-shared.js"></script>
+    <div id="seeds_unavailable" class="legacy-state legacy-state--error" role="alert" style="display:none">
+      <h2>Seeds are unavailable</h2><p>The agent seed service could not be reached.</p>
+    </div>
+    <div id="seeds_table_container" class="legacy-table-shell" style="display:none">
+      <table class="table table-condensed table-striped">
+        <thead><tr><th>Status</th><th>Id</th><th>Target host</th><th>Source host</th><th>Seed start time</th><th>Seed end time</th></tr></thead>
+        <tbody data-agent="seed_details"></tbody>
+      </table>
+    </div>
+  </article>
+  <script src="{{.prefix}}/js/seeds.js?v=20260812-legacy-v1"></script>
+  <script src="{{.prefix}}/js/seed-shared.js"></script>
+  {{else}}
+  <article id="seeds_disabled" class="legacy-state" role="status">
+    <h2>Agent HTTP service is disabled</h2>
+    <p>Enable <code>ServeAgentsHttp</code> to expose agents and agent-assisted seeding in this installation.</p>
+  </article>
+  {{end}}
+</section>

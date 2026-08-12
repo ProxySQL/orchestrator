@@ -1,23 +1,27 @@
-<style type="text/css">
-  #agents .popover.instance {
-    display: inline-block;
-    position: inherit;
-    width: 276px;
-  }
-
-  #agents .popover.instance {
-    margin: 8px;
-  }
-
-  #agents .popover.instance p {
-    margin: 8px 0px;
-  }
-</style>
-
-<div class="container" id="agents">
-</div>
-
-
-<script>
-</script>
-<script src="{{.prefix}}/js/agents.js"></script>
+<section class="legacy-workspace" id="agents_workspace" aria-labelledby="agents_title">
+  <header class="legacy-workspace-header">
+    <div>
+      <p class="legacy-workspace-eyebrow">Agent service</p>
+      <h1 id="agents_title">Agents</h1>
+      <p>Hosts available to perform agent-assisted seed and copy operations.</p>
+    </div>
+  </header>
+  {{if .agentsHttpActive}}
+  <article class="legacy-panel">
+    <div id="agents_loading" class="legacy-state" role="status">Loading agents…</div>
+    <div id="agents_empty" class="legacy-state" role="status" style="display:none">
+      <h2>No agents registered</h2><p>Connected agents will appear here when they become available.</p>
+    </div>
+    <div id="agents_unavailable" class="legacy-state legacy-state--error" role="alert" style="display:none">
+      <h2>Agents are unavailable</h2><p>The agent service could not be reached.</p>
+    </div>
+    <div id="agents" class="d-flex flex-wrap gap-3"></div>
+  </article>
+  <script src="{{.prefix}}/js/agents.js?v=20260812-legacy-v1"></script>
+  {{else}}
+  <article id="agents_disabled" class="legacy-state" role="status">
+    <h2>Agent HTTP service is disabled</h2>
+    <p>Enable <code>ServeAgentsHttp</code> to expose agents and agent-assisted seeding in this installation.</p>
+  </article>
+  {{end}}
+</section>

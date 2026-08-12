@@ -14,7 +14,12 @@ $(document).ready(function() {
   $.get(appUrl(apiUri), function(auditEntries) {
     auditEntries = auditEntries || [];
     displayAudit(auditEntries);
-  }, "json");
+  }, "json").fail(function() {
+    hideLoader();
+    $("#audit_empty").hide();
+    $("#audit_unavailable").show();
+    $("#audit .pager li").addClass("disabled");
+  });
 
   function ackInfo(audit) {
     var info = "";
@@ -67,6 +72,7 @@ $(document).ready(function() {
   function displaySingleAudit(audit) {
     $("#audit .pager").hide();
     $("#audit_recovery_table").hide();
+	$("#audit_recovery_details_container").show();
 
     var clusterAlias = audit.AnalysisEntry.ClusterDetails.ClusterAlias;
     var clusterName = audit.AnalysisEntry.ClusterDetails.ClusterName;
@@ -109,7 +115,8 @@ $(document).ready(function() {
     }).attr("rowspan", numRows-1).appendTo($("#audit_recovery_details tbody tr:nth-child(2)"));
 
     auditRecoverySteps(audit.UID, $('#audit_recovery_steps'))
-    $("#audit_recovery_steps").show();
+	$("#audit_recovery_steps_container").show();
+	$("#audit_recovery_steps").show();
   }
 
   function displayAudit(auditEntries) {
@@ -122,6 +129,12 @@ $(document).ready(function() {
     var singleRecoveryAudit = (auditEntries.length == 1);
 
     hideLoader();
+	if (auditEntries.length > 0) {
+	  $("#audit_empty").hide();
+	  if (!singleRecoveryAudit) {
+		$("#audit_recovery_table_container").show();
+	  }
+	}
     auditEntries.forEach(function(audit) {
       if (singleRecoveryAudit) {
         displaySingleAudit(audit)

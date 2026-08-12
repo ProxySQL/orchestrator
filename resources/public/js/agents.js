@@ -5,9 +5,14 @@ $(document).ready(function () {
     
     $.get(appUrl("/api/agents"), function (agents) {
     	displayAgents(agents);
-    }, "json");
+    }, "json").fail(function() {
+		hideLoader();
+		$("#agents_loading").hide();
+		$("#agents_unavailable").show();
+	});
     function displayAgents(agents) {
         hideLoader();
+		$("#agents_loading").hide();
         
         agents.forEach(function (agent) {
     		$("#agents").append('<div xmlns="http://www.w3.org/1999/xhtml" class="popover instance right" data-agent-name="'+agent.Hostname+'"><div class="arrow"></div><div class="popover-content"></div></div>');
@@ -26,7 +31,7 @@ $(document).ready(function () {
         $("div.popover").show();
 	
         if (agents.length == 0) {
-        	addAlert("No agents found");
+			$("#agents_empty").show();
         }
     }
 });	
