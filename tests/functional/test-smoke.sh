@@ -32,6 +32,26 @@ else
 fi
 
 echo ""
+echo "--- Audit persistence ---"
+# Maintenance changes only Orchestrator metadata; it does not alter MySQL roles
+# or replication. Ending it leaves the topology in its original state.
+AUDIT_OWNER="functional-audit-smoke"
+AUDIT_REASON="verify-backend-persistence"
+test_endpoint "Begin safe maintenance for audit" "$ORC_URL/api/begin-maintenance/mysql2/3306/$AUDIT_OWNER/$AUDIT_REASON" "200"
+test_endpoint "End safe maintenance for audit" "$ORC_URL/api/end-maintenance/mysql2/3306" "200"
+AUDIT_ENTRIES=$(curl -s --max-time 10 "$ORC_URL/api/audit/0" 2>/dev/null)
+if echo "$AUDIT_ENTRIES" | python3 -c '
+import json, sys
+entries = json.load(sys.stdin)
+types = {entry.get("AuditType") for entry in entries}
+raise SystemExit(0 if {"begin-maintenance", "end-maintenance"} <= types else 1)
+'; then
+    pass "Audit persistence records maintenance lifecycle"
+else
+    fail "Audit persistence records maintenance lifecycle" "Response: $AUDIT_ENTRIES"
+fi
+
+echo ""
 echo "--- Web UI ---"
 test_endpoint "Web UI root" "$ORC_URL/" "302"
 test_endpoint "Static CSS" "$ORC_URL/css/orchestrator.css" "200"
