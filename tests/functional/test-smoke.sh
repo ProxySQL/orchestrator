@@ -46,9 +46,13 @@ if [ "$BEGIN_MAINTENANCE_STATUS" = "200" ]; then
     MAINTENANCE_KEY=$(printf '%s' "$BEGIN_MAINTENANCE_BODY" | python3 -c '
 import json, sys
 response = json.load(sys.stdin)
-key = response.get("Details")
+details = response.get("Details")
+key = details.get("MaintenanceKey") if isinstance(details, dict) else None
 expected_message = "Maintenance begun: mysql2:3306"
-if response.get("Code") != "OK" or response.get("Message") != expected_message or not isinstance(key, int) or key <= 0:
+if (response.get("Code") != "OK" or response.get("Message") != expected_message
+        or not isinstance(details, dict) or details.get("Hostname") != "mysql2"
+        or details.get("Port") != 3306
+        or not isinstance(key, int) or key <= 0):
     raise SystemExit(1)
 print(key)
 ' 2>/dev/null || true)

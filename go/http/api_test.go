@@ -56,7 +56,7 @@ func TestKnownPaths(t *testing.T) {
 	}
 }
 
-func TestMaintenanceBegunResponseReturnsCreatedMaintenanceKey(t *testing.T) {
+func TestMaintenanceBegunResponsePreservesInstanceDetailsAndAddsCreatedMaintenanceKey(t *testing.T) {
 	response := maintenanceBegunResponse(inst.InstanceKey{Hostname: "mysql2", Port: 3306}, 42)
 
 	encoded, err := json.Marshal(response)
@@ -66,7 +66,11 @@ func TestMaintenanceBegunResponseReturnsCreatedMaintenanceKey(t *testing.T) {
 	var decoded struct {
 		Code    string
 		Message string
-		Details int64
+		Details struct {
+			Hostname       string
+			Port           int
+			MaintenanceKey int64
+		}
 	}
 	if err := json.Unmarshal(encoded, &decoded); err != nil {
 		t.Fatal(err)
@@ -77,7 +81,13 @@ func TestMaintenanceBegunResponseReturnsCreatedMaintenanceKey(t *testing.T) {
 	if decoded.Message != "Maintenance begun: mysql2:3306" {
 		t.Fatalf("expected existing message to be preserved, got %q", decoded.Message)
 	}
-	if decoded.Details != 42 {
-		t.Fatalf("expected created maintenance key 42 in Details, got %d", decoded.Details)
+	if decoded.Details.Hostname != "mysql2" {
+		t.Fatalf("expected existing Details.Hostname mysql2, got %q", decoded.Details.Hostname)
+	}
+	if decoded.Details.Port != 3306 {
+		t.Fatalf("expected existing Details.Port 3306, got %d", decoded.Details.Port)
+	}
+	if decoded.Details.MaintenanceKey != 42 {
+		t.Fatalf("expected created maintenance key 42 in Details.MaintenanceKey, got %d", decoded.Details.MaintenanceKey)
 	}
 }

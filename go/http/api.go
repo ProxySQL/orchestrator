@@ -402,8 +402,14 @@ func (this *HttpAPI) Resolve(w http.ResponseWriter, r *http.Request) {
 }
 
 // BeginMaintenance begins maintenance mode for given instance
+type maintenanceBegunDetails struct {
+	inst.InstanceKey
+	MaintenanceKey int64
+}
+
 func maintenanceBegunResponse(instanceKey inst.InstanceKey, maintenanceKey int64) *APIResponse {
-	return &APIResponse{Code: OK, Message: fmt.Sprintf("Maintenance begun: %+v", instanceKey), Details: maintenanceKey}
+	details := maintenanceBegunDetails{InstanceKey: instanceKey, MaintenanceKey: maintenanceKey}
+	return &APIResponse{Code: OK, Message: fmt.Sprintf("Maintenance begun: %+v", instanceKey), Details: details}
 }
 
 func (this *HttpAPI) BeginMaintenance(w http.ResponseWriter, r *http.Request) {

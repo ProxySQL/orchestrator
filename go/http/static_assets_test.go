@@ -518,6 +518,9 @@ func TestSmokeEndsOnlyMaintenanceCreatedByItsBeginCall(t *testing.T) {
 	if !strings.Contains(script, `/api/end-maintenance/$MAINTENANCE_KEY`) {
 		t.Error("smoke must end maintenance by the exact key returned by its begin call")
 	}
+	if !strings.Contains(script, `key = details.get("MaintenanceKey") if isinstance(details, dict) else None`) {
+		t.Error("smoke must read the additive maintenance key without replacing instance details")
+	}
 	if strings.Contains(script, `/api/end-maintenance/mysql2/3306`) {
 		t.Error("smoke must never end maintenance by instance")
 	}

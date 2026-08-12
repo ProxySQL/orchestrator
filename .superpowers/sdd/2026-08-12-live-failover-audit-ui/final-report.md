@@ -112,10 +112,11 @@ failover:
   restoration it starts only mysql1; mysql2/mysql3 are never started, and
   replication repair is attempted only through `exec` against their existing
   running containers.
-- successful `begin-maintenance` responses retain the existing Code and Message
-  fields while returning the created maintenance key in Details. The smoke test
-  accepts only the direct successful response for mysql2, extracts its positive
-  integer key, and ends maintenance only through `/api/end-maintenance/{key}`.
+- successful `begin-maintenance` responses retain the existing Code, Message,
+  `Details.Hostname`, and `Details.Port` fields while adding the created key as
+  `Details.MaintenanceKey`. The smoke test accepts only the direct successful
+  response for mysql2, extracts its positive integer key, and ends maintenance
+  only through `/api/end-maintenance/{key}`.
 
 Strict RED evidence was captured before each correction. The handler contract
 first failed to build with `undefined: maintenanceBegunResponse`. After the
@@ -123,6 +124,13 @@ minimal API response change exposed the shell regressions, the focused test
 reported all missing deadline/no-op/keyed-cleanup contracts and detected both
 unsafe instance cleanup branches. A second deadline-boundary RED reported the
 missing remaining-budget calculation before that behavior was added.
+
+A final scoped review found that the first key-returning response had replaced
+the historical instance details with a number. The additive compatibility test
+failed against that version because numeric Details could not decode into
+`Hostname`, `Port`, and `MaintenanceKey`. The corrected response preserves the
+two historical fields and adds the key; the smoke consumer now verifies all
+three before cleanup. Failure responses remain unchanged.
 
 Fresh GREEN verification:
 
@@ -136,9 +144,10 @@ Fresh GREEN verification:
 | `git diff --check` | pass |
 
 The test binary was rebuilt for the lab's Linux/arm64 platform and only the
-Orchestrator service was recreated. The smoke test received maintenance key 1,
-ended exactly that key, and passed 35/35 checks. MySQL container ID comparison
-before and after had no diff. The first smoke attempt failed safely at readiness
+Orchestrator service was recreated. The smoke test received
+`Details.MaintenanceKey` 1 alongside the historical instance fields, ended
+exactly that key, and passed 35/35 checks. MySQL container ID comparison before
+and after had no diff. The first smoke attempt failed safely at readiness
 because a host Darwin binary had been mounted into the Linux container; no
 maintenance call occurred. Rebuilding in the existing `golang:1.25.7` Linux
 image corrected that environment mismatch. No live failover was run.
