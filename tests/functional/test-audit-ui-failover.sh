@@ -9,10 +9,10 @@ AFTER_IDS="$(mktemp)"
 MYSQL1_STOPPED=false
 
 restore_lab() {
-  if [ "$MYSQL1_STOPPED" = true ]; then
-    $COMPOSE start mysql1 >/dev/null
+  if [ "$MYSQL1_STOPPED" != true ]; then
+    return
   fi
-  $COMPOSE start mysql2 mysql3 >/dev/null 2>&1 || true
+  $COMPOSE start mysql1 >/dev/null
   for attempt in $(seq 1 60); do
     $COMPOSE exec -T mysql1 mysqladmin ping -h localhost -uroot -ptestpass >/dev/null 2>&1 && break
     sleep 1
@@ -135,8 +135,15 @@ $COMPOSE stop mysql1 >/dev/null || abort_contract "Stop mysql1"
 RECOVERED=false
 SUCCESSOR=""
 echo "Waiting for a new successful DeadMaster recovery (max 90s)..."
-for attempt in $(seq 1 90); do
-  RECOVERY=$(curl -fsS --max-time 10 "$ORC_URL/api/v2/recoveries" 2>/dev/null \
+recovery_wait_started=$SECONDS
+deadline=$((SECONDS + 90))
+while (( SECONDS < deadline )); do
+  remaining=$((deadline - SECONDS))
+  curl_args=(--max-time 2)
+  if (( remaining < 2 )); then
+    curl_args=(--max-time "$remaining")
+  fi
+  RECOVERY=$(curl -fsS "${curl_args[@]}" "$ORC_URL/api/v2/recoveries" 2>/dev/null \
     | python3 -c '
 import json
 import sys
@@ -154,13 +161,16 @@ raise SystemExit(1)
   if [ -n "$RECOVERY" ]; then
     SUCCESSOR="$RECOVERY"
     RECOVERED=true
-    echo "DeadMaster recovery succeeded after ${attempt}s with successor $SUCCESSOR"
+    echo "DeadMaster recovery succeeded after $((SECONDS - recovery_wait_started))s with successor $SUCCESSOR"
     break
   fi
-  sleep 1
+  if (( SECONDS < deadline )); then
+    sleep 1
+  fi
 done
 
-[ "$RECOVERED" = true ] || abort_contract "DeadMaster recovery completes within 90s"
+[ "$RECOVERED" = true ] || abort_contract "DeadMaster recovery completes within 90s" \
+  "elapsed=$((SECONDS - recovery_wait_started))s"
 pass "DeadMaster recovered successfully to $SUCCESSOR"
 
 echo "Restoring mysql1 as writable primary and mysql2/mysql3 as replicas..."

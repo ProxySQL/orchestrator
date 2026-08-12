@@ -37,8 +37,29 @@ echo "--- Audit persistence ---"
 # or replication. Ending it leaves the topology in its original state.
 AUDIT_OWNER="functional-audit-smoke"
 AUDIT_REASON="verify-backend-persistence"
-test_endpoint "Begin safe maintenance for audit" "$ORC_URL/api/begin-maintenance/mysql2/3306/$AUDIT_OWNER/$AUDIT_REASON" "200"
-test_endpoint "End safe maintenance for audit" "$ORC_URL/api/end-maintenance/mysql2/3306" "200"
+BEGIN_MAINTENANCE_BODY=$(curl -sS --max-time 10 \
+    -w '\n%{http_code}' "$ORC_URL/api/begin-maintenance/mysql2/3306/$AUDIT_OWNER/$AUDIT_REASON" 2>/dev/null)
+BEGIN_MAINTENANCE_STATUS=${BEGIN_MAINTENANCE_BODY##*$'\n'}
+BEGIN_MAINTENANCE_BODY=${BEGIN_MAINTENANCE_BODY%$'\n'*}
+MAINTENANCE_KEY=""
+if [ "$BEGIN_MAINTENANCE_STATUS" = "200" ]; then
+    MAINTENANCE_KEY=$(printf '%s' "$BEGIN_MAINTENANCE_BODY" | python3 -c '
+import json, sys
+response = json.load(sys.stdin)
+key = response.get("Details")
+expected_message = "Maintenance begun: mysql2:3306"
+if response.get("Code") != "OK" or response.get("Message") != expected_message or not isinstance(key, int) or key <= 0:
+    raise SystemExit(1)
+print(key)
+' 2>/dev/null || true)
+fi
+if [ -n "$MAINTENANCE_KEY" ]; then
+    pass "Begin safe maintenance for audit (HTTP 200, key $MAINTENANCE_KEY)"
+    test_endpoint "End safe maintenance for audit" "$ORC_URL/api/end-maintenance/$MAINTENANCE_KEY" "200"
+else
+    fail "Begin safe maintenance for audit returned this call's maintenance key" \
+        "HTTP $BEGIN_MAINTENANCE_STATUS response: $BEGIN_MAINTENANCE_BODY"
+fi
 AUDIT_ENTRIES=$(curl -s --max-time 10 "$ORC_URL/api/audit/0" 2>/dev/null)
 if echo "$AUDIT_ENTRIES" | python3 -c '
 import json, sys

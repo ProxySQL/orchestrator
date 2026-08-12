@@ -98,5 +98,49 @@ containers, deleting volumes, or discarding SQLite history.
 
 Unresolved concerns: **none**. Docker Compose emitted its pre-existing
 obsolete-top-level-`version` notice and the MySQL client emitted its standard
+password-on-command-line warning during the earlier live verification.
+
+## Final safety corrections (2026-08-12)
+
+Three Important review findings were corrected without running another live
+failover:
+
+- The recovery poll now uses a `SECONDS + 90` wall-clock deadline, limits each
+  curl to at most two seconds (and to the remaining deadline budget near the
+  boundary), and reports actual elapsed seconds.
+- `restore_lab` returns immediately unless this harness stopped mysql1. During
+  restoration it starts only mysql1; mysql2/mysql3 are never started, and
+  replication repair is attempted only through `exec` against their existing
+  running containers.
+- successful `begin-maintenance` responses retain the existing Code and Message
+  fields while returning the created maintenance key in Details. The smoke test
+  accepts only the direct successful response for mysql2, extracts its positive
+  integer key, and ends maintenance only through `/api/end-maintenance/{key}`.
+
+Strict RED evidence was captured before each correction. The handler contract
+first failed to build with `undefined: maintenanceBegunResponse`. After the
+minimal API response change exposed the shell regressions, the focused test
+reported all missing deadline/no-op/keyed-cleanup contracts and detected both
+unsafe instance cleanup branches. A second deadline-boundary RED reported the
+missing remaining-budget calculation before that behavior was added.
+
+Fresh GREEN verification:
+
+| Command | Result |
+| --- | --- |
+| focused three-regression `go test` | pass |
+| `go test ./go/http -count=1` | pass |
+| four `go/http/testdata/*_test.js` files | 23/23 pass |
+| `bash -n` on both changed functional scripts | pass |
+| `bash tests/functional/test-smoke.sh` | 35 passed, 0 failed, 0 skipped |
+| `git diff --check` | pass |
+
+The test binary was rebuilt for the lab's Linux/arm64 platform and only the
+Orchestrator service was recreated. The smoke test received maintenance key 1,
+ended exactly that key, and passed 35/35 checks. MySQL container ID comparison
+before and after had no diff. The first smoke attempt failed safely at readiness
+because a host Darwin binary had been mounted into the Linux container; no
+maintenance call occurred. Rebuilding in the existing `golang:1.25.7` Linux
+image corrected that environment mismatch. No live failover was run.
 command-line-password warning during topology inspection; neither is an
 application/browser-console warning or a verification failure.

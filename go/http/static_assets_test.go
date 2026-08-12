@@ -483,3 +483,42 @@ func matchingCSSBrace(css string, open int) int {
 	}
 	return -1
 }
+
+func TestAuditFailoverHarnessSafetyContracts(t *testing.T) {
+	chdirToRepoRoot(t)
+	contents, err := os.ReadFile(filepath.Join("tests", "functional", "test-audit-ui-failover.sh"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	script := string(contents)
+	for _, required := range []string{
+		`deadline=$((SECONDS + 90))`,
+		`--max-time 2`,
+		`while (( SECONDS < deadline ))`,
+		`remaining=$((deadline - SECONDS))`,
+		`curl_args=(--max-time "$remaining")`,
+		`if [ "$MYSQL1_STOPPED" != true ]; then`,
+	} {
+		if !strings.Contains(script, required) {
+			t.Errorf("failover harness missing safety contract %q", required)
+		}
+	}
+	if strings.Contains(script, `$COMPOSE start mysql2 mysql3`) {
+		t.Error("restore_lab must never start mysql2 or mysql3")
+	}
+}
+
+func TestSmokeEndsOnlyMaintenanceCreatedByItsBeginCall(t *testing.T) {
+	chdirToRepoRoot(t)
+	contents, err := os.ReadFile(filepath.Join("tests", "functional", "test-smoke.sh"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	script := string(contents)
+	if !strings.Contains(script, `/api/end-maintenance/$MAINTENANCE_KEY`) {
+		t.Error("smoke must end maintenance by the exact key returned by its begin call")
+	}
+	if strings.Contains(script, `/api/end-maintenance/mysql2/3306`) {
+		t.Error("smoke must never end maintenance by instance")
+	}
+}
