@@ -75,7 +75,7 @@ test("analysis links use an encoded route for a distinct alias", function() {
   assert.equal(sandbox.clusterAnalysisTopologyPath(cluster, true), "/web/cluster/alias/production%20east?compact=true");
 });
 
-test("incident model derives actionable, blocked, downtimed, and structural entries", function() {
+test("incident model derives blocked and structural entries", function() {
   const clusters = [{ClusterName: "mysql1:3306", ClusterAlias: "mysql1:3306", CountInstances: 3}];
   const replicationAnalysis = {Details: [{
     Analysis: "DeadMaster",
@@ -121,6 +121,96 @@ test("incident model derives actionable, blocked, downtimed, and structural entr
       downtimeEndTimestamp: "",
     },
   ]);
+});
+
+test("incident model derives an actionable entry", function() {
+  const model = sandbox.buildClustersAnalysisModel(
+    [{ClusterName: "mysql1:3306", ClusterAlias: "mysql1:3306", CountInstances: 3}],
+    {Details: [{
+      Analysis: "DeadMaster",
+      AnalyzedInstanceKey: {Hostname: "mysql1", Port: 3306},
+      ClusterDetails: {ClusterName: "mysql1:3306"},
+      CountReplicas: 2,
+      IsDowntimed: false,
+      StructureAnalysis: [],
+    }]},
+    [],
+    {DeadMaster: true}
+  );
+
+  assert.deepEqual(JSON.parse(JSON.stringify(model.clusters[0].entries)), [{
+    analysis: "DeadMaster",
+    instance: "mysql1:3306",
+    state: "actionable",
+    statusLabel: "Requires attention",
+    impactLabel: "Affected replicas",
+    replicaCount: 2,
+    downtimeEndTimestamp: "",
+  }]);
+});
+
+test("incident model sorts entries by state, instance, and analysis", function() {
+  const clusterName = "mysql1:3306";
+  function entry(analysis, hostname, isDowntimed, structureAnalysis) {
+    return {
+      Analysis: analysis,
+      AnalyzedInstanceKey: {Hostname: hostname, Port: 3306},
+      ClusterDetails: {ClusterName: clusterName},
+      CountReplicas: 2,
+      IsDowntimed: isDowntimed,
+      StructureAnalysis: structureAnalysis || [],
+    };
+  }
+  const model = sandbox.buildClustersAnalysisModel(
+    [{ClusterName: clusterName, ClusterAlias: clusterName, CountInstances: 6}],
+    {Details: [
+      entry("DeadMaster", "mysql-z", true),
+      entry("NoProblem", "mysql-c", false, ["ErrantGTIDStructureWarning"]),
+      entry("DeadMaster", "mysql-b", false),
+      entry("DeadMaster", "mysql-a", false),
+      entry("DeadMaster", "mysql-blocked", false),
+      entry("DeadCoMaster", "mysql-a", false),
+    ]},
+    [{
+      FailedInstanceKey: {Hostname: "mysql-blocked", Port: 3306},
+      Analysis: "DeadMaster",
+    }],
+    {DeadCoMaster: true, DeadMaster: true}
+  );
+
+  assert.deepEqual(
+    JSON.parse(JSON.stringify(model.clusters[0].entries.map(function(item) {
+      return {state: item.state, instance: item.instance, analysis: item.analysis};
+    }))),
+    [
+      {state: "blocked", instance: "mysql-blocked:3306", analysis: "DeadMaster"},
+      {state: "actionable", instance: "mysql-a:3306", analysis: "DeadCoMaster"},
+      {state: "actionable", instance: "mysql-a:3306", analysis: "DeadMaster"},
+      {state: "actionable", instance: "mysql-b:3306", analysis: "DeadMaster"},
+      {state: "warning", instance: "mysql-c:3306", analysis: "ErrantGTIDStructureWarning"},
+      {state: "downtimed", instance: "mysql-z:3306", analysis: "DeadMaster"},
+    ]
+  );
+});
+
+test("incident model tracks an unmatched structural entry", function() {
+  const model = sandbox.buildClustersAnalysisModel(
+    [],
+    {Details: [{
+      Analysis: "NoProblem",
+      AnalyzedInstanceKey: {Hostname: "mysql1", Port: 3306},
+      ClusterDetails: {ClusterName: "mysql1:3306"},
+      CountReplicas: 2,
+      IsDowntimed: false,
+      StructureAnalysis: ["ErrantGTIDStructureWarning"],
+    }]},
+    [],
+    {}
+  );
+
+  assert.equal(model.unmatchedEntryCount, 1);
+  assert.equal(model.incidentCount, 0);
+  assert.equal(model.clusters.length, 0);
 });
 
 test("incident model reports a downtimed analysis without mutating API input", function() {
@@ -292,4 +382,18 @@ test("document adapter renders unavailable state for invalid successful incident
     assert.equal(rendered.summary, "Analysis unavailable");
     assert.match(rendered.markup, /Failure analysis is temporarily unavailable/);
   });
+});
+
+test("document adapter renders unavailable state when an actionable analysis has no matching cluster", function() {
+  const rendered = renderAdapterWithResponses([], {Details: [{
+    Analysis: "DeadMaster",
+    AnalyzedInstanceKey: {Hostname: "mysql1", Port: 3306},
+    ClusterDetails: {ClusterName: "mysql1:3306"},
+    CountReplicas: 2,
+    IsDowntimed: false,
+    StructureAnalysis: [],
+  }]}, []);
+
+  assert.equal(rendered.summary, "Analysis unavailable");
+  assert.match(rendered.markup, /Failure analysis is temporarily unavailable/);
 });

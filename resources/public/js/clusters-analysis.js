@@ -11,6 +11,7 @@ function clustersAnalysisBlockedKey(hostname, port, analysis) {
 }
 
 function buildClustersAnalysisModel(clusters, replicationAnalysis, blockedRecoveries, interestingAnalysisMap) {
+  var unmatchedEntryCount = 0;
   var blocked = {};
   (blockedRecoveries || []).forEach(function(recovery) {
     var key = clustersAnalysisBlockedKey(
@@ -38,6 +39,7 @@ function buildClustersAnalysisModel(clusters, replicationAnalysis, blockedRecove
   function appendEntry(apiEntry, analysis, structural) {
     var cluster = byName[apiEntry.ClusterDetails.ClusterName];
     if (!cluster) {
+      unmatchedEntryCount++;
       return;
     }
     var isBlocked = !!blocked[clustersAnalysisBlockedKey(
@@ -78,6 +80,19 @@ function buildClustersAnalysisModel(clusters, replicationAnalysis, blockedRecove
   var precedence = {blocked: 4, actionable: 3, warning: 2, downtimed: 1};
   var affected = Object.keys(byName).map(function(name) {
     var cluster = byName[name];
+    cluster.entries.sort(function(a, b) {
+      var stateOrder = precedence[b.state] - precedence[a.state];
+      if (stateOrder) {
+        return stateOrder;
+      }
+      if (a.instance != b.instance) {
+        return a.instance < b.instance ? -1 : 1;
+      }
+      if (a.analysis != b.analysis) {
+        return a.analysis < b.analysis ? -1 : 1;
+      }
+      return 0;
+    });
     cluster.entries.forEach(function(entry) {
       if (precedence[entry.state] > precedence[cluster.state]) {
         cluster.state = entry.state;
@@ -104,6 +119,7 @@ function buildClustersAnalysisModel(clusters, replicationAnalysis, blockedRecove
   return {
     clusters: affected,
     incidentCount: affected.reduce(function(total, cluster) { return total + cluster.entries.length; }, 0),
+    unmatchedEntryCount: unmatchedEntryCount,
   };
 }
 
@@ -201,6 +217,10 @@ $(document).ready(function() {
         blockedRecoveries,
         interestingAnalysis
       );
+      if (model.unmatchedEntryCount > 0) {
+        renderClustersAnalysisState(renderClustersAnalysisUnavailableState(), "Analysis unavailable");
+        return;
+      }
       model.clusters.forEach(function(cluster) {
         cluster.topologyPath = appUrl(cluster.topologyPath);
       });

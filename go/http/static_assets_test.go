@@ -162,8 +162,8 @@ func TestClustersAnalysisWorkspaceStylesAreScoped(t *testing.T) {
 			t.Errorf("missing scoped selector %q", selector)
 		}
 	}
-	if strings.Contains(css, "\n.popover") || strings.Contains(css, "\n.container") {
-		t.Fatal("failure analysis stylesheet leaks legacy global selectors")
+	if unscoped := unscopedWorkspaceCSSSelectors(css, "#clusters_analysis_workspace"); len(unscoped) > 0 {
+		t.Errorf("failure analysis stylesheet selectors must be scoped below #clusters_analysis_workspace: %q", unscoped)
 	}
 
 	intermediateBreakpointFound := false
@@ -208,6 +208,21 @@ func TestClustersAnalysisWorkspaceStylesAreScoped(t *testing.T) {
 	}
 	if braceDepth != 0 {
 		t.Error("failure analysis stylesheet has unbalanced braces")
+	}
+}
+
+func TestUnscopedWorkspaceCSSSelectorsRejectsArbitraryGlobalRule(t *testing.T) {
+	css := `
+#clusters_analysis_workspace .analysis-cluster { display: grid; }
+@media (max-width: 760px) {
+	#clusters_analysis_workspace .analysis-cluster { display: block; }
+	.unexpected-global { display: none; }
+}`
+
+	got := unscopedWorkspaceCSSSelectors(css, "#clusters_analysis_workspace")
+	want := []string{".unexpected-global"}
+	if strings.Join(got, "\n") != strings.Join(want, "\n") {
+		t.Fatalf("unscopedWorkspaceCSSSelectors() = %q, want %q", got, want)
 	}
 }
 
@@ -358,6 +373,19 @@ func TestIsClusterWorkspaceSelector(t *testing.T) {
 
 func isClusterWorkspaceSelector(selector string) bool {
 	return isWorkspaceSelector(selector, "#cluster_workspace")
+}
+
+func unscopedWorkspaceCSSSelectors(css string, workspaceID string) []string {
+	var unscoped []string
+	for _, selector := range workspaceCSSSelectors(css) {
+		for _, part := range strings.Split(selector, ",") {
+			part = strings.TrimSpace(part)
+			if !isWorkspaceSelector(part, workspaceID) {
+				unscoped = append(unscoped, part)
+			}
+		}
+	}
+	return unscoped
 }
 
 func isWorkspaceSelector(selector string, workspaceID string) bool {
