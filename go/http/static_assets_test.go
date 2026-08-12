@@ -143,6 +143,30 @@ func TestStaticClustersLandingAssets(t *testing.T) {
 	}
 }
 
+func TestClustersAnalysisWorkspaceStylesAreScoped(t *testing.T) {
+	chdirToRepoRoot(t)
+	source, err := os.ReadFile(filepath.Join("resources", "public", "css", "clusters-analysis-workspace.css"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	css := string(source)
+	for _, selector := range []string{
+		"#clusters_analysis_workspace .clusters-analysis-header",
+		"#clusters_analysis_workspace .analysis-cluster",
+		"#clusters_analysis_workspace .analysis-entry",
+		"#clusters_analysis_workspace .analysis-cluster-impact",
+		"#clusters_analysis_workspace .clusters-analysis-empty",
+		"#clusters_analysis_workspace .clusters-analysis-unavailable",
+	} {
+		if !strings.Contains(css, selector) {
+			t.Errorf("missing scoped selector %q", selector)
+		}
+	}
+	if strings.Contains(css, "\n.popover") || strings.Contains(css, "\n.container") {
+		t.Fatal("failure analysis stylesheet leaks legacy global selectors")
+	}
+}
+
 func TestClusterTopologyRendererUsesWorkspaceCanvasViewport(t *testing.T) {
 	chdirToRepoRoot(t)
 

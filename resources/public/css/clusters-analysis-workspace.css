@@ -1,9 +1,403 @@
 #clusters_analysis_workspace {
   --analysis-accent: #2f6b9e;
+  --analysis-accent-strong: #244f74;
   --analysis-background: #f4f3ef;
   --analysis-border: #d5d9dc;
   --analysis-chrome: #202b36;
   --analysis-muted: #687582;
   --analysis-panel: #ffffff;
   --analysis-text: #263442;
+  background: var(--analysis-background);
+  color: var(--analysis-text);
+  isolation: isolate;
+  margin: -15px calc(-0.5 * var(--bs-gutter-x, 1.5rem)) 0;
+  min-height: calc(100vh - 56px);
+  padding-bottom: 40px;
+}
+
+#clusters_analysis_workspace .clusters-analysis-header {
+  align-items: center;
+  background: var(--analysis-chrome);
+  color: #ffffff;
+  display: flex;
+  justify-content: space-between;
+  min-height: 88px;
+  padding: 16px clamp(20px, 4vw, 52px);
+}
+
+#clusters_analysis_workspace .clusters-analysis-eyebrow {
+  color: #9cabb9;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  margin: 0 0 2px;
+  text-transform: uppercase;
+}
+
+#clusters_analysis_workspace #clusters_analysis_title {
+  color: #ffffff;
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+  margin: 0;
+}
+
+#clusters_analysis_workspace #clusters_analysis_summary {
+  color: #aebbc7;
+  font-size: 12px;
+  line-height: 1.35;
+  margin: 3px 0 0;
+}
+
+#clusters_analysis_workspace .clusters-analysis-dashboard-link {
+  background: #ffffff;
+  border: 1px solid #ffffff;
+  border-radius: 4px;
+  color: var(--analysis-chrome);
+  display: inline-block;
+  flex: 0 0 auto;
+  font-size: 12px;
+  font-weight: 700;
+  margin-left: 24px;
+  padding: 8px 13px;
+  text-decoration: none;
+}
+
+#clusters_analysis_workspace .clusters-analysis-dashboard-link:hover,
+#clusters_analysis_workspace .clusters-analysis-dashboard-link:focus {
+  background: #e8eef3;
+  border-color: #e8eef3;
+  color: #16212c;
+  text-decoration: none;
+}
+
+#clusters_analysis_workspace .clusters-analysis-dashboard-link:focus,
+#clusters_analysis_workspace .analysis-cluster-impact a:focus,
+#clusters_analysis_workspace .clusters-analysis-unavailable a:focus,
+#clusters_analysis_workspace .clusters-analysis-unavailable-state a:focus {
+  outline: 2px solid #9cc9ec;
+  outline-offset: 2px;
+}
+
+#clusters_analysis_workspace .clusters-analysis-content {
+  margin: 0 auto;
+  max-width: 1180px;
+  padding: 30px clamp(20px, 4vw, 52px) 0;
+}
+
+#clusters_analysis_workspace .clusters-analysis-columns {
+  color: var(--analysis-muted);
+  display: grid;
+  font-size: 10px;
+  font-weight: 700;
+  gap: 22px;
+  grid-template-columns: minmax(220px, .9fr) minmax(360px, 1.6fr) minmax(180px, .7fr);
+  letter-spacing: 0.09em;
+  padding: 0 18px 7px;
+  text-transform: uppercase;
+}
+
+#clusters_analysis_workspace .clusters-analysis-columns span:last-child {
+  text-align: right;
+}
+
+#clusters_analysis_workspace #clusters_analysis_list {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+#clusters_analysis_workspace .analysis-cluster {
+  --analysis-state: var(--analysis-muted);
+  background: var(--analysis-panel);
+  border: 1px solid var(--analysis-border);
+  border-radius: 5px;
+  box-shadow: 0 2px 5px rgba(25, 37, 49, 0.07);
+  display: grid;
+  gap: 22px;
+  grid-template-columns: minmax(220px, .9fr) minmax(360px, 1.6fr) minmax(180px, .7fr);
+  min-width: 0;
+  overflow: hidden;
+  padding: 0 18px 0 22px;
+  position: relative;
+}
+
+#clusters_analysis_workspace .analysis-cluster::before {
+  background: var(--analysis-state);
+  content: "";
+  inset: 0 auto 0 0;
+  position: absolute;
+  width: 4px;
+}
+
+#clusters_analysis_workspace .analysis-cluster[data-analysis-state="actionable"] {
+  --analysis-state: #b94a48;
+}
+
+#clusters_analysis_workspace .analysis-cluster[data-analysis-state="blocked"] {
+  --analysis-state: #8e3b46;
+}
+
+#clusters_analysis_workspace .analysis-cluster[data-analysis-state="warning"] {
+  --analysis-state: #b17817;
+}
+
+#clusters_analysis_workspace .analysis-cluster[data-analysis-state="downtimed"] {
+  --analysis-state: #687582;
+}
+
+#clusters_analysis_workspace .analysis-cluster-identity {
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  padding: 16px 0;
+}
+
+#clusters_analysis_workspace .analysis-cluster-identity h2 {
+  color: var(--analysis-text);
+  font-size: 15px;
+  font-weight: 650;
+  line-height: 1.3;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+#clusters_analysis_workspace .analysis-cluster-alias {
+  color: var(--analysis-muted);
+  font-size: 12px;
+  line-height: 1.35;
+  margin: 4px 0 0;
+  overflow-wrap: anywhere;
+}
+
+#clusters_analysis_workspace .analysis-entry-list {
+  align-self: stretch;
+  border-left: 1px solid #e4e7e9;
+  list-style: none;
+  margin: 0;
+  min-width: 0;
+  padding: 12px 0 12px 22px;
+}
+
+#clusters_analysis_workspace .analysis-entry {
+  align-items: center;
+  display: grid;
+  gap: 4px 10px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  min-width: 0;
+  padding: 8px 0;
+}
+
+#clusters_analysis_workspace .analysis-entry + .analysis-entry {
+  border-top: 1px solid #edf0f2;
+}
+
+#clusters_analysis_workspace .analysis-entry-analysis {
+  color: var(--analysis-text);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.35;
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+#clusters_analysis_workspace .analysis-entry-status {
+  background: #e4e9ed;
+  border-radius: 9px;
+  color: #4d5c69;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 18px;
+  margin: 0;
+  padding: 0 8px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+#clusters_analysis_workspace .analysis-entry[data-analysis-state="actionable"] .analysis-entry-status {
+  background: #f4d8d7;
+  color: #7e302f;
+}
+
+#clusters_analysis_workspace .analysis-entry[data-analysis-state="blocked"] .analysis-entry-status {
+  background: #ead8dc;
+  color: #682b35;
+}
+
+#clusters_analysis_workspace .analysis-entry[data-analysis-state="warning"] .analysis-entry-status {
+  background: #f7dfb7;
+  color: #70480d;
+}
+
+#clusters_analysis_workspace .analysis-entry-instance,
+#clusters_analysis_workspace .analysis-entry-impact,
+#clusters_analysis_workspace .analysis-entry-downtime {
+  color: var(--analysis-muted);
+  font-size: 11px;
+  line-height: 1.35;
+  margin: 0;
+}
+
+#clusters_analysis_workspace .analysis-entry-instance {
+  grid-column: 1;
+  overflow-wrap: anywhere;
+}
+
+#clusters_analysis_workspace .analysis-entry-impact {
+  color: var(--analysis-text);
+  font-weight: 700;
+  grid-column: 2;
+  grid-row: 2;
+  text-align: right;
+}
+
+#clusters_analysis_workspace .analysis-entry-downtime {
+  grid-column: 1 / -1;
+}
+
+#clusters_analysis_workspace .analysis-cluster-impact {
+  align-items: flex-end;
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  padding: 16px 0;
+}
+
+#clusters_analysis_workspace .analysis-cluster-impact p {
+  color: var(--analysis-muted);
+  font-size: 12px;
+  line-height: 1.35;
+  margin: 0 0 8px;
+  text-align: right;
+}
+
+#clusters_analysis_workspace .analysis-cluster-impact a,
+#clusters_analysis_workspace .clusters-analysis-unavailable a,
+#clusters_analysis_workspace .clusters-analysis-unavailable-state a {
+  background: var(--analysis-accent);
+  border: 1px solid var(--analysis-accent);
+  border-radius: 3px;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  padding: 8px 10px;
+  text-decoration: none;
+}
+
+#clusters_analysis_workspace .analysis-cluster-impact a:hover,
+#clusters_analysis_workspace .analysis-cluster-impact a:focus,
+#clusters_analysis_workspace .clusters-analysis-unavailable a:hover,
+#clusters_analysis_workspace .clusters-analysis-unavailable a:focus,
+#clusters_analysis_workspace .clusters-analysis-unavailable-state a:hover,
+#clusters_analysis_workspace .clusters-analysis-unavailable-state a:focus {
+  background: var(--analysis-accent-strong);
+  border-color: var(--analysis-accent-strong);
+  color: #ffffff;
+  text-decoration: none;
+}
+
+#clusters_analysis_workspace .clusters-analysis-state,
+#clusters_analysis_workspace .clusters-analysis-empty,
+#clusters_analysis_workspace .clusters-analysis-empty-state,
+#clusters_analysis_workspace .clusters-analysis-unavailable,
+#clusters_analysis_workspace .clusters-analysis-unavailable-state {
+  background: var(--analysis-panel);
+  border: 1px solid var(--analysis-border);
+  border-radius: 5px;
+  color: var(--analysis-muted);
+  margin: 0;
+  padding: 36px 24px;
+  text-align: center;
+}
+
+#clusters_analysis_workspace .clusters-analysis-state {
+  font-size: 13px;
+}
+
+#clusters_analysis_workspace .clusters-analysis-empty-state,
+#clusters_analysis_workspace .clusters-analysis-unavailable-state {
+  display: grid;
+  gap: 8px;
+  justify-items: center;
+}
+
+#clusters_analysis_workspace .clusters-analysis-empty h2,
+#clusters_analysis_workspace .clusters-analysis-empty-state h2,
+#clusters_analysis_workspace .clusters-analysis-unavailable h2,
+#clusters_analysis_workspace .clusters-analysis-unavailable-state h2 {
+  color: var(--analysis-text);
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.3;
+  margin: 0;
+}
+
+#clusters_analysis_workspace .clusters-analysis-empty p,
+#clusters_analysis_workspace .clusters-analysis-empty-state p,
+#clusters_analysis_workspace .clusters-analysis-unavailable p,
+#clusters_analysis_workspace .clusters-analysis-unavailable-state p {
+  font-size: 12px;
+  line-height: 1.45;
+  margin: 0;
+}
+
+#clusters_analysis_workspace .clusters-analysis-unavailable a,
+#clusters_analysis_workspace .clusters-analysis-unavailable-state a {
+  display: inline-block;
+  margin-top: 4px;
+}
+
+@media (max-width: 760px) {
+  #clusters_analysis_workspace .clusters-analysis-header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 14px;
+    padding: 16px 20px;
+  }
+
+  #clusters_analysis_workspace .clusters-analysis-dashboard-link {
+    margin-left: 0;
+  }
+
+  #clusters_analysis_workspace .clusters-analysis-content {
+    padding: 22px 14px 0;
+  }
+
+  #clusters_analysis_workspace .clusters-analysis-columns {
+    display: none;
+  }
+
+  #clusters_analysis_workspace .analysis-cluster {
+    display: block;
+    padding: 0 14px 0 18px;
+  }
+
+  #clusters_analysis_workspace .analysis-cluster-identity {
+    padding: 16px 0 12px;
+  }
+
+  #clusters_analysis_workspace .analysis-entry-list {
+    border-left: 0;
+    border-top: 1px solid #e4e7e9;
+    padding: 8px 0;
+  }
+
+  #clusters_analysis_workspace .analysis-cluster-impact {
+    align-items: flex-start;
+    border-top: 1px solid #e4e7e9;
+    padding: 12px 0 16px;
+  }
+
+  #clusters_analysis_workspace .analysis-cluster-impact p {
+    text-align: left;
+  }
+}
 }
