@@ -165,6 +165,50 @@ func TestClustersAnalysisWorkspaceStylesAreScoped(t *testing.T) {
 	if strings.Contains(css, "\n.popover") || strings.Contains(css, "\n.container") {
 		t.Fatal("failure analysis stylesheet leaks legacy global selectors")
 	}
+
+	intermediateBreakpointFound := false
+	mediaPattern := regexp.MustCompile(`@media\s*\(max-width:\s*(\d+)px\)\s*\{`)
+	columnPattern := regexp.MustCompile(`(?s)` + regexp.QuoteMeta("#clusters_analysis_workspace .clusters-analysis-columns") + `\s*\{([^}]*)\}`)
+	clusterPattern := regexp.MustCompile(`(?s)` + regexp.QuoteMeta("#clusters_analysis_workspace .analysis-cluster") + `\s*\{([^}]*)\}`)
+	flexibleGrid := "grid-template-columns: minmax(0, .9fr) minmax(0, 1.6fr) minmax(0, .7fr);"
+	for _, match := range mediaPattern.FindAllStringSubmatchIndex(css, -1) {
+		breakpoint, err := strconv.Atoi(css[match[2]:match[3]])
+		if err != nil || breakpoint <= 760 {
+			continue
+		}
+		openBrace := match[1] - 1
+		closeBrace := matchingCSSBrace(css, openBrace)
+		if closeBrace < 0 {
+			continue
+		}
+		mediaCSS := css[openBrace+1 : closeBrace]
+		columns := columnPattern.FindStringSubmatch(mediaCSS)
+		cluster := clusterPattern.FindStringSubmatch(mediaCSS)
+		if columns != nil && cluster != nil &&
+			strings.Contains(columns[1], flexibleGrid) && strings.Contains(cluster[1], flexibleGrid) {
+			intermediateBreakpointFound = true
+			break
+		}
+	}
+	if !intermediateBreakpointFound {
+		t.Error("failure analysis stylesheet needs an intermediate breakpoint above 760px with flexible label and row grids")
+	}
+
+	braceDepth := 0
+	for _, character := range css {
+		switch character {
+		case '{':
+			braceDepth++
+		case '}':
+			braceDepth--
+		}
+		if braceDepth < 0 {
+			break
+		}
+	}
+	if braceDepth != 0 {
+		t.Error("failure analysis stylesheet has unbalanced braces")
+	}
 }
 
 func TestClusterTopologyRendererUsesWorkspaceCanvasViewport(t *testing.T) {

@@ -355,6 +355,16 @@
   margin-top: 4px;
 }
 
+@media (max-width: 920px) {
+  #clusters_analysis_workspace .clusters-analysis-columns {
+    grid-template-columns: minmax(0, .9fr) minmax(0, 1.6fr) minmax(0, .7fr);
+  }
+
+  #clusters_analysis_workspace .analysis-cluster {
+    grid-template-columns: minmax(0, .9fr) minmax(0, 1.6fr) minmax(0, .7fr);
+  }
+}
+
 @media (max-width: 760px) {
   #clusters_analysis_workspace .clusters-analysis-header {
     align-items: flex-start;
@@ -399,5 +409,4 @@
   #clusters_analysis_workspace .analysis-cluster-impact p {
     text-align: left;
   }
-}
 }
