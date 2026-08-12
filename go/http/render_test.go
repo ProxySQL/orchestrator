@@ -216,6 +216,33 @@ func TestRenderClustersWorkspace(t *testing.T) {
 	}
 }
 
+func TestRenderClustersAnalysisWorkspace(t *testing.T) {
+	chdirToRepoRoot(t)
+	clearContentTemplateCache()
+
+	rec := httptest.NewRecorder()
+	renderHTML(rec, http.StatusOK, "templates/clusters_analysis", sampleTemplateData())
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, body = %s", rec.Code, rec.Body.String())
+	}
+	body := rec.Body.String()
+	for _, expected := range []string{
+		`id="clusters_analysis_workspace"`,
+		`aria-labelledby="clusters_analysis_title"`,
+		`id="clusters_analysis_summary"`,
+		`role="status"`,
+		`id="clusters_analysis_loading"`,
+		`id="clusters_analysis_list"`,
+		`href="/web/clusters"`,
+		`/css/clusters-analysis-workspace.css`,
+	} {
+		if !strings.Contains(body, expected) {
+			t.Errorf("expected failure analysis workspace contract %q", expected)
+		}
+	}
+}
+
 func TestRenderClusterWorkspace(t *testing.T) {
 	chdirToRepoRoot(t)
 	clearContentTemplateCache()
