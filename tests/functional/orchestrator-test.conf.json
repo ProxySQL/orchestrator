@@ -6,6 +6,7 @@
   "MySQLOrchestratorHost": "",
   "MySQLOrchestratorPort": 0,
   "BackendDB": "sqlite",
+  "AuditToBackendDB": true,
   "SQLite3DataFile": "/tmp/orchestrator-test.sqlite3",
   "DiscoverByShowSlaveHosts": false,
   "InstancePollSeconds": 5,
