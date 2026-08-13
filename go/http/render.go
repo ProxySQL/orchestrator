@@ -19,6 +19,7 @@ package http
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"html/template"
 	"net/http"
 	"os"
@@ -27,6 +28,19 @@ import (
 
 	"github.com/proxysql/golib/log"
 )
+
+// assetVersion is appended as ?v= on static asset URLs in templates so
+// browsers always pick up fresh JS/CSS after a server restart.
+var assetVersion = computeAssetVersion()
+
+func computeAssetVersion() string {
+	if exe, err := os.Executable(); err == nil {
+		if info, err := os.Stat(exe); err == nil {
+			return fmt.Sprintf("%d", info.ModTime().UnixNano())
+		}
+	}
+	return fmt.Sprintf("%d", os.Getpid())
+}
 
 // renderJSON writes a JSON response with the given status code.
 func renderJSON(w http.ResponseWriter, status int, data interface{}) {
@@ -119,6 +133,14 @@ func renderHTML(w http.ResponseWriter, status int, name string, data interface{}
 		_ = log.Errorf("Error parsing layout template for %s: %+v", name, err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
+	}
+
+	// Inject assetVersion so layout.tmpl can append ?v= on static asset URLs
+	// for cache-busting after server upgrades.
+	if m, ok := data.(map[string]interface{}); ok && m != nil {
+		if _, present := m["assetVersion"]; !present {
+			m["assetVersion"] = assetVersion
+		}
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=UTF-8")

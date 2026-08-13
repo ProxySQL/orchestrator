@@ -79,12 +79,16 @@ function visualizeInstances(nodesMap, onSvgInstanceWrapper, clusterControl) {
   var i = 0;
   var duration = 0;
 
-  var tree = d3.layout.tree();
-  tree = tree.size([svgHeight, svgWidth]);
+  // D3 v7 replaces d3.layout.tree() with d3.tree(), which operates on a
+  // d3.hierarchy() wrapped root and mutates h.x / h.y on each hierarchy node.
+  var treeLayout = d3.tree().size([svgHeight, svgWidth]);
 
-  var diagonal = d3.svg.diagonal().projection(function(d) {
-    return [d.y, d.x];
-  });
+  // D3 v7 replaces d3.svg.diagonal().projection(...) with d3.linkHorizontal().
+  // The original projection swapped x and y to lay out left-to-right, so we
+  // mirror that here via the .x / .y accessors.
+  var diagonal = d3.linkHorizontal()
+    .x(function(d) { return d.y; })
+    .y(function(d) { return d.x; });
 
   var svg = d3.select("#cluster_container").append("svg")
     .attr("width", svgWidth + margin.right + margin.left)
@@ -110,16 +114,30 @@ function visualizeInstances(nodesMap, onSvgInstanceWrapper, clusterControl) {
   update(root);
 
   function update(source) {
-    nodesList.where(function(t) {
+    nodesList.filter(function(t) {
       return t.x != 0;
     }).forEach(function(t) {
       t.prevX = t.x;
       t.prevY = t.y;
     });
-    // Compute the new tree layout.
-    var nodes = tree.nodes(root).reverse();
-    var links = tree.links(nodes);
-    nodesList.where(function(t) {
+
+    // Build a hierarchy from the topology root and run the tree layout. The
+    // layout writes x / y onto each hierarchy node; copy those back onto the
+    // original data objects so the rest of the code (transforms, transitions,
+    // updateDiv repositioning) can keep reading d.x / d.y directly.
+    var rootH = d3.hierarchy(root);
+    treeLayout(rootH);
+    rootH.each(function(h) {
+      h.data.x = h.x;
+      h.data.y = h.y;
+    });
+
+    var nodes = rootH.descendants().map(function(h) { return h.data; }).reverse();
+    var links = rootH.links().map(function(l) {
+      return { source: l.source.data, target: l.target.data };
+    });
+
+    nodesList.filter(function(t) {
       return t.prevX != null;
     }).forEach(function(t) {
       t.x = t.prevX;
@@ -181,10 +199,9 @@ function visualizeInstances(nodesMap, onSvgInstanceWrapper, clusterControl) {
       onSvgInstanceWrapper(this, nodesMap);
     })
 
-    // Transition nodes to their new position.
-    var nodeUpdate = node
-      //.transition()
-      //.duration(duration)
+    // D3 v6+: the enter and update selections are no longer merged automatically.
+    // Merge them so transforms / circle attrs land on both new and existing nodes.
+    var nodeUpdate = nodeEnter.merge(node)
       .attr("transform", function(d) {
         return "translate(" + d.y + "," + d.x + ")";
       });
@@ -254,8 +271,8 @@ function visualizeInstances(nodesMap, onSvgInstanceWrapper, clusterControl) {
 
   }
 
-  // Toggle children on click.
-  function click(d) {
+  // Toggle children on click. D3 v6+ passes (event, datum); previously just datum.
+  function click(event, d) {
     if (d.children) {
       d._children = d.children;
       d.children = null;

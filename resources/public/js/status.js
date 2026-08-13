@@ -16,17 +16,17 @@ function addRaftTableData(name, column1, column2) {
 	);
 }
 function addStatusActionButton(name, uri) {
-	$("#orchestratorStatus .panel-footer").append(
+	$("#orchestratorStatus .card-footer").append(
 		'<button type="button" class="btn btn-sm btn-info">'+name+'</button> '
 	);
-	var button = $('#orchestratorStatus .panel-footer button:last');
+	var button = $('#orchestratorStatus .card-footer button:last');
 	button.click(function(){
 		apiCommand("/api/"+uri);
 	});
 }
 
 $(document).ready(function () {
-	var statusObject = $("#orchestratorStatus .panel-body");
+	var statusObject = $("#orchestratorStatus .card-body");
     $.get(appUrl("/api/health/"), function (health) {
     	statusObject.prepend('<h4>'+health.Message+'</h4>')
         $(".status-table-primary").append(

@@ -12,7 +12,7 @@ function appendSeedDetails(seed, selector) {
 	row += '<td><a href="' + appUrl('/web/agent/'+seed.TargetHostname) + '">'+seed.TargetHostname+'</a></td>';
 	row += '<td><a href="' + appUrl('/web/agent/'+seed.SourceHostname) + '">'+seed.SourceHostname+'</a></td>';
 	row += '<td>' + seed.StartTimestamp + '</td>';
-	row += '<td>' + (seed.IsComplete ? seed.EndTimestamp : '<button class="btn btn-xs btn-danger" data-command="abort-seed" data-seed-source-host="'+seed.SourceHostname+'" data-seed-target-host="'+seed.TargetHostname+'" data-seed-id="' + seed.SeedId + '">Abort</button>') + '</td>';
+	row += '<td>' + (seed.IsComplete ? seed.EndTimestamp : '<button class="btn btn-sm btn-danger" data-command="abort-seed" data-seed-source-host="'+seed.SourceHostname+'" data-seed-target-host="'+seed.TargetHostname+'" data-seed-id="' + seed.SeedId + '">Abort</button>') + '</td>';
 	row += '</tr>';
 	$(selector).append(row);
     hideLoader();

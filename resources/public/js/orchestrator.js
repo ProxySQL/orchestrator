@@ -11,10 +11,10 @@ reloadPageHint = {
 
 function updateCountdownDisplay() {
   if ($.cookie("auto-refresh") == "true") {
-    $("#refreshCountdown").html('<span class="glyphicon glyphicon-repeat" title="Click to pause"></span> ' + secondsTillRefresh + 's');
+    $("#refreshCountdown").html('<span class="bi bi-arrow-repeat" title="Click to pause"></span> ' + secondsTillRefresh + 's');
   } else {
     secondsTillRefresh = refreshIntervalSeconds;
-    $("#refreshCountdown").html('<span class="glyphicon glyphicon-pause" title="Click to countdown"></span> ' + secondsTillRefresh + 's');
+    $("#refreshCountdown").html('<span class="bi bi-pause-fill" title="Click to countdown"></span> ' + secondsTillRefresh + 's');
   }
 }
 
@@ -164,7 +164,7 @@ function addAlert(alertText, alertClass) {
     alertClass = "danger";
   }
   $("#alerts_container").append(
-    '<div class="alert alert-' + alertClass + ' alert-dismissable">' + '<button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button>' + alertText + '</div>');
+    '<div class="alert alert-' + alertClass + ' alert-dismissible fade show">' + alertText + '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>');
   $(".alert").alert();
   return false;
 }
@@ -230,7 +230,7 @@ function addNodeModalDataAttribute(name, value) {
 
 function addModalAlert(alertText) {
   $("#node_modal .modal-body").append(
-    '<div class="alert alert-danger alert-dismissable">' + '<button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button>' + alertText + '</div>');
+    '<div class="alert alert-danger alert-dismissible fade show">' + alertText + '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>');
   $(".alert").alert();
   return false;
 }
@@ -304,7 +304,7 @@ function openNodeModal(node) {
           return;
         }
         var title = canonizeInstanceTitle(equivalence.Key.Hostname + ':' + equivalence.Key.Port);
-        $('#node_modal [data-btn-group=move-equivalent] ul').append('<li><a href="#" data-btn="move-equivalent" data-hostname="' + equivalence.Key.Hostname + '" data-port="' + equivalence.Key.Port + '">' + title + '</a></li>');
+        $('#node_modal [data-btn-group=move-equivalent] ul').append('<li><a class="dropdown-item" href="#" data-btn="move-equivalent" data-hostname="' + equivalence.Key.Hostname + '" data-port="' + equivalence.Key.Port + '">' + title + '</a></li>');
       });
 
       if ($('#node_modal [data-btn-group=move-equivalent] ul li').length) {
@@ -406,7 +406,7 @@ function openNodeModal(node) {
   }, "json");
 
 
-  $('#node_modal [data-btn]').unbind("click");
+  $('#node_modal [data-btn]').off("click");
 
   $("#beginDowntimeOwner").val(getUserId());
   $('#node_modal button[data-btn=begin-downtime]').click(function() {
@@ -520,8 +520,8 @@ function openNodeModal(node) {
   });
 
   if (node.IsDowntimed) {
-    $('#node_modal .end-downtime .panel-heading').html("Downtimed by <strong>" + node.DowntimeOwner + "</strong> until " + node.DowntimeEndTimestamp);
-    $('#node_modal .end-downtime .panel-body').html(
+    $('#node_modal .end-downtime .card-header').html("Downtimed by <strong>" + node.DowntimeOwner + "</strong> until " + node.DowntimeEndTimestamp);
+    $('#node_modal .end-downtime .card-body').html(
       node.DowntimeReason
     );
     $('#node_modal .begin-downtime').hide();
@@ -622,7 +622,7 @@ function openNodeModal(node) {
   }
 
   $('#node_modal').modal({})
-  $('#node_modal').unbind('hidden.bs.modal');
+  $('#node_modal').off('hidden.bs.modal');
   $('#node_modal').on('hidden.bs.modal', function() {
     nodeModalVisible = false;
   })
@@ -896,7 +896,7 @@ function renderInstanceElement(popoverElement, instance, renderType) {
   popoverElement.find("h3").attr('title', tooltip);
   popoverElement.find("h3").html('&nbsp;<div class="pull-left">' +
     (isAnonymized() ? anonymizedInstanceId : isAliased() ? instance.InstanceAlias : instance.canonicalTitle) +
-    '</div><div class="pull-right instance-glyphs"><span class="glyphicon glyphicon-cog" title="Open config dialog"></span></div>');
+    '</div><div class="pull-right instance-glyphs"><span class="bi bi-gear-fill" title="Open config dialog"></span></div>');
   var indicateLastSeenInStatus = false;
 
   if (instance.isAggregate) {
@@ -904,8 +904,8 @@ function renderInstanceElement(popoverElement, instance, renderType) {
     popoverElement.find(".instance-content").append('<div>Instances: <div class="pull-right"></div></div>');
 
     function addInstancesBadge(count, badgeClass, title) {
-      popoverElement.find(".instance-content .pull-right").append('<span class="badge ' + badgeClass + '" data-toggle="tooltip" data-placement="bottom" data-html="true" title="' + title + '">' + count + '</span> ');
-      popoverElement.find('[data-toggle="tooltip"]').tooltip();
+      popoverElement.find(".instance-content .pull-right").append('<span class="badge ' + badgeClass + '" data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-html="true" title="' + title + '">' + count + '</span> ');
+      popoverElement.find('[data-bs-toggle="tooltip"]').tooltip();
     }
     var instancesHint = instance.aggregatedProblems[""].join("<br>");
     addInstancesBadge(instance.aggregatedInstances.length, "label-primary", "Aggregated instances<br>" + instancesHint);
@@ -925,36 +925,36 @@ function renderInstanceElement(popoverElement, instance, renderType) {
     }
     if (instance.supportsGTID) {
       if (instance.hasMaster && !instance.usingGTID) {
-        popoverElement.find("h3 div.pull-right").prepend('<span class="glyphicon text-muted glyphicon-globe" title="Support GTID but not using it in replication"></span> ');
+        popoverElement.find("h3 div.pull-right").prepend('<span class="bi text-muted bi-globe" title="Support GTID but not using it in replication"></span> ');
       } else if (instance.GtidErrant) {
-        popoverElement.find("h3 div.pull-right").prepend('<span class="glyphicon text-danger glyphicon-globe" title="Errant GTID found"></span> ');
+        popoverElement.find("h3 div.pull-right").prepend('<span class="bi text-danger bi-globe" title="Errant GTID found"></span> ');
       } else {
-        popoverElement.find("h3 div.pull-right").prepend('<span class="glyphicon glyphicon-globe" title="Using GTID"></span> ');
+        popoverElement.find("h3 div.pull-right").prepend('<span class="bi bi-globe" title="Using GTID"></span> ');
       }
     }
     if (instance.UsingPseudoGTID) {
-      popoverElement.find("h3 div.pull-right").prepend('<span class="glyphicon glyphicon-globe" title="Using Pseudo GTID"></span> ');
+      popoverElement.find("h3 div.pull-right").prepend('<span class="bi bi-globe" title="Using Pseudo GTID"></span> ');
     }
     if (!instance.ReadOnly) {
-      popoverElement.find("h3 div.pull-right").prepend('<span class="glyphicon glyphicon-pencil" title="Writeable"></span> ');
+      popoverElement.find("h3 div.pull-right").prepend('<span class="bi bi-pencil-fill" title="Writeable"></span> ');
     }
     if (instance.isMostAdvancedOfSiblings) {
-      popoverElement.find("h3 div.pull-right").prepend('<span class="glyphicon glyphicon-star" title="Most advanced replica"></span> ');
+      popoverElement.find("h3 div.pull-right").prepend('<span class="bi bi-star-fill" title="Most advanced replica"></span> ');
     }
     if (instance.CountMySQLSnapshots > 0) {
-      popoverElement.find("h3 div.pull-right").prepend('<span class="glyphicon glyphicon-camera" title="' + instance.CountMySQLSnapshots + ' snapshots"></span> ');
+      popoverElement.find("h3 div.pull-right").prepend('<span class="bi bi-camera-fill" title="' + instance.CountMySQLSnapshots + ' snapshots"></span> ');
     }
     if (instance.HasReplicationFilters) {
-      popoverElement.find("h3 div.pull-right").prepend('<span class="glyphicon glyphicon-filter" title="Using replication filters"></span> ');
+      popoverElement.find("h3 div.pull-right").prepend('<span class="bi bi-funnel-fill" title="Using replication filters"></span> ');
     }
     if (instance.SemiSyncMasterStatus) {
-      popoverElement.find("h3 div.pull-right").prepend('<span class="glyphicon glyphicon-check" title="Semi sync enabled (master side)"></span> ');
+      popoverElement.find("h3 div.pull-right").prepend('<span class="bi bi-check-square" title="Semi sync enabled (master side)"></span> ');
     }
     if (instance.SemiSyncReplicaStatus) {
-      popoverElement.find("h3 div.pull-right").prepend('<span class="glyphicon glyphicon-saved" title="Semi sync enabled (replica side)"></span> ');
+      popoverElement.find("h3 div.pull-right").prepend('<span class="bi bi-cloud-download-fill" title="Semi sync enabled (replica side)"></span> ');
     }
     if (instance.LogBinEnabled && instance.LogReplicationUpdatesEnabled) {
-      popoverElement.find("h3 div.pull-right").prepend('<span class="glyphicon glyphicon-forward" title="Logs replication updates"></span> ');
+      popoverElement.find("h3 div.pull-right").prepend('<span class="bi bi-fast-forward-fill" title="Logs replication updates"></span> ');
     }
     // Icons for GR
     var text_style;
@@ -963,27 +963,27 @@ function renderInstanceElement(popoverElement, instance, renderType) {
         text_style = "";
       else
         text_style = "text-muted";
-      popoverElement.find("h3 div.pull-right").prepend('<span class="glyphicon '+ text_style +' glyphicon-tower" title="Group replication '+ instance.ReplicationGroupMemberRole + ' ' + instance.ReplicationGroupMemberState +'"></span> ');
+      popoverElement.find("h3 div.pull-right").prepend('<span class="bi '+ text_style +' bi-server" title="Group replication '+ instance.ReplicationGroupMemberRole + ' ' + instance.ReplicationGroupMemberState +'"></span> ');
     }
 
     if (instance.IsCandidate) {
-      popoverElement.find("h3 div.pull-right").prepend('<span class="glyphicon glyphicon-heart" title="Candidate"></span> ');
+      popoverElement.find("h3 div.pull-right").prepend('<span class="bi bi-heart-fill" title="Candidate"></span> ');
     }
     if (instance.PromotionRule == "prefer_not") {
-      popoverElement.find("h3 div.pull-right").prepend('<span class="glyphicon glyphicon-thumbs-down" title="Prefer not promote"></span> ');
+      popoverElement.find("h3 div.pull-right").prepend('<span class="bi bi-hand-thumbs-down" title="Prefer not promote"></span> ');
     }
     if (instance.PromotionRule == "must_not") {
-      popoverElement.find("h3 div.pull-right").prepend('<span class="glyphicon glyphicon-ban-circle" title="Must not promote"></span> ');
+      popoverElement.find("h3 div.pull-right").prepend('<span class="bi bi-slash-circle-fill" title="Must not promote"></span> ');
     }
     if (instance.inMaintenanceProblem()) {
-      popoverElement.find("h3 div.pull-right").prepend('<span class="glyphicon glyphicon-wrench" title="In maintenance"></span> ');
+      popoverElement.find("h3 div.pull-right").prepend('<span class="bi bi-wrench" title="In maintenance"></span> ');
     }
     if (instance.IsDetached) {
-      popoverElement.find("h3 div.pull-right").prepend('<span class="glyphicon glyphicon-remove-sign" title="Replication forcibly detached"></span> ');
+      popoverElement.find("h3 div.pull-right").prepend('<span class="bi bi-x-circle-fill" title="Replication forcibly detached"></span> ');
     }
     if (instance.IsDowntimed) {
       var downtimeMessage = 'Downtimed by ' + instance.DowntimeOwner + ': ' + instance.DowntimeReason + '.\nEnds: ' + instance.DowntimeEndTimestamp;
-      popoverElement.find("h3 div.pull-right").prepend('<span class="glyphicon glyphicon-volume-off" title="' + downtimeMessage + '"></span> ');
+      popoverElement.find("h3 div.pull-right").prepend('<span class="bi bi-volume-mute-fill" title="' + downtimeMessage + '"></span> ');
     }
 
     $.get(appUrl("/api/tags/" + instance.Key.Hostname + "/" + instance.Key.Port), function(tagStrings) {
@@ -992,7 +992,7 @@ function renderInstanceElement(popoverElement, instance, renderType) {
         tagStrings.forEach(function(tag) {
           tagsText = tagsText.concat(tag, '&#10;');
         });
-        popoverElement.find("h3 div.pull-right").prepend('<span class="glyphicon glyphicon-tags" title="' + tagsText +'"></span> ');
+        popoverElement.find("h3 div.pull-right").prepend('<span class="bi bi-tags-fill" title="' + tagsText +'"></span> ');
       }
     }, "json");
 
@@ -1061,7 +1061,10 @@ function renderInstanceElement(popoverElement, instance, renderType) {
     popoverElement.find(".instance-content").html(contentHtml);
   }
 
-  popoverElement.find("h3 .instance-glyphs").click(function() {
+  // Open the modal from anywhere in the title bar (title text, status glyphs,
+  // or the cog cluster). jQuery UI draggable still works because it
+  // distinguishes click from drag based on mouse movement.
+  popoverElement.find("h3").css("cursor", "pointer").click(function() {
     openNodeModal(instance);
     return false;
   });
@@ -1087,8 +1090,8 @@ function renderGlobalRecoveriesButton(isGlobalRecoveriesEnabled) {
   if (isGlobalRecoveriesEnabled) {
     iconContainer
       .prop("title", "Global Recoveries Enabled")
-      .addClass("glyphicon-ok-sign")
-      .removeClass("hidden")
+      .addClass("bi-check-circle-fill")
+      .removeClass("d-none")
       .click(function(event) {
         bootbox.confirm("<h3>Global Recoveries</h3>Are you sure you want to <strong>disable</strong> global recoveries?", function(confirm) {
           if (confirm) {
@@ -1099,8 +1102,8 @@ function renderGlobalRecoveriesButton(isGlobalRecoveriesEnabled) {
   } else {
     iconContainer
       .prop("title", "Global Recoveries Disabled")
-      .addClass("glyphicon-remove-sign")
-      .removeClass("hidden")
+      .addClass("bi-x-circle-fill")
+      .removeClass("d-none")
       .click(function(event) {
         bootbox.confirm("<h3>Global Recoveries</h3>Are you sure you want to enable global recoveries?", function(confirm) {
           if (confirm) {
@@ -1135,7 +1138,7 @@ $(document).ready(function() {
         url = appUrl('/web/cluster/alias/' + encodeURIComponent(cluster.ClusterAlias));
         title = '<strong>' + cluster.ClusterAlias + '</strong>, <span class="small">' + title + '</span>';;
       }
-      $("#dropdown-clusters").append('<li><a href="' + url + '">' + title + '</a></li>');
+      $("#dropdown-clusters").append('<li><a class="dropdown-item" href="' + url + '">' + title + '</a></li>');
     });
     onClustersListeners.forEach(function(func) {
       func(clusters);

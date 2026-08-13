@@ -79,7 +79,7 @@ $(document).ready(function() {
 
     function displayAnalysisEntry(analysisEntry, popoverElement) {
       var blockedKey = getBlockedRecoveryKey(analysisEntry.AnalyzedInstanceKey.Hostname, analysisEntry.AnalyzedInstanceKey.Port, analysisEntry.Analysis);
-      var displayText = '<hr/><span><strong>' + analysisEntry.Analysis + (analysisEntry.IsDowntimed ? '<br/>[<i>downtime till ' + analysisEntry.DowntimeEndTimestamp + '</i>]' : '') + (blockedrecoveriesMap[blockedKey] ? '<br/><span class="glyphicon glyphicon-exclamation-sign text-danger"></span> Blocked' : '') + "</strong></span>" + "<br/>" + "<span>" + analysisEntry.AnalyzedInstanceKey.Hostname + ":" + analysisEntry.AnalyzedInstanceKey.Port + "</span>";
+      var displayText = '<hr/><span><strong>' + analysisEntry.Analysis + (analysisEntry.IsDowntimed ? '<br/>[<i>downtime till ' + analysisEntry.DowntimeEndTimestamp + '</i>]' : '') + (blockedrecoveriesMap[blockedKey] ? '<br/><span class="bi bi-exclamation-circle-fill text-danger"></span> Blocked' : '') + "</strong></span>" + "<br/>" + "<span>" + analysisEntry.AnalyzedInstanceKey.Hostname + ":" + analysisEntry.AnalyzedInstanceKey.Port + "</span>";
       if (analysisEntry.IsDowntimed) {
         displayText = '<div class="downtimed">' + displayText + '</div>';
       } else if (blockedrecoveriesMap[blockedKey]) {
@@ -104,7 +104,7 @@ $(document).ready(function() {
       if (cluster.ClusterAlias != "") {
         popoverElement.find("h3 .pull-left a span").addClass("small");
         popoverElement.find("h3 .pull-left").prepend('<a href="' + appUrl('/web/cluster/alias/' + encodeURIComponent(cluster.ClusterAlias)) + '"><strong>' + cluster.ClusterAlias + '</strong></a><br/>');
-        popoverElement.find("h3 .pull-right").append('<a href="' + appUrl('/web/cluster/alias/' + encodeURIComponent(cluster.ClusterAlias) + '?compact=true') + '"><span class="glyphicon glyphicon-compressed" title="Compact display"></span></a>');
+        popoverElement.find("h3 .pull-right").append('<a href="' + appUrl('/web/cluster/alias/' + encodeURIComponent(cluster.ClusterAlias) + '?compact=true') + '"><span class="bi bi-file-zip-fill" title="Compact display"></span></a>');
       }
       displayInstancesBadge(popoverElement, "Instances", cluster.CountInstances, "label-primary", "Total instances in cluster");
 

@@ -140,27 +140,27 @@ $(document).ready(function() {
           if (mutedCnt > 1) {
             popoverElement.find("h3 .pull-left").prepend('<span class="overlay-counter">' + mutedCnt +' </span>');
           }
-          popoverElement.find("h3 .pull-left").prepend('<span class="glyphicon glyphicon-exclamation-sign text-muted"' + ' title="' + mutedMsg + '"></span>');          
+          popoverElement.find("h3 .pull-left").prepend('<span class="bi bi-exclamation-circle-fill text-muted"' + ' title="' + mutedMsg + '"></span>');          
         }
         if (warningCnt > 0) {
           if (warningCnt > 1) {
             popoverElement.find("h3 .pull-left").prepend('<span class="overlay-counter">' + warningCnt +' </span>');
           }
-          popoverElement.find("h3 .pull-left").prepend('<span class="glyphicon glyphicon-exclamation-sign text-warning"' + ' title="' + warningMsg + '"></span>');          
+          popoverElement.find("h3 .pull-left").prepend('<span class="bi bi-exclamation-circle-fill text-warning"' + ' title="' + warningMsg + '"></span>');          
         }
         if (dangerCnt > 0) {
           if (dangerCnt > 1) {
             popoverElement.find("h3 .pull-left").prepend('<span class="overlay-counter">' + dangerCnt +' </span>');
           }
-          popoverElement.find("h3 .pull-left").prepend('<span class="glyphicon glyphicon-exclamation-sign text-danger"' + ' title="' + dangerMsg + '"></span>');          
+          popoverElement.find("h3 .pull-left").prepend('<span class="bi bi-exclamation-circle-fill text-danger"' + ' title="' + dangerMsg + '"></span>');          
         }
       }
-      popoverElement.find("h3 .pull-right").append('<a href="' + compactClusterUri + '"><span class="glyphicon glyphicon-compressed" title="Compact display"></span></a>');
+      popoverElement.find("h3 .pull-right").append('<a href="' + compactClusterUri + '"><span class="bi bi-file-zip-fill" title="Compact display"></span></a>');
       if (cluster.HasAutomatedIntermediateMasterRecovery === true) {
-        popoverElement.find("h3 .pull-right").prepend('<span class="glyphicon glyphicon-heart-empty text-info" title="Automated intermediate master recovery for this cluster ENABLED"></span>');
+        popoverElement.find("h3 .pull-right").prepend('<span class="bi bi-heart text-info" title="Automated intermediate master recovery for this cluster ENABLED"></span>');
       }
       if (cluster.HasAutomatedMasterRecovery === true) {
-        popoverElement.find("h3 .pull-right").prepend('<span class="glyphicon glyphicon-heart text-info" title="Automated master recovery for this cluster ENABLED"></span>');
+        popoverElement.find("h3 .pull-right").prepend('<span class="bi bi-heart-fill text-info" title="Automated master recovery for this cluster ENABLED"></span>');
       }
 
       var contentHtml = '' + '<div>Instances: <div class="pull-right"></div></div>';
