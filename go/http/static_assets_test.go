@@ -388,15 +388,49 @@ func TestOpenNodeModalExplicitlyShowsBootstrapModal(t *testing.T) {
 	}
 }
 
-func TestClusterProblemsMoveIntoWorkspaceHeader(t *testing.T) {
+func TestClusterProblemsPlacementTracksNavbarBreakpoint(t *testing.T) {
 	chdirToRepoRoot(t)
 
 	source, err := os.ReadFile(filepath.Join("resources", "public", "js", "cluster.js"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(string(source), `$("#instance_problems").appendTo(".cluster-workspace-header").addClass("cluster-workspace-problems");`) {
-		t.Fatal("cluster problems control must be placed in the workspace header")
+	for _, want := range []string{
+		`window.matchMedia("(min-width: 992px)")`,
+		`appendTo(".cluster-workspace-header")`,
+		`appendTo('[data-nav-page="problems"]')`,
+		`.off("resize.clusterProblems")`,
+		`.on("resize.clusterProblems", placeClusterProblems)`,
+	} {
+		if !strings.Contains(string(source), want) {
+			t.Errorf("cluster problems placement must contain %q", want)
+		}
+	}
+}
+
+func TestIconOnlyActionsHaveAccessibleNames(t *testing.T) {
+	chdirToRepoRoot(t)
+
+	clustersSource, err := os.ReadFile(filepath.Join("resources", "public", "js", "clusters.js"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(clustersSource), `aria-label="Open compact topology"`) {
+		t.Error("compact topology link must have an accessible name")
+	}
+
+	auditSource, err := os.ReadFile(filepath.Join("resources", "public", "js", "audit-recovery.js"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		`<button type="button" class="acknowledge-indicator ack-recovery"`,
+		`aria-label="Acknowledge recovery"`,
+		`$(event.currentTarget).attr("data-recovery-id")`,
+	} {
+		if !strings.Contains(string(auditSource), want) {
+			t.Errorf("recovery acknowledgment must contain %q", want)
+		}
 	}
 }
 

@@ -144,13 +144,13 @@ $(document).ready(function() {
       var analyzedInstanceDisplay = getInstanceTitle(audit.AnalysisEntry.AnalyzedInstanceKey.Hostname, audit.AnalysisEntry.AnalyzedInstanceKey.Port);
       var sucessorInstanceDisplay = getInstanceTitle(audit.SuccessorKey.Hostname, audit.SuccessorKey.Port);
       var row = $('<tr/>');
-      var ack = $('<i class="bi acknowledge-indicator" title="" aria-hidden="true"></i>');
+      var ack;
       if (audit.Acknowledged) {
-        ack.addClass("bi-check-circle-fill").addClass("text-primary");
         var ackTitle = "Acknowledged by " + audit.AcknowledgedBy + " at " + audit.AcknowledgedAt + ": " + audit.AcknowledgedComment;
-        ack.attr("title", ackTitle);
+        ack = $('<span class="acknowledge-indicator" role="img"><i class="bi bi-check-circle-fill text-primary" aria-hidden="true"></i></span>');
+        ack.attr("title", ackTitle).attr("aria-label", ackTitle);
       } else {
-        ack.addClass("bi-exclamation-triangle-fill").addClass("text-danger").addClass("ack-recovery");
+        ack = $('<button type="button" class="acknowledge-indicator ack-recovery" aria-label="Acknowledge recovery"><i class="bi bi-exclamation-triangle-fill text-danger" aria-hidden="true"></i></button>');
         ack.attr("data-recovery-id", audit.Id);
         ack.attr("title", "Unacknowledged. Click to acknowledge");
       }
@@ -224,7 +224,7 @@ $(document).ready(function() {
       return false;
     });
     $("body").on("click", ".ack-recovery", function(event) {
-      var recoveryId = $(event.target).attr("data-recovery-id");
+      var recoveryId = $(event.currentTarget).attr("data-recovery-id");
       bootbox.prompt({
         title: "Acknowledge recovery",
         placeholder: "comment",

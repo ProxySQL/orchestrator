@@ -573,7 +573,16 @@ body {
 	padding-right: 8px;
 }
 
-#audit .acknowledge-indicator.unacknowledged {
+#audit button.acknowledge-indicator {
+	background: transparent;
+	border: 0;
+	color: inherit;
+	padding-bottom: 0;
+	padding-left: 0;
+	padding-top: 0;
+}
+
+#audit .ack-recovery {
 	cursor: pointer;
 }
 

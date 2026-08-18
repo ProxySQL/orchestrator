@@ -1799,7 +1799,15 @@ function Cluster() {
       });
     });
     $("#instance_problems_button").attr("title", "Cluster Problems");
-    $("#instance_problems").appendTo(".cluster-workspace-header").addClass("cluster-workspace-problems");
+    function placeClusterProblems() {
+      if (window.matchMedia("(min-width: 992px)").matches) {
+        $("#instance_problems").appendTo(".cluster-workspace-header").addClass("cluster-workspace-problems");
+      } else {
+        $("#instance_problems").appendTo('[data-nav-page="problems"]').removeClass("cluster-workspace-problems");
+      }
+    }
+    placeClusterProblems();
+    $(window).off("resize.clusterProblems").on("resize.clusterProblems", placeClusterProblems);
 
     $("#cluster_sidebar").on("click", "a[data-command]", function(event) {
       event.preventDefault();

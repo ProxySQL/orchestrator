@@ -205,7 +205,7 @@ $(document).ready(function() {
           popoverElement.find("h3 .pull-left").prepend('<i class="bi bi-exclamation-triangle-fill text-danger"' + ' title="' + dangerMsg + '" aria-hidden="true"></i>');
         }
       }
-      popoverElement.find("h3 .pull-right").append('<a href="' + compactClusterUri + '"><i class="bi bi-diagram-3" title="Compact display" aria-hidden="true"></i></a>');
+      popoverElement.find("h3 .pull-right").append('<a href="' + compactClusterUri + '" aria-label="Open compact topology" title="Compact display"><i class="bi bi-diagram-3" aria-hidden="true"></i></a>');
       if (cluster.HasAutomatedIntermediateMasterRecovery === true) {
         popoverElement.find("h3 .pull-right").prepend('<i class="bi bi-check-circle-fill text-info" title="Automated intermediate master recovery for this cluster ENABLED" aria-hidden="true"></i>');
       }
