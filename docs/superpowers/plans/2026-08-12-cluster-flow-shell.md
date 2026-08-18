@@ -95,4 +95,3 @@ git commit -m "test(ui): verify cluster landing flow"
 - [ ] Run `go test ./go/http`, `git diff --check`, and the functional smoke script.
 - [ ] Confirm `git status --short` contains no tracked scratch files.
 - [ ] Review the complete landing-to-topology route in the Docker lab and summarize preserved operational behavior.
-

@@ -39,4 +39,3 @@ The cluster page starts with an identity row: cluster name, primary, member/heal
 - Template tests protect the landing-page landmarks and retained command hooks.
 - Functional smoke checks confirm `/`, `/web/clusters`, and a live cluster detail route return the intended page shells.
 - Manual lab check confirms the landing page is readable, the selected cluster opens, view controls work, and topology remains interactable.
-

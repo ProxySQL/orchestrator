@@ -134,4 +134,3 @@ git commit -m "test(ui): smoke-test cluster workspace"
 - [ ] Run the functional smoke script against the Docker lab.
 - [ ] Review the rendered cluster page in the local browser at desktop and narrow widths.
 - [ ] Summarize preserved behavior, visual changes, and any intentionally deferred renderer modernization.
-
