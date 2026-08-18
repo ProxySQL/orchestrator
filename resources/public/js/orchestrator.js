@@ -164,7 +164,7 @@ function addAlert(alertText, alertClass) {
     alertClass = "danger";
   }
   $("#alerts_container").append(
-    '<div class="alert alert-' + alertClass + ' alert-dismissable">' + '<button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button>' + alertText + '</div>');
+    '<div class="alert alert-' + alertClass + ' alert-dismissable">' + '<button type="button" class="close" data-dismiss="alert" data-bs-dismiss="alert" aria-hidden="true">&times;</button>' + alertText + '</div>');
   $(".alert").alert();
   return false;
 }
@@ -230,7 +230,7 @@ function addNodeModalDataAttribute(name, value) {
 
 function addModalAlert(alertText) {
   $("#node_modal .modal-body").append(
-    '<div class="alert alert-danger alert-dismissable">' + '<button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button>' + alertText + '</div>');
+    '<div class="alert alert-danger alert-dismissable">' + '<button type="button" class="close" data-dismiss="alert" data-bs-dismiss="alert" aria-hidden="true">&times;</button>' + alertText + '</div>');
   $(".alert").alert();
   return false;
 }

@@ -97,6 +97,27 @@ func TestBootstrapLegacyBridgeIsShipped(t *testing.T) {
 	}
 }
 
+func TestDynamicBootstrapControlsEmitNativeAttributes(t *testing.T) {
+	chdirToRepoRoot(t)
+
+	clusterSource, err := os.ReadFile(filepath.Join("resources", "public", "js", "cluster.js"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := `data-toggle="dropdown" data-bs-toggle="dropdown"`; !strings.Contains(string(clusterSource), want) {
+		t.Errorf("dynamic recovery dropdown is missing native Bootstrap attribute %q", want)
+	}
+
+	orchestratorSource, err := os.ReadFile(filepath.Join("resources", "public", "js", "orchestrator.js"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	const nativeAlertDismiss = `data-dismiss="alert" data-bs-dismiss="alert"`
+	if got, want := strings.Count(string(orchestratorSource), nativeAlertDismiss), 2; got != want {
+		t.Errorf("dynamic alert dismiss controls with native Bootstrap attributes = %d, want %d", got, want)
+	}
+}
+
 func TestActiveUIUsesBootstrapIcons(t *testing.T) {
 	chdirToRepoRoot(t)
 

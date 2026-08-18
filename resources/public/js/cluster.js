@@ -1544,7 +1544,7 @@ function Cluster() {
     var popoverElement = getInstanceDiv(instance.id);
 
     popoverElement.append('<h4 class="popover-footer"><div class="dropdown"></div></h4>');
-    popoverElement.find(".popover-footer .dropdown").append('<button type="button" class="btn btn-xs btn-default dropdown-toggle" id="recover_dropdown_' + instance.id + '" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true"><i class="bi bi-wrench-adjustable text-danger" aria-hidden="true"></i> Recover <span class="caret"></span></button><ul class="dropdown-menu" aria-labelledby="recover_dropdown_' + instance.id + '"></ul>');
+    popoverElement.find(".popover-footer .dropdown").append('<button type="button" class="btn btn-xs btn-default dropdown-toggle" id="recover_dropdown_' + instance.id + '" data-toggle="dropdown" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="true"><i class="bi bi-wrench-adjustable text-danger" aria-hidden="true"></i> Recover <span class="caret"></span></button><ul class="dropdown-menu" aria-labelledby="recover_dropdown_' + instance.id + '"></ul>');
     popoverElement.find(".popover-footer .dropdown").append('<ul class="dropdown-menu" aria-labelledby="recover_dropdown_' + instance.id + '"></ul>');
     var recoveryListing = popoverElement.find(".dropdown ul");
 
