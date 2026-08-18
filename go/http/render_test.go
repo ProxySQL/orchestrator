@@ -62,6 +62,13 @@ func clearContentTemplateCache() {
 	contentTemplateCache.Unlock()
 }
 
+func setAssetVersionForTest(t *testing.T, version string) {
+	t.Helper()
+	old := assetVersion
+	assetVersion = version
+	t.Cleanup(func() { assetVersion = old })
+}
+
 // contentTemplateNames returns every content template under resources/templates
 // (everything except layout). Discovered from disk so new templates are covered.
 func contentTemplateNames(t *testing.T) []string {
@@ -321,6 +328,7 @@ func TestRenderHTMLYield(t *testing.T) {
 func TestRenderHTMLUsesLocalBootstrapAssets(t *testing.T) {
 	chdirToRepoRoot(t)
 	clearContentTemplateCache()
+	setAssetVersionForTest(t, "asset-test-42")
 
 	rec := httptest.NewRecorder()
 	renderHTML(rec, http.StatusOK, "templates/clusters", sampleTemplateData())
@@ -330,8 +338,9 @@ func TestRenderHTMLUsesLocalBootstrapAssets(t *testing.T) {
 	}
 	body := rec.Body.String()
 	for _, expected := range []string{
-		`href="/bootstrap5/css/bootstrap.min.css"`,
-		`src="/bootstrap5/js/bootstrap.bundle.min.js"`,
+		`/bootstrap5/css/bootstrap.min.css?v=asset-test-42`,
+		`/bootstrap5/js/bootstrap.bundle.min.js?v=asset-test-42`,
+		`/bootstrap-icons/font/bootstrap-icons.min.css?v=asset-test-42`,
 	} {
 		if !strings.Contains(body, expected) {
 			t.Fatalf("expected locally served Bootstrap asset %q, body snippet: %s", expected, truncate(body, 500))
@@ -339,6 +348,24 @@ func TestRenderHTMLUsesLocalBootstrapAssets(t *testing.T) {
 	}
 	if strings.Contains(body, "cdn.jsdelivr.net/npm/bootstrap") {
 		t.Fatal("rendered layout still depends on the external Bootstrap CDN")
+	}
+}
+
+func TestRenderHTMLSharesAssetVersionWithContentAndLayout(t *testing.T) {
+	chdirToRepoRoot(t)
+	clearContentTemplateCache()
+	setAssetVersionForTest(t, "asset-test-42")
+
+	rec := httptest.NewRecorder()
+	renderHTML(rec, http.StatusOK, "templates/clusters_analysis", sampleTemplateData())
+	body := rec.Body.String()
+	for _, want := range []string{
+		`/css/orchestrator.css?v=asset-test-42`,
+		`/js/clusters-analysis.js?v=asset-test-42`,
+	} {
+		if !strings.Contains(body, want) {
+			t.Errorf("rendered page missing shared asset version %q", want)
+		}
 	}
 }
 
@@ -430,6 +457,7 @@ func TestRenderClustersAnalysisWorkspace(t *testing.T) {
 func TestRenderClustersAnalysisWorkspaceUsesCurrentAssetRevision(t *testing.T) {
 	chdirToRepoRoot(t)
 	clearContentTemplateCache()
+	setAssetVersionForTest(t, "asset-test-42")
 
 	rec := httptest.NewRecorder()
 	renderHTML(rec, http.StatusOK, "templates/clusters_analysis", sampleTemplateData())
@@ -439,8 +467,8 @@ func TestRenderClustersAnalysisWorkspaceUsesCurrentAssetRevision(t *testing.T) {
 	}
 	body := rec.Body.String()
 	for _, expected := range []string{
-		`href="/css/clusters-analysis-workspace.css?v=20260812-failure-analysis-v2"`,
-		`src="/js/clusters-analysis.js?v=20260812-failure-analysis-v2"`,
+		`href="/css/clusters-analysis-workspace.css?v=asset-test-42"`,
+		`src="/js/clusters-analysis.js?v=asset-test-42"`,
 	} {
 		if !strings.Contains(body, expected) {
 			t.Errorf("expected current failure analysis asset revision %q", expected)

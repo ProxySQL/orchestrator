@@ -44,6 +44,13 @@ var sslPEMPassword []byte
 var agentSSLPEMPassword []byte
 var discoveryMetrics *collection.Collection
 
+func revalidateStaticAssets(next nethttp.Handler) nethttp.Handler {
+	return nethttp.HandlerFunc(func(w nethttp.ResponseWriter, r *nethttp.Request) {
+		w.Header().Set("Cache-Control", "no-cache, must-revalidate")
+		next.ServeHTTP(w, r)
+	})
+}
+
 // Http starts serving
 func Http(continuousDiscovery bool) {
 	promptForSSLPasswords()
@@ -106,7 +113,7 @@ func standardHttp(continuousDiscovery bool) {
 
 	// Static file serving
 	prefix := config.Config.URLPrefix
-	fileServer := nethttp.FileServer(nethttp.Dir("resources/public"))
+	fileServer := revalidateStaticAssets(nethttp.FileServer(nethttp.Dir("resources/public")))
 	if prefix != "" {
 		router.Handle(prefix+"/*", nethttp.StripPrefix(prefix, fileServer))
 	} else {

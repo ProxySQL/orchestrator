@@ -58,6 +58,26 @@ func TestBundledJQueryMeetsSecurityFloor(t *testing.T) {
 	t.Logf("bundled jQuery %d.%d.%d", major, minor, patch)
 }
 
+func TestBootstrapIconAssetsAreVendored(t *testing.T) {
+	chdirToRepoRoot(t)
+
+	iconDir := filepath.Join("resources", "public", "bootstrap-icons", "font")
+	css, err := os.ReadFile(filepath.Join(iconDir, "bootstrap-icons.min.css"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"bootstrap-icons.woff", "bootstrap-icons.woff2"} {
+		if !strings.Contains(string(css), want) {
+			t.Errorf("Bootstrap Icons stylesheet is missing font reference %q", want)
+		}
+	}
+	for _, name := range []string{"bootstrap-icons.min.css", "fonts/bootstrap-icons.woff", "fonts/bootstrap-icons.woff2"} {
+		if _, err := os.Stat(filepath.Join(iconDir, name)); err != nil {
+			t.Errorf("Bootstrap Icons asset %q is not vendored: %v", name, err)
+		}
+	}
+}
+
 func TestStaticClusterWorkspaceAssets(t *testing.T) {
 	chdirToRepoRoot(t)
 

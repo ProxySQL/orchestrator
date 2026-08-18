@@ -23,6 +23,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"sync"
 
 	"github.com/proxysql/golib/log"
@@ -51,6 +52,26 @@ var (
 
 const templateDir = "resources"
 const layoutFile = "templates/layout"
+
+var assetVersion = computeAssetVersion()
+
+func computeAssetVersion() string {
+	if exe, err := os.Executable(); err == nil {
+		if info, err := os.Stat(exe); err == nil {
+			return strconv.FormatInt(info.ModTime().UnixNano(), 10)
+		}
+	}
+	return strconv.Itoa(os.Getpid())
+}
+
+func injectAssetVersion(data interface{}, version string) interface{} {
+	if values, ok := data.(map[string]interface{}); ok && values != nil {
+		if _, exists := values["assetVersion"]; !exists {
+			values["assetVersion"] = version
+		}
+	}
+	return data
+}
 
 func loadLayoutSource() {
 	layoutPath := filepath.Join(templateDir, layoutFile+".tmpl")
@@ -94,6 +115,7 @@ func renderHTML(w http.ResponseWriter, status int, name string, data interface{}
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
+	data = injectAssetVersion(data, assetVersion)
 
 	var contentBuf bytes.Buffer
 	if err := content.Execute(&contentBuf, data); err != nil {

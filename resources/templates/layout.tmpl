@@ -9,18 +9,19 @@
 	<meta name="author" content="">
 	<link rel="shortcut icon" href="/images/orchestrator-logo-32-dark.png">
 	<title>Orchestrator - {{.title}}</title>
-	<script type="text/javascript" src="{{.prefix}}/js/jquery.min.js"></script>
-	<script type="text/javascript" src="{{.prefix}}/js/jquery.cookie-1.4.1.min.js"></script>
-	<script type="text/javascript" src="{{.prefix}}/js/corex.js"></script>
-	<script type="text/javascript" src="{{.prefix}}/js/corex-jquery.js"></script>
-	<script src="{{.prefix}}/js/md5.js"></script>
-	<script src="{{.prefix}}/js/common.js"></script>
-	<script src="{{.prefix}}/js/orchestrator.js?v=20260812-ui2"></script>
-	<script src="{{.prefix}}/js/custom.js"></script>
-	<link href="{{.prefix}}/bootstrap5/css/bootstrap.min.css" rel="stylesheet">
-	<link href="{{.prefix}}/css/orchestrator.css" rel="stylesheet">
-	<link href="{{.prefix}}/css/legacy-workspace.css?v=20260812-legacy-v2" rel="stylesheet">
-	<link href="{{.prefix}}/css/custom.css" rel="stylesheet">
+	<script type="text/javascript" src="{{.prefix}}/js/jquery.min.js?v={{.assetVersion}}"></script>
+	<script type="text/javascript" src="{{.prefix}}/js/jquery.cookie-1.4.1.min.js?v={{.assetVersion}}"></script>
+	<script type="text/javascript" src="{{.prefix}}/js/corex.js?v={{.assetVersion}}"></script>
+	<script type="text/javascript" src="{{.prefix}}/js/corex-jquery.js?v={{.assetVersion}}"></script>
+	<script src="{{.prefix}}/js/md5.js?v={{.assetVersion}}"></script>
+	<script src="{{.prefix}}/js/common.js?v={{.assetVersion}}"></script>
+	<script src="{{.prefix}}/js/orchestrator.js?v={{.assetVersion}}"></script>
+	<script src="{{.prefix}}/js/custom.js?v={{.assetVersion}}"></script>
+	<link href="{{.prefix}}/bootstrap5/css/bootstrap.min.css?v={{.assetVersion}}" rel="stylesheet">
+	<link href="{{.prefix}}/bootstrap-icons/font/bootstrap-icons.min.css?v={{.assetVersion}}" rel="stylesheet">
+	<link href="{{.prefix}}/css/orchestrator.css?v={{.assetVersion}}" rel="stylesheet">
+	<link href="{{.prefix}}/css/legacy-workspace.css?v={{.assetVersion}}" rel="stylesheet">
+	<link href="{{.prefix}}/css/custom.css?v={{.assetVersion}}" rel="stylesheet">
 
 	<style type="text/css">
 		.ajaxLoader {
@@ -226,7 +227,7 @@
 
 	</div>
 
-	<script src="{{.prefix}}/bootstrap5/js/bootstrap.bundle.min.js"></script>
+	<script src="{{.prefix}}/bootstrap5/js/bootstrap.bundle.min.js?v={{.assetVersion}}"></script>
 	<!-- Bootstrap 5 compatibility: map legacy data-toggle/data-dismiss attributes -->
 	<script>
 		document.addEventListener('DOMContentLoaded', function() {
@@ -253,7 +254,7 @@
 			});
 		});
 	</script>
-	<script type="text/javascript" src="{{.prefix}}/js/bootbox.min.js"></script>
+	<script type="text/javascript" src="{{.prefix}}/js/bootbox.min.js?v={{.assetVersion}}"></script>
 	<script>
 		function autoshowProblems() {
 			return "{{.autoshow_problems}}";
@@ -279,7 +280,7 @@
 			return "{{.webMessage}}";
 		}
 	</script>
-	<script src="{{.prefix}}/js/instance-problems.js?v=20260812-ui"></script>
+	<script src="{{.prefix}}/js/instance-problems.js?v={{.assetVersion}}"></script>
 </body>
 
 </html>
