@@ -340,6 +340,7 @@ func TestRenderHTMLUsesLocalBootstrapAssets(t *testing.T) {
 	for _, expected := range []string{
 		`/bootstrap5/css/bootstrap.min.css?v=asset-test-42`,
 		`/bootstrap5/js/bootstrap.bundle.min.js?v=asset-test-42`,
+		`/js/bootstrap-legacy-bridge.js?v=asset-test-42`,
 		`/bootstrap-icons/font/bootstrap-icons.min.css?v=asset-test-42`,
 	} {
 		if !strings.Contains(body, expected) {
@@ -348,6 +349,14 @@ func TestRenderHTMLUsesLocalBootstrapAssets(t *testing.T) {
 	}
 	if strings.Contains(body, "cdn.jsdelivr.net/npm/bootstrap") {
 		t.Fatal("rendered layout still depends on the external Bootstrap CDN")
+	}
+	bundle := strings.Index(body, `/bootstrap5/js/bootstrap.bundle.min.js?v=asset-test-42`)
+	bridge := strings.Index(body, `/js/bootstrap-legacy-bridge.js?v=asset-test-42`)
+	if bundle < 0 || bridge < bundle {
+		t.Fatal("Bootstrap bundle must load before the compatibility bridge")
+	}
+	if strings.Contains(body, "Bootstrap 5 compatibility: map legacy") {
+		t.Fatal("layout still embeds the compatibility bridge inline")
 	}
 }
 

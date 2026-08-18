@@ -78,6 +78,25 @@ func TestBootstrapIconAssetsAreVendored(t *testing.T) {
 	}
 }
 
+func TestBootstrapLegacyBridgeIsShipped(t *testing.T) {
+	chdirToRepoRoot(t)
+
+	path := filepath.Join("resources", "public", "js", "bootstrap-legacy-bridge.js")
+	source, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("Bootstrap legacy bridge is not shipped: %v", err)
+	}
+	for _, want := range []string{
+		"OrchestratorBootstrapBridge",
+		"normalizeAttributes",
+		"installJQueryAdapters",
+	} {
+		if !strings.Contains(string(source), want) {
+			t.Errorf("Bootstrap legacy bridge is missing %q", want)
+		}
+	}
+}
+
 func TestStaticClusterWorkspaceAssets(t *testing.T) {
 	chdirToRepoRoot(t)
 

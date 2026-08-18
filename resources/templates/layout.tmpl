@@ -228,31 +228,9 @@
 	</div>
 
 	<script src="{{.prefix}}/bootstrap5/js/bootstrap.bundle.min.js?v={{.assetVersion}}"></script>
-	<!-- Bootstrap 5 compatibility: map legacy data-toggle/data-dismiss attributes -->
+	<script src="{{.prefix}}/js/bootstrap-legacy-bridge.js?v={{.assetVersion}}"></script>
 	<script>
-		document.addEventListener('DOMContentLoaded', function() {
-			document.addEventListener('click', function(e) {
-				var el = e.target.closest('[data-toggle="dropdown"]');
-				if (el) {
-					var dd = bootstrap.Dropdown.getOrCreateInstance(el);
-					dd.toggle();
-					e.preventDefault();
-				}
-				var dismissBtn = e.target.closest('[data-dismiss="modal"]');
-				if (dismissBtn) {
-					var modal = dismissBtn.closest('.modal');
-					if (modal) {
-						var bsModal = bootstrap.Modal.getInstance(modal);
-						if (bsModal) bsModal.hide();
-					}
-				}
-				var dismissAlert = e.target.closest('[data-dismiss="alert"]');
-				if (dismissAlert) {
-					var alert = dismissAlert.closest('.alert');
-					if (alert) alert.remove();
-				}
-			});
-		});
+		OrchestratorBootstrapBridge.init(document, window.jQuery, window.bootstrap);
 	</script>
 	<script type="text/javascript" src="{{.prefix}}/js/bootbox.min.js?v={{.assetVersion}}"></script>
 	<script>
