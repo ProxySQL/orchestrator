@@ -188,29 +188,29 @@ $(document).ready(function() {
           if (mutedCnt > 1) {
             popoverElement.find("h3 .pull-left").prepend('<span class="overlay-counter">' + mutedCnt +' </span>');
           }
-          popoverElement.find("h3 .pull-left").prepend('<span class="glyphicon glyphicon-exclamation-sign text-muted"' + ' title="' + mutedMsg + '"></span>');          
+          popoverElement.find("h3 .pull-left").prepend('<i class="bi bi-exclamation-triangle-fill text-muted"' + ' title="' + mutedMsg + '" aria-hidden="true"></i>');
         }
         if (warningCnt > 0) {
           analysisState = "warning";
           if (warningCnt > 1) {
             popoverElement.find("h3 .pull-left").prepend('<span class="overlay-counter">' + warningCnt +' </span>');
           }
-          popoverElement.find("h3 .pull-left").prepend('<span class="glyphicon glyphicon-exclamation-sign text-warning"' + ' title="' + warningMsg + '"></span>');          
+          popoverElement.find("h3 .pull-left").prepend('<i class="bi bi-exclamation-triangle-fill text-warning"' + ' title="' + warningMsg + '" aria-hidden="true"></i>');
         }
         if (dangerCnt > 0) {
           analysisState = "danger";
           if (dangerCnt > 1) {
             popoverElement.find("h3 .pull-left").prepend('<span class="overlay-counter">' + dangerCnt +' </span>');
           }
-          popoverElement.find("h3 .pull-left").prepend('<span class="glyphicon glyphicon-exclamation-sign text-danger"' + ' title="' + dangerMsg + '"></span>');          
+          popoverElement.find("h3 .pull-left").prepend('<i class="bi bi-exclamation-triangle-fill text-danger"' + ' title="' + dangerMsg + '" aria-hidden="true"></i>');
         }
       }
-      popoverElement.find("h3 .pull-right").append('<a href="' + compactClusterUri + '"><span class="glyphicon glyphicon-compressed" title="Compact display"></span></a>');
+      popoverElement.find("h3 .pull-right").append('<a href="' + compactClusterUri + '"><i class="bi bi-diagram-3" title="Compact display" aria-hidden="true"></i></a>');
       if (cluster.HasAutomatedIntermediateMasterRecovery === true) {
-        popoverElement.find("h3 .pull-right").prepend('<span class="glyphicon glyphicon-heart-empty text-info" title="Automated intermediate master recovery for this cluster ENABLED"></span>');
+        popoverElement.find("h3 .pull-right").prepend('<i class="bi bi-check-circle-fill text-info" title="Automated intermediate master recovery for this cluster ENABLED" aria-hidden="true"></i>');
       }
       if (cluster.HasAutomatedMasterRecovery === true) {
-        popoverElement.find("h3 .pull-right").prepend('<span class="glyphicon glyphicon-heart text-info" title="Automated master recovery for this cluster ENABLED"></span>');
+        popoverElement.find("h3 .pull-right").prepend('<i class="bi bi-check-circle-fill text-info" title="Automated master recovery for this cluster ENABLED" aria-hidden="true"></i>');
       }
 
       var clusterProblemTypes = [];

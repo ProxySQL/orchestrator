@@ -34,7 +34,7 @@
 
 <body>
 
-	<nav class="navbar navbar-expand-md navbar-dark bg-dark fixed-top">
+	<nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
 		<div class="container-fluid">
 			<a class="navbar-brand orchestrator-brand" href="https://github.com/ProxySQL/orchestrator" target="_blank" rel="noopener noreferrer">orchestrator</a>
 			<button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain" aria-controls="navbarMain" aria-expanded="false" aria-label="Toggle navigation">
@@ -88,30 +88,43 @@
 
 				<li class="nav-item" data-nav-page="search">
 					<form class="d-flex" role="search" name="searchForm" action="{{.prefix}}/web/search">
-						<input type="text" name="s" id="searchInput" class="form-control form-control-sm me-2" placeholder="Search">
-						<button type="submit" class="btn btn-secondary btn-sm"><span class="glyphicon glyphicon-search"></span></button>
+						<input type="text" name="s" id="searchInput" class="form-control form-control-sm me-2" placeholder="Search" aria-label="Search instances">
+						<button type="submit" class="btn btn-secondary btn-sm" aria-label="Submit search"><i class="bi bi-search" aria-hidden="true"></i></button>
 					</form>
 				</li>
+			</ul>
+			<ul class="navbar-nav align-items-lg-center" id="nav_operational_status" aria-label="Operational status">
 				<li class="nav-item dropdown" data-nav-page="context" style="visibility: hidden;">
 					<a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">
-						<span class="glyphicon glyphicon-cog"></span>
+						<i class="bi bi-gear" aria-hidden="true"></i><span class="visually-hidden">Context</span>
 					</a>
 					<ul class="dropdown-menu" id="dropdown-context">
 					</ul>
 				</li>
 				<li class="nav-item" data-nav-page="global-recoveries">
 					<a id="global-recoveries-icon" class="nav-link" name="global-recoveries" href="#">
-						<span class="glyphicon hidden"></span>
+						<i class="bi d-none" aria-hidden="true"></i><span class="visually-hidden">Global recoveries</span>
 					</a>
 				</li>
 				<li class="nav-item" data-nav-page="read-only" style="display: none;">
-					<a class="nav-link" name="read-only" title="read only mode"><span class="glyphicon glyphicon-eye-open"></span></a>
+					<a class="nav-link" name="read-only" title="read only mode"><i class="bi bi-eye" aria-hidden="true"></i><span class="visually-hidden">Read-only mode</span></a>
 				</li>
 				<li class="nav-item" data-nav-page="user-id" style="display: none;">
 					<a class="nav-link" name="user-id"></a>
 				</li>
 				<li class="nav-item" data-nav-page="refreshCountdown">
 					<a href="#" id="refreshCountdown" class="nav-link small"></a>
+				</li>
+				<li class="nav-item" data-nav-page="problems">
+					<div id="instance_problems">
+						<div class="dropdown">
+							<button type="button" id="instance_problems_button" class="btn btn-secondary dropdown-toggle" data-bs-toggle="dropdown" title="Problems">
+								<i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i><span class="visually-hidden">Problems</span>
+							</button>
+							<ul class="dropdown-menu dropdown-menu-end" role="menu" aria-labelledby="instance_problems_button">
+							</ul>
+						</div>
+					</div>
 				</li>
 			</ul>
 		</div>
@@ -120,15 +133,6 @@
 
 	<div id="alerts_container"></div>
 	<div class="container-fluid" id="main_container">
-		<div class="pull-right" id="instance_problems">
-			<div class="dropdown pull-right">
-				<button type="button" id="instance_problems_button" class="btn btn-secondary dropdown-toggle" data-bs-toggle="dropdown" title="Problems">
-					<span class="problem-indicator-symbol" aria-hidden="true">!</span><span class="visually-hidden">Problems</span> <span class="caret"></span>
-				</button>
-				<ul class="dropdown-menu" role="menu" aria-labelledby="dLabel">
-				</ul>
-			</div>
-		</div>
 
 		{{yield}}
 
@@ -158,7 +162,7 @@
 										</select>
 									</div>
 									<button type="button" class="form-control btn btn-info pull-right" data-btn="begin-downtime">
-										<span class="glyphicon glyphicon-volume-off"></span> Begin downtime
+										<i class="bi bi-pause-fill" aria-hidden="true"></i> Begin downtime
 									</button>
 								</form>
 							</div>
@@ -169,7 +173,7 @@
 							</div>
 							<div class="card-footer">
 								<button type="button" class="btn btn-secondary" data-btn="end-downtime">
-									<span class="glyphicon glyphicon-volume-up"></span> End downtime
+									<i class="bi bi-play-fill" aria-hidden="true"></i> End downtime
 								</button>
 							</div>
 						</div>
@@ -179,23 +183,23 @@
 						</table>
 					</div>
 					<div class="modal-footer">
-						<button type="button" class="btn btn-success" data-btn="recover" title="Recover from failure"><span class="glyphicon glyphicon-heart"></span> Recover</button>
-						<button type="button" class="btn alert-success" data-btn="refresh-instance" title="Refresh instance status now"><span class="glyphicon glyphicon-refresh"></span> Refresh</button>
-						<button type="button" class="btn btn-danger" data-btn="stop-replica"><span class="glyphicon glyphicon-stop"></span> Stop replication</button>
-						<button type="button" class="btn btn-success" data-btn="start-replica"><span class="glyphicon glyphicon-play"></span> Start replication</button>
-						<button type="button" class="btn btn-warning" data-btn="restart-replica"><span class="glyphicon glyphicon-repeat"></span> Restart replication</button>
-						<button type="button" class="btn btn-danger" data-btn="detach-replica" title="Corrupt replica coordinates such that it fails to replicate. Reversible via reattach-replica"><span class="glyphicon glyphicon-remove-sign"></span> Detach replica</button>
-						<button type="button" class="btn btn-success" data-btn="reattach-replica" title="Restore replica coordinates corrupted by detach-replica"><span class="glyphicon glyphicon-ok-sign"></span> Reattach replica</button>
+						<button type="button" class="btn btn-success" data-btn="recover" title="Recover from failure"><i class="bi bi-wrench-adjustable" aria-hidden="true"></i> Recover</button>
+						<button type="button" class="btn alert-success" data-btn="refresh-instance" title="Refresh instance status now"><i class="bi bi-arrow-clockwise" aria-hidden="true"></i> Refresh</button>
+						<button type="button" class="btn btn-danger" data-btn="stop-replica"><i class="bi bi-stop-fill" aria-hidden="true"></i> Stop replication</button>
+						<button type="button" class="btn btn-success" data-btn="start-replica"><i class="bi bi-play-fill" aria-hidden="true"></i> Start replication</button>
+						<button type="button" class="btn btn-warning" data-btn="restart-replica"><i class="bi bi-arrow-clockwise" aria-hidden="true"></i> Restart replication</button>
+						<button type="button" class="btn btn-danger" data-btn="detach-replica" title="Corrupt replica coordinates such that it fails to replicate. Reversible via reattach-replica"><i class="bi bi-x-circle-fill" aria-hidden="true"></i> Detach replica</button>
+						<button type="button" class="btn btn-success" data-btn="reattach-replica" title="Restore replica coordinates corrupted by detach-replica"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> Reattach replica</button>
 
 						<button type="button" class="btn btn-danger" data-btn="skip-query" title="Skip a single query and resume replication">Skip query</button>
-						<button type="button" class="btn btn-warning" data-btn="set-read-only"><span class="glyphicon glyphicon-eye-open"></span> Set read-only</button>
-						<button type="button" class="btn btn-warning" data-btn="set-writeable"><span class="glyphicon glyphicon-pencil"></span> Set writeable</button>
+						<button type="button" class="btn btn-warning" data-btn="set-read-only"><i class="bi bi-eye" aria-hidden="true"></i> Set read-only</button>
+						<button type="button" class="btn btn-warning" data-btn="set-writeable"><i class="bi bi-pencil" aria-hidden="true"></i> Set writeable</button>
 						<button type="button" class="btn btn-warning" data-btn="reattach-replica-master-host" title="Reattach with detached master">
-							</span> Reattach</button>
+							Reattach</button>
 						<button type="button" class="btn btn-danger" data-btn="reset-replica" title="Make this replica forget its master and stop replicating">Reset replica</button>
 						<button type="button" class="btn btn-info" data-btn="take-siblings" title="Take siblings of this replica">Take siblings</button>
-						<button type="button" class="btn btn-success" data-btn="enable-gtid"><span class="glyphicon glyphicon-globe"></span> Enable</button>
-						<button type="button" class="btn btn-danger" data-btn="disable-gtid"><span class="glyphicon glyphicon-remove"></span> Disable</button>
+						<button type="button" class="btn btn-success" data-btn="enable-gtid"><i class="bi bi-diagram-3" aria-hidden="true"></i> Enable</button>
+						<button type="button" class="btn btn-danger" data-btn="disable-gtid"><i class="bi bi-x-circle-fill" aria-hidden="true"></i> Disable</button>
 						<div class="btn-group" data-btn-group="gtid-errant-fix">
 							<button type="button" class="btn btn-danger" data-btn="gtid-errant-fix" data-grouped="true">Fix</button>
 							<button type="button" class="btn btn-danger dropdown-toggle" data-bs-toggle="dropdown">
@@ -207,7 +211,7 @@
 							</ul>
 						</div>
 						<button type="button" class="btn btn-info" data-btn="regroup-replicas" title="Pick candidate replica and have it take its siblings">Regroup replicas</button>
-						<button type="button" class="btn alert-danger" data-btn="forget-instance" title="Make orchestrator forget this instance. Orchestrator may auto-find it again."><span class="glyphicon glyphicon-remove"></span> Forget</button>
+						<button type="button" class="btn alert-danger" data-btn="forget-instance" title="Make orchestrator forget this instance. Orchestrator may auto-find it again."><i class="bi bi-x-circle-fill" aria-hidden="true"></i> Forget</button>
 						<button type="button" class="btn btn-warning" data-btn="end-maintenance" title="End maintenance period now">End maintenance</button>
 						<button type="button" class="btn btn-primary" data-bs-dismiss="modal">Done</button>
 						<div class="btn-group" data-btn-group="move-equivalent">

@@ -8,85 +8,89 @@
       Agent: <strong><span data-agent="hostname"></span></strong>
     </div>
     <div class="card-body">
-      <div class="col-xs-6">
-        <div class="card">
-          <div class="card-header">
-            Info
-          </div>
-          <table class="table">
-            <tr>
-              <td>Hostname</td>
-              <td data-agent="hostname_search"></td>
-            </tr>
-            <tr>
-              <td>Port</td>
-              <td data-agent="port"></td>
-            </tr>
-            <tr>
-              <td>Last submitted</td>
-              <td data-agent="last_submitted"></td>
-            </tr>
-            <tr>
-              <td>MySQL running</td>
-              <td data-agent="mysql_running"></td>
-            </tr>
-            <tr>
-              <td>MySQL port</td>
-              <td data-agent="mysql_port"></td>
-            </tr>
-            <tr>
-              <td>MySQL disk usage</td>
-              <td data-agent="mysql_disk_usage"></td>
-            </tr>
-            <tr>
-              <td>Error log tail (click to expand)</td>
-              <td>
-                <a data-agent="mysql_error_log_tail"></a>
-              </td>
-            </tr>
-          </table>
-        </div>
-      </div>
-      <div class="col-xs-6">
-        <div class="card">
-          <div class="card-header">
-            Snapshots
-          </div>
-          <table class="table">
-            <tr>
-              <td>Available locally</td>
-              <td>
-                <table class="table table-condensed table-unbordered" data-agent="available_local_snapshots"></table>
-              </td>
-            </tr>
-            <tr>
-              <td>Available remote</td>
-              <td>
-                <table class="table table-condensed table-unbordered" data-agent="available_remote_snapshots"></table>
-              </td>
-            </tr>
-            <tr>
-              <td>Snapshots taken on this host
-                <div>
-                  <button class="btn btn-xs btn-info" data-command="create-snapshot">Create snapshot</button>
-                </div>
-              </td>
-            </tr>
-        </div>
-        </td>
-        <td>
-          <table class="table table-condensed table-unbordered" data-agent="lv_snapshots"></table>
-        </td>
-        </tr>
-        <tr>
-          <td>Mounted snapshot</td>
-          <td>
-            <table class="table table-condensed table-unbordered">
-              <tr data-agent="mount_point"></tr>
+      <div class="row g-3">
+        <div class="col-md-6">
+          <div class="card h-100">
+            <div class="card-header">
+              Info
+            </div>
+            <table class="table">
+              <tbody>
+                <tr>
+                  <td>Hostname</td>
+                  <td data-agent="hostname_search"></td>
+                </tr>
+                <tr>
+                  <td>Port</td>
+                  <td data-agent="port"></td>
+                </tr>
+                <tr>
+                  <td>Last submitted</td>
+                  <td data-agent="last_submitted"></td>
+                </tr>
+                <tr>
+                  <td>MySQL running</td>
+                  <td data-agent="mysql_running"></td>
+                </tr>
+                <tr>
+                  <td>MySQL port</td>
+                  <td data-agent="mysql_port"></td>
+                </tr>
+                <tr>
+                  <td>MySQL disk usage</td>
+                  <td data-agent="mysql_disk_usage"></td>
+                </tr>
+                <tr>
+                  <td>Error log tail (click to expand)</td>
+                  <td>
+                    <a data-agent="mysql_error_log_tail"></a>
+                  </td>
+                </tr>
+              </tbody>
             </table>
-          </td>
-        </tr>
-        </table>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="card h-100">
+            <div class="card-header">
+              Snapshots
+            </div>
+            <table class="table">
+              <tbody>
+                <tr>
+                  <td>Available locally</td>
+                  <td>
+                    <table class="table table-condensed table-unbordered" data-agent="available_local_snapshots"></table>
+                  </td>
+                </tr>
+                <tr>
+                  <td>Available remote</td>
+                  <td>
+                    <table class="table table-condensed table-unbordered" data-agent="available_remote_snapshots"></table>
+                  </td>
+                </tr>
+                <tr>
+                  <td>Snapshots taken on this host
+                    <div>
+                      <button class="btn btn-xs btn-info" data-command="create-snapshot">Create snapshot</button>
+                    </div>
+                  </td>
+                  <td>
+                    <table class="table table-condensed table-unbordered" data-agent="lv_snapshots"></table>
+                  </td>
+                </tr>
+                <tr>
+                  <td>Mounted snapshot</td>
+                  <td>
+                    <table class="table table-condensed table-unbordered">
+                      <tbody><tr data-agent="mount_point"></tr></tbody>
+                    </table>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -148,7 +152,6 @@
       </table>
     </div>
   </div>
-</div>
 </div>
 
 <script>

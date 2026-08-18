@@ -1,16 +1,19 @@
 #clusters_analysis_workspace {
-  --analysis-accent: #2f6b9e;
+  --analysis-accent: var(--orc-accent);
+  --analysis-primary: var(--orc-primary);
   --analysis-accent-strong: #244f74;
-  --analysis-background: #f4f3ef;
-  --analysis-border: #d5d9dc;
-  --analysis-chrome: #202b36;
-  --analysis-muted: #687582;
-  --analysis-panel: #ffffff;
-  --analysis-text: #263442;
+  --analysis-background: var(--orc-background);
+  --analysis-border: var(--orc-line);
+  --analysis-chrome: var(--orc-ink);
+  --analysis-muted: var(--orc-muted);
+  --analysis-panel: var(--orc-surface);
+  --analysis-text: var(--orc-ink);
   background: var(--analysis-background);
   color: var(--analysis-text);
   isolation: isolate;
-  margin: -15px calc(-0.5 * var(--bs-gutter-x, 1.5rem)) 0;
+  margin: -15px auto 0;
+  max-width: 1180px;
+  width: calc(100% - var(--bs-gutter-x, 1.5rem));
   min-height: calc(100vh - 56px);
   padding-bottom: 40px;
 }
@@ -23,10 +26,11 @@
   justify-content: space-between;
   min-height: 88px;
   padding: 16px clamp(20px, 4vw, 52px);
+  border-radius: 0.75rem;
 }
 
 #clusters_analysis_workspace .clusters-analysis-eyebrow {
-  color: #9cabb9;
+  color: var(--analysis-accent);
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.12em;
@@ -111,7 +115,7 @@
 #clusters_analysis_workspace .analysis-cluster {
   --analysis-state: var(--analysis-muted);
   background: var(--analysis-panel);
-  border: 1px solid var(--analysis-border);
+  border: 1px solid var(--orc-line);
   border-radius: 5px;
   box-shadow: 0 2px 5px rgba(25, 37, 49, 0.07);
   display: grid;
@@ -281,8 +285,8 @@
 #clusters_analysis_workspace .analysis-cluster-impact a,
 #clusters_analysis_workspace .clusters-analysis-unavailable a,
 #clusters_analysis_workspace .clusters-analysis-unavailable-state a {
-  background: var(--analysis-accent);
-  border: 1px solid var(--analysis-accent);
+  background: var(--analysis-primary);
+  border: 1px solid var(--analysis-primary);
   border-radius: 3px;
   color: #ffffff;
   font-size: 11px;
@@ -310,7 +314,7 @@
 #clusters_analysis_workspace .clusters-analysis-unavailable,
 #clusters_analysis_workspace .clusters-analysis-unavailable-state {
   background: var(--analysis-panel);
-  border: 1px solid var(--analysis-border);
+  border: 1px solid var(--orc-line);
   border-radius: 5px;
   color: var(--analysis-muted);
   margin: 0;

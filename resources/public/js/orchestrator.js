@@ -11,10 +11,10 @@ reloadPageHint = {
 
 function updateCountdownDisplay() {
   if ($.cookie("auto-refresh") == "true") {
-    $("#refreshCountdown").html('<span class="glyphicon glyphicon-repeat" title="Click to pause"></span> ' + secondsTillRefresh + 's');
+    $("#refreshCountdown").html('<i class="bi bi-arrow-clockwise" title="Click to pause" aria-hidden="true"></i> ' + secondsTillRefresh + 's');
   } else {
     secondsTillRefresh = refreshIntervalSeconds;
-    $("#refreshCountdown").html('<span class="glyphicon glyphicon-pause" title="Click to countdown"></span> ' + secondsTillRefresh + 's');
+    $("#refreshCountdown").html('<i class="bi bi-pause-fill" title="Click to countdown" aria-hidden="true"></i> ' + secondsTillRefresh + 's');
   }
 }
 
@@ -931,36 +931,36 @@ function renderInstanceElement(popoverElement, instance, renderType) {
     }
     if (instance.supportsGTID) {
       if (instance.hasMaster && !instance.usingGTID) {
-        popoverElement.find("h3 div.pull-right").prepend('<span class="glyphicon text-muted glyphicon-globe" title="Support GTID but not using it in replication"></span> ');
+        popoverElement.find("h3 div.pull-right").prepend('<i class="bi text-muted bi-diagram-3" title="Support GTID but not using it in replication" aria-hidden="true"></i> ');
       } else if (instance.GtidErrant) {
-        popoverElement.find("h3 div.pull-right").prepend('<span class="glyphicon text-danger glyphicon-globe" title="Errant GTID found"></span> ');
+        popoverElement.find("h3 div.pull-right").prepend('<i class="bi text-danger bi-diagram-3" title="Errant GTID found" aria-hidden="true"></i> ');
       } else {
-        popoverElement.find("h3 div.pull-right").prepend('<span class="glyphicon glyphicon-globe" title="Using GTID"></span> ');
+        popoverElement.find("h3 div.pull-right").prepend('<i class="bi bi-diagram-3" title="Using GTID" aria-hidden="true"></i> ');
       }
     }
     if (instance.UsingPseudoGTID) {
-      popoverElement.find("h3 div.pull-right").prepend('<span class="glyphicon glyphicon-globe" title="Using Pseudo GTID"></span> ');
+      popoverElement.find("h3 div.pull-right").prepend('<i class="bi bi-diagram-3" title="Using Pseudo GTID" aria-hidden="true"></i> ');
     }
     if (!instance.ReadOnly) {
-      popoverElement.find("h3 div.pull-right").prepend('<span class="glyphicon glyphicon-pencil" title="Writeable"></span> ');
+      popoverElement.find("h3 div.pull-right").prepend('<i class="bi bi-pencil" title="Writeable" aria-hidden="true"></i> ');
     }
     if (instance.isMostAdvancedOfSiblings) {
-      popoverElement.find("h3 div.pull-right").prepend('<span class="glyphicon glyphicon-star" title="Most advanced replica"></span> ');
+      popoverElement.find("h3 div.pull-right").prepend('<i class="bi bi-star-fill" title="Most advanced replica" aria-hidden="true"></i> ');
     }
     if (instance.CountMySQLSnapshots > 0) {
-      popoverElement.find("h3 div.pull-right").prepend('<span class="glyphicon glyphicon-camera" title="' + instance.CountMySQLSnapshots + ' snapshots"></span> ');
+      popoverElement.find("h3 div.pull-right").prepend('<i class="bi bi-camera-fill" title="' + instance.CountMySQLSnapshots + ' snapshots" aria-hidden="true"></i> ');
     }
     if (instance.HasReplicationFilters) {
-      popoverElement.find("h3 div.pull-right").prepend('<span class="glyphicon glyphicon-filter" title="Using replication filters"></span> ');
+      popoverElement.find("h3 div.pull-right").prepend('<i class="bi bi-funnel-fill" title="Using replication filters" aria-hidden="true"></i> ');
     }
     if (instance.SemiSyncMasterStatus) {
-      popoverElement.find("h3 div.pull-right").prepend('<span class="glyphicon glyphicon-check" title="Semi sync enabled (master side)"></span> ');
+      popoverElement.find("h3 div.pull-right").prepend('<i class="bi bi-check-circle-fill" title="Semi sync enabled (master side)" aria-hidden="true"></i> ');
     }
     if (instance.SemiSyncReplicaStatus) {
-      popoverElement.find("h3 div.pull-right").prepend('<span class="glyphicon glyphicon-saved" title="Semi sync enabled (replica side)"></span> ');
+      popoverElement.find("h3 div.pull-right").prepend('<i class="bi bi-check-circle-fill" title="Semi sync enabled (replica side)" aria-hidden="true"></i> ');
     }
     if (instance.LogBinEnabled && instance.LogReplicationUpdatesEnabled) {
-      popoverElement.find("h3 div.pull-right").prepend('<span class="glyphicon glyphicon-forward" title="Logs replication updates"></span> ');
+      popoverElement.find("h3 div.pull-right").prepend('<i class="bi bi-fast-forward-fill" title="Logs replication updates" aria-hidden="true"></i> ');
     }
     // Icons for GR
     var text_style;
@@ -969,27 +969,27 @@ function renderInstanceElement(popoverElement, instance, renderType) {
         text_style = "";
       else
         text_style = "text-muted";
-      popoverElement.find("h3 div.pull-right").prepend('<span class="glyphicon '+ text_style +' glyphicon-tower" title="Group replication '+ instance.ReplicationGroupMemberRole + ' ' + instance.ReplicationGroupMemberState +'"></span> ');
+      popoverElement.find("h3 div.pull-right").prepend('<i class="bi '+ text_style +' bi-server" title="Group replication '+ instance.ReplicationGroupMemberRole + ' ' + instance.ReplicationGroupMemberState +'" aria-hidden="true"></i> ');
     }
 
     if (instance.IsCandidate) {
-      popoverElement.find("h3 div.pull-right").prepend('<span class="glyphicon glyphicon-heart" title="Candidate"></span> ');
+      popoverElement.find("h3 div.pull-right").prepend('<i class="bi bi-heart-fill" title="Candidate" aria-hidden="true"></i> ');
     }
     if (instance.PromotionRule == "prefer_not") {
-      popoverElement.find("h3 div.pull-right").prepend('<span class="glyphicon glyphicon-thumbs-down" title="Prefer not promote"></span> ');
+      popoverElement.find("h3 div.pull-right").prepend('<i class="bi bi-hand-thumbs-down" title="Prefer not promote" aria-hidden="true"></i> ');
     }
     if (instance.PromotionRule == "must_not") {
-      popoverElement.find("h3 div.pull-right").prepend('<span class="glyphicon glyphicon-ban-circle" title="Must not promote"></span> ');
+      popoverElement.find("h3 div.pull-right").prepend('<i class="bi bi-slash-circle-fill" title="Must not promote" aria-hidden="true"></i> ');
     }
     if (instance.inMaintenanceProblem()) {
-      popoverElement.find("h3 div.pull-right").prepend('<span class="glyphicon glyphicon-wrench" title="In maintenance"></span> ');
+      popoverElement.find("h3 div.pull-right").prepend('<i class="bi bi-wrench-adjustable" title="In maintenance" aria-hidden="true"></i> ');
     }
     if (instance.IsDetached) {
-      popoverElement.find("h3 div.pull-right").prepend('<span class="glyphicon glyphicon-remove-sign" title="Replication forcibly detached"></span> ');
+      popoverElement.find("h3 div.pull-right").prepend('<i class="bi bi-x-circle-fill" title="Replication forcibly detached" aria-hidden="true"></i> ');
     }
     if (instance.IsDowntimed) {
       var downtimeMessage = 'Downtimed by ' + instance.DowntimeOwner + ': ' + instance.DowntimeReason + '.\nEnds: ' + instance.DowntimeEndTimestamp;
-      popoverElement.find("h3 div.pull-right").prepend('<span class="glyphicon glyphicon-volume-off" title="' + downtimeMessage + '"></span> ');
+      popoverElement.find("h3 div.pull-right").prepend('<i class="bi bi-pause-fill" title="' + downtimeMessage + '" aria-hidden="true"></i> ');
     }
 
     $.get(appUrl("/api/tags/" + instance.Key.Hostname + "/" + instance.Key.Port), function(tagStrings) {
@@ -998,7 +998,7 @@ function renderInstanceElement(popoverElement, instance, renderType) {
         tagStrings.forEach(function(tag) {
           tagsText = tagsText.concat(tag, '&#10;');
         });
-        popoverElement.find("h3 div.pull-right").prepend('<span class="glyphicon glyphicon-tags" title="' + tagsText +'"></span> ');
+        popoverElement.find("h3 div.pull-right").prepend('<i class="bi bi-tags-fill" title="' + tagsText +'" aria-hidden="true"></i> ');
       }
     }, "json");
 
@@ -1119,12 +1119,13 @@ function getParameterByName(name) {
 
 
 function renderGlobalRecoveriesButton(isGlobalRecoveriesEnabled) {
-  var iconContainer = $("#global-recoveries-icon > span");
+  var iconContainer = $("#global-recoveries-icon > i");
+  iconContainer.removeClass("bi-check-circle-fill bi-x-circle-fill");
   if (isGlobalRecoveriesEnabled) {
     iconContainer
       .prop("title", "Global Recoveries Enabled")
-      .addClass("glyphicon-ok-sign")
-      .removeClass("hidden")
+      .addClass("bi-check-circle-fill")
+      .removeClass("d-none")
       .click(function(event) {
         bootbox.confirm("<h3>Global Recoveries</h3>Are you sure you want to <strong>disable</strong> global recoveries?", function(confirm) {
           if (confirm) {
@@ -1135,8 +1136,8 @@ function renderGlobalRecoveriesButton(isGlobalRecoveriesEnabled) {
   } else {
     iconContainer
       .prop("title", "Global Recoveries Disabled")
-      .addClass("glyphicon-remove-sign")
-      .removeClass("hidden")
+      .addClass("bi-x-circle-fill")
+      .removeClass("d-none")
       .click(function(event) {
         bootbox.confirm("<h3>Global Recoveries</h3>Are you sure you want to enable global recoveries?", function(confirm) {
           if (confirm) {

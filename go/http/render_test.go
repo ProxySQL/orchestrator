@@ -407,6 +407,37 @@ func TestRenderedNavigationUsesRegisteredClusterRoutes(t *testing.T) {
 	}
 }
 
+func TestResponsiveShellUsesBootstrapIcons(t *testing.T) {
+	chdirToRepoRoot(t)
+	setAssetVersionForTest(t, "asset-test-42")
+	rec := httptest.NewRecorder()
+	renderHTML(rec, http.StatusOK, "templates/clusters", sampleTemplateData())
+	body := rec.Body.String()
+	for _, want := range []string{
+		`navbar-expand-lg`,
+		`aria-label="Search instances"`,
+		`aria-label="Submit search"`,
+		`class="bi bi-search"`,
+		`id="nav_operational_status"`,
+	} {
+		if !strings.Contains(body, want) {
+			t.Errorf("responsive shell missing %q", want)
+		}
+	}
+}
+
+func TestAgentDetailUsesBootstrapGrid(t *testing.T) {
+	chdirToRepoRoot(t)
+	source, err := os.ReadFile("resources/templates/agent.tmpl")
+	if err != nil {
+		t.Fatal(err)
+	}
+	body := string(source)
+	if !strings.Contains(body, `class="row g-3"`) || strings.Count(body, `class="col-md-6"`) != 2 {
+		t.Fatal("agent Info and Snapshots must share one two-column Bootstrap row")
+	}
+}
+
 func TestRenderClustersWorkspace(t *testing.T) {
 	chdirToRepoRoot(t)
 	clearContentTemplateCache()
@@ -546,8 +577,12 @@ func TestRenderClusterWorkspacePreservesLegacyHooks(t *testing.T) {
 	if infoCommandEnd == -1 {
 		t.Fatal("expected rendered cluster information command")
 	}
-	if count := strings.Count(body[infoCommand:infoCommand+infoCommandEnd], `<span`); count != 1 {
-		t.Fatalf("cluster information command rendered %d spans, want one legacy glyphicon target", count)
+	infoMarkup := body[infoCommand : infoCommand+infoCommandEnd]
+	if count := strings.Count(infoMarkup, `<i`); count != 1 {
+		t.Fatalf("cluster information command rendered %d icons, want one Bootstrap Icon", count)
+	}
+	if !strings.Contains(infoMarkup, `class="bi `) || !strings.Contains(infoMarkup, `aria-hidden="true"`) {
+		t.Fatal("cluster information command icon must be a decorative Bootstrap Icon")
 	}
 
 	for _, command := range []string{

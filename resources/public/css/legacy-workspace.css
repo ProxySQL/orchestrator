@@ -1,10 +1,12 @@
 .legacy-workspace {
-  --legacy-ink: #18242c;
-  --legacy-muted: #66747d;
-  --legacy-line: #d8dedf;
-  --legacy-surface: #ffffff;
+  --legacy-ink: var(--orc-ink);
+  --legacy-muted: var(--orc-muted);
+  --legacy-line: var(--orc-line);
+  --legacy-surface: var(--orc-surface);
   --legacy-soft: #eef2f1;
-  --legacy-accent: #ef7d32;
+  --legacy-accent: var(--orc-accent);
+  --legacy-primary: var(--orc-primary);
+  background: var(--orc-background);
   max-width: 1180px;
   margin: 0 auto;
   padding: 1.5rem clamp(0.75rem, 2vw, 1.5rem) 3rem;
@@ -60,7 +62,7 @@
 .legacy-workspace .legacy-panel {
   min-width: 0;
   padding: clamp(1.2rem, 2.5vw, 1.65rem);
-  border: 1px solid var(--legacy-line);
+  border: 1px solid var(--orc-line);
   border-radius: 0.7rem;
   background: var(--legacy-surface);
   box-shadow: 0 0.45rem 1.3rem rgba(28, 43, 50, 0.06);
@@ -200,7 +202,8 @@
   padding: 0.35rem 0.75rem;
   border: 1px solid var(--legacy-line);
   border-radius: 0.35rem;
-  background: #fff;
+  background: var(--orc-surface);
+  color: var(--legacy-primary);
   text-decoration: none;
 }
 
@@ -210,10 +213,11 @@
 }
 
 .legacy-workspace .legacy-table-shell {
+  max-width: 100%;
   overflow-x: auto;
-  border: 1px solid var(--legacy-line);
+  border: 1px solid var(--orc-line);
   border-radius: 0.6rem;
-  background: #fff;
+  background: var(--orc-surface);
 }
 
 .legacy-workspace .legacy-table-shell .table {
@@ -282,6 +286,12 @@
 }
 
 @media (max-width: 820px) {
+
+  .legacy-workspace {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
   .legacy-workspace .legacy-workspace-grid--about,
   .legacy-workspace .legacy-support-grid {
     grid-template-columns: 1fr;

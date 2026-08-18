@@ -97,6 +97,29 @@ func TestBootstrapLegacyBridgeIsShipped(t *testing.T) {
 	}
 }
 
+func TestActiveUIUsesBootstrapIcons(t *testing.T) {
+	chdirToRepoRoot(t)
+
+	for _, path := range []string{
+		"resources/templates/layout.tmpl",
+		"resources/templates/cluster.tmpl",
+		"resources/templates/clusters.tmpl",
+		"resources/public/js/orchestrator.js",
+		"resources/public/js/cluster.js",
+		"resources/public/js/clusters.js",
+		"resources/public/js/audit-recovery.js",
+		"resources/public/js/cluster-pools.js",
+	} {
+		source, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if strings.Contains(string(source), "glyphicon") {
+			t.Errorf("active UI asset %q still uses glyphicon", path)
+		}
+	}
+}
+
 func TestStaticClusterWorkspaceAssets(t *testing.T) {
 	chdirToRepoRoot(t)
 

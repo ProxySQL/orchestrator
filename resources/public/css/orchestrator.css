@@ -1,7 +1,13 @@
 /* ── Modern theme variables ─────────────────────────────────────────── */
 :root {
-    --orc-primary: #0d6efd;
-    --orc-primary-dark: #0a58ca;
+    --orc-ink: #263442;
+    --orc-muted: #687582;
+    --orc-line: #d5d9dc;
+    --orc-surface: #ffffff;
+    --orc-background: #f4f3ef;
+    --orc-accent: #ef7d32;
+    --orc-primary: #2f6b9e;
+    --orc-primary-dark: #244f74;
     --orc-bg: #f4f6f9;
     --orc-card-bg: #ffffff;
     --orc-card-border: #dee2e6;
@@ -22,7 +28,7 @@
 
 body {
     font-family: var(--orc-font-family);
-    background-color: var(--orc-bg);
+    background-color: var(--orc-background);
     background-repeat: repeat;
     padding-top: 56px;
 }
@@ -38,6 +44,20 @@ body {
 .navbar .navbar-brand {
     font-weight: 600;
     letter-spacing: 0.02em;
+}
+
+#nav_operational_status {
+    gap: 0.125rem;
+}
+
+#nav_operational_status #instance_problems {
+    padding: 0;
+    position: relative;
+    right: auto;
+}
+
+#nav_operational_status #instance_problems_button {
+    padding: 0.25rem 0.6rem;
 }
 
 /* ── Card-based panels ──────────────────────────────────────────────── */
@@ -184,25 +204,30 @@ body {
     width: auto;
 }
 
-.instance h3 .pull-right > .glyphicon {
+.instance h3 .pull-right > .glyphicon,
+.instance h3 .pull-right > .bi {
     color: #606060;
 }
 
-.instance h3 .pull-right > .glyphicon.text-muted {
+.instance h3 .pull-right > .glyphicon.text-muted,
+.instance h3 .pull-right > .bi.text-muted {
     color: #999999;
 }
 
-.instance h3 .pull-right > .glyphicon.text-danger {
+.instance h3 .pull-right > .glyphicon.text-danger,
+.instance h3 .pull-right > .bi.text-danger {
     color: #a94442;
 }
 
 
-.instance h3 .glyphicon {
+.instance h3 .glyphicon,
+.instance h3 .bi {
     position: inherit;
     cursor: default;
 }
 
-.instance h3 .glyphicon-tags {
+.instance h3 .glyphicon-tags,
+.instance h3 .bi-tags-fill {
     margin-right: 0.4em;
 }
 
@@ -210,7 +235,8 @@ body {
     cursor: pointer;
 }
 
-.instance h3 .glyphicon {
+.instance h3 .glyphicon,
+.instance h3 .bi {
     cursor: pointer;
 }
 
@@ -219,7 +245,8 @@ body {
     color: #ffffff;
 }
 
-.instance h3.label-info .glyphicon {
+.instance h3.label-info .glyphicon,
+.instance h3.label-info .bi {
     color: #ffffff;
 }
 
@@ -228,11 +255,13 @@ body {
     color: #ffffff;
 }
 
-.instance h3.label-warning .glyphicon {
+.instance h3.label-warning .glyphicon,
+.instance h3.label-warning .bi {
     color: #ffffff;
 }
 
-.glyphicon.text-warning {
+.glyphicon.text-warning,
+.bi.text-warning {
     color: #f0ad4e;
 }
 
@@ -241,7 +270,8 @@ body {
     color: #ffffff;
 }
 
-.instance h3.label-danger .glyphicon {
+.instance h3.label-danger .glyphicon,
+.instance h3.label-danger .bi {
     color: #ffffff;
 }
 
@@ -250,7 +280,8 @@ body {
     color: #ffffff;
 }
 
-.instance h3.label-stale .glyphicon {
+.instance h3.label-stale .glyphicon,
+.instance h3.label-stale .bi {
     color: #ffffff;
 }
 
@@ -259,7 +290,8 @@ body {
     color: #ffffff;
 }
 
-.instance h3.label-errant .glyphicon {
+.instance h3.label-errant .glyphicon,
+.instance h3.label-errant .bi {
     color: #ffffff;
 }
 
@@ -268,7 +300,8 @@ body {
     color: #ffffff;
 }
 
-.instance h3.label-fatal .glyphicon {
+.instance h3.label-fatal .glyphicon,
+.instance h3.label-fatal .bi {
     color: #ffffff;
 }
 
@@ -277,7 +310,8 @@ body {
     color: #ffffff;
 }
 
-.instance h3.label-primary .glyphicon {
+.instance h3.label-primary .glyphicon,
+.instance h3.label-primary .bi {
     color: #ffffff;
 }
 
@@ -357,21 +391,21 @@ body {
 }
 
 
-#clusters .instance h3 .pull-right > .glyphicon {
+#clusters .instance h3 .pull-right > .glyphicon,
+#clusters .instance h3 .pull-right > .bi {
 	margin-right: 2px;
 	font-size: 12px;
 	color: #31708f;
 }
 
-#clusters .instance h3 .pull-left > .glyphicon {
+#clusters .instance h3 .pull-left > .glyphicon,
+#clusters .instance h3 .pull-left > .bi {
 	margin-right: 2px;
 }
 
 #instance_problems {
     z-index: 10;
-    position: fixed;
-    right: 0px;
-    padding-right: 15px;
+    position: relative;
 }
 
 #instance_problems button.btn-stale {
@@ -535,11 +569,11 @@ body {
     background-color: inherit;
 }
 
-#audit span.acknowledge-indicator {
+#audit .acknowledge-indicator {
 	padding-right: 8px;
 }
 
-#audit span.acknowledge-indicator.unacknowledged {
+#audit .acknowledge-indicator.unacknowledged {
 	cursor: pointer;
 }
 
@@ -641,12 +675,14 @@ body {
     cursor: pointer;
 }
 
-#cluster_sidebar li[data-bullet] span.glyphicon {
+#cluster_sidebar li[data-bullet] span.glyphicon,
+#cluster_sidebar li[data-bullet] .bi {
     font-size: 20px;
     margin-bottom: 15px;
 }
 
-#cluster_sidebar li a .glyphicon {
+#cluster_sidebar li a .glyphicon,
+#cluster_sidebar li a .bi {
     cursor: pointer;
 }
 
@@ -669,7 +705,8 @@ body {
     margin-bottom: 8px;
 }
 
-#cluster_sidebar li div.glyphicon {
+#cluster_sidebar li div.glyphicon,
+#cluster_sidebar li .bi {
     font-size: 24px;
     padding-right: 8px;
 }
@@ -705,7 +742,8 @@ body {
   margin-bottom: 8px;
 }
 
-#cluster_info [data-tag=glyphs] span.glyphicon {
+#cluster_info [data-tag=glyphs] span.glyphicon,
+#cluster_info [data-tag=glyphs] .bi {
   font-size: 20px;
 }
 
@@ -725,7 +763,8 @@ body {
   padding: 4px;
 }
 
-#cluster_info div[data-tag=analysis] div .pull-left.glyphicon {
+#cluster_info div[data-tag=analysis] div .pull-left.glyphicon,
+#cluster_info div[data-tag=analysis] div .pull-left.bi {
   font-size: 32px;
 }
 
@@ -894,7 +933,8 @@ body {
     color: #ffffff;
 }
 
-.instance.accept_drop h3 .glyphicon {
+.instance.accept_drop h3 .glyphicon,
+.instance.accept_drop h3 .bi {
     color: #ffffff;
 }
 
@@ -903,7 +943,8 @@ body {
     color: #ffffff;
 }
 
-.instance.accept_drop_warning h3 .glyphicon {
+.instance.accept_drop_warning h3 .glyphicon,
+.instance.accept_drop_warning h3 .bi {
     color: #ffffff;
 }
 
@@ -1006,6 +1047,35 @@ body {
 
 #main_container.container, #main_container .container {
     width: inherit;
+}
+
+@media (max-width: 991.98px) {
+    #navbarMain {
+        max-height: calc(100vh - 56px);
+        overflow-y: auto;
+        padding: 0.75rem 0 1rem;
+    }
+
+    #navbarMain form[role="search"] {
+        margin: 0.5rem 0;
+    }
+
+    #nav_operational_status {
+        align-items: stretch;
+        border-top: 1px solid rgba(255, 255, 255, 0.16);
+        margin-top: 0.5rem;
+        padding-top: 0.5rem;
+    }
+
+    #nav_operational_status #instance_problems_button {
+        margin-top: 0.25rem;
+    }
+}
+
+@media (max-width: 620px) {
+    body {
+        overflow-x: hidden;
+    }
 }
 
 .container.clusters .popover.instance {

@@ -115,10 +115,10 @@ $(document).ready(function() {
   function updateExpandedStatus() {
     if (isExpanded) {
       $("div.pool-instances-listing").removeClass('hidden');
-      $("#dropdown-context a[data-command=expand-instances]").prepend('<span class="glyphicon glyphicon-ok"></span> ');
+      $("#dropdown-context a[data-command=expand-instances]").prepend('<i class="bi bi-check-circle-fill" aria-hidden="true"></i> ');
     } else {
       $("div.pool-instances-listing").addClass('hidden');
-      $("#dropdown-context a[data-command=expand-instances] span").remove();
+      $("#dropdown-context a[data-command=expand-instances] i.bi").remove();
     }
   }
 
