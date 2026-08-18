@@ -52,3 +52,15 @@ ProxySQL remained running under unchanged container ID `da43b809c43d9ff755589194
 ## Concerns
 
 - Live recovery-dropdown interaction was intentionally not exercised because the safe lab had no actionable recovery state. The focused static regression proves the late emitter includes both legacy and native Bootstrap attributes.
+
+## Review fix round 1/5 — Scoped regression
+
+The initial regression scanned complete JavaScript files, so an identical attribute pair elsewhere in a file could satisfy the assertion after the intended emitter regressed. The test now extracts one exact named function declaration through the next function at the same indentation scope, rejecting missing or duplicate declarations and missing scope boundaries.
+
+Assertions are independent per emitter:
+
+- `onAnalysisEntry` must contain the `recover_dropdown_` hook and exactly one paired dropdown attribute.
+- `addAlert` must contain exactly one paired alert-dismiss attribute.
+- `addModalAlert` must contain exactly one paired alert-dismiss attribute.
+
+RED mutation evidence: after temporarily removing `data-bs-dismiss="alert"` only from `addAlert`, the focused test failed specifically with `addAlert native alert dismiss emitters = 0, want 1`. The production line was immediately restored, leaving this review commit test-only. Focused GREEN, full `go/http`, all Node UI tests, and diff/show checks passed; no Docker or browser work was repeated for this test-only review fix.

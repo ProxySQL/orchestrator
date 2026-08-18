@@ -18,6 +18,7 @@ package http
 
 import (
 	"bufio"
+	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -97,6 +98,24 @@ func TestBootstrapLegacyBridgeIsShipped(t *testing.T) {
 	}
 }
 
+func javascriptFunctionBody(source, functionName string) (string, error) {
+	declarationPattern := regexp.MustCompile(`(?m)^([ \t]*)function ` + regexp.QuoteMeta(functionName) + `\(`)
+	declarations := declarationPattern.FindAllStringSubmatchIndex(source, -1)
+	if len(declarations) != 1 {
+		return "", fmt.Errorf("JavaScript function %q declarations = %d, want 1", functionName, len(declarations))
+	}
+
+	declaration := declarations[0]
+	indent := source[declaration[2]:declaration[3]]
+	nextFunctionPattern := regexp.MustCompile(`(?m)^` + regexp.QuoteMeta(indent) + `function [A-Za-z_$][A-Za-z0-9_$]*\(`)
+	nextFunction := nextFunctionPattern.FindStringIndex(source[declaration[1]:])
+	if nextFunction == nil {
+		return "", fmt.Errorf("JavaScript function %q has no following function at the same scope", functionName)
+	}
+
+	return source[declaration[0] : declaration[1]+nextFunction[0]], nil
+}
+
 func TestDynamicBootstrapControlsEmitNativeAttributes(t *testing.T) {
 	chdirToRepoRoot(t)
 
@@ -104,8 +123,15 @@ func TestDynamicBootstrapControlsEmitNativeAttributes(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if want := `data-toggle="dropdown" data-bs-toggle="dropdown"`; !strings.Contains(string(clusterSource), want) {
-		t.Errorf("dynamic recovery dropdown is missing native Bootstrap attribute %q", want)
+	recoveryEmitter, err := javascriptFunctionBody(string(clusterSource), "onAnalysisEntry")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(recoveryEmitter, `recover_dropdown_`) {
+		t.Error("onAnalysisEntry is missing the recovery dropdown hook")
+	}
+	if got, want := strings.Count(recoveryEmitter, `data-toggle="dropdown" data-bs-toggle="dropdown"`), 1; got != want {
+		t.Errorf("onAnalysisEntry native recovery dropdown emitters = %d, want %d", got, want)
 	}
 
 	orchestratorSource, err := os.ReadFile(filepath.Join("resources", "public", "js", "orchestrator.js"))
@@ -113,8 +139,14 @@ func TestDynamicBootstrapControlsEmitNativeAttributes(t *testing.T) {
 		t.Fatal(err)
 	}
 	const nativeAlertDismiss = `data-dismiss="alert" data-bs-dismiss="alert"`
-	if got, want := strings.Count(string(orchestratorSource), nativeAlertDismiss), 2; got != want {
-		t.Errorf("dynamic alert dismiss controls with native Bootstrap attributes = %d, want %d", got, want)
+	for _, functionName := range []string{"addAlert", "addModalAlert"} {
+		emitter, err := javascriptFunctionBody(string(orchestratorSource), functionName)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got, want := strings.Count(emitter, nativeAlertDismiss), 1; got != want {
+			t.Errorf("%s native alert dismiss emitters = %d, want %d", functionName, got, want)
+		}
 	}
 }
 
