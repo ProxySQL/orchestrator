@@ -1,7 +1,5 @@
 (function(root) {
-  var clickListenerInstalled = false;
   var readyListenerInstalled = false;
-  var bootstrapAPI = null;
 
   function normalizeAttributes(scope) {
     var mappings = [
@@ -43,24 +41,9 @@
     install('alert', bootstrap.Alert);
   }
 
-  function handleLegacyDismissals(event) {
-    var trigger = event.target.closest('[data-dismiss]');
-    if (!trigger || !bootstrapAPI) return;
-    var kind = trigger.getAttribute('data-dismiss');
-    var host = trigger.closest(kind === 'modal' ? '.modal' : '.alert');
-    if (!host) return;
-    if (kind === 'modal') bootstrapAPI.Modal.getOrCreateInstance(host).hide();
-    if (kind === 'alert') bootstrapAPI.Alert.getOrCreateInstance(host).close();
-  }
-
   function init(doc, $, bootstrap) {
-    bootstrapAPI = bootstrap || bootstrapAPI;
     normalizeAttributes(doc);
     installJQueryAdapters($, bootstrap);
-    if (!clickListenerInstalled) {
-      doc.addEventListener('click', handleLegacyDismissals);
-      clickListenerInstalled = true;
-    }
     if (!readyListenerInstalled) {
       doc.addEventListener('DOMContentLoaded', function() {
         normalizeAttributes(doc);

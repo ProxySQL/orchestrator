@@ -25,13 +25,13 @@ function fakeDocument(elements) {
   };
 }
 
-test('bridge initialization is idempotent and normalizes legacy attributes', () => {
+test('bridge initialization normalizes legacy attributes without a dismissal listener', () => {
   const legacyToggle = fakeElement({'data-toggle': 'dropdown'});
   const legacyDismiss = fakeElement({'data-dismiss': 'modal'});
   const document = fakeDocument([legacyToggle, legacyDismiss]);
   bridge.init(document, null, null);
   bridge.init(document, null, null);
-  assert.equal(document.listenerCount('click'), 1);
+  assert.equal(document.listenerCount('click'), 0);
   assert.equal(document.listenerCount('DOMContentLoaded'), 1);
   assert.equal(legacyToggle.getAttribute('data-bs-toggle'), 'dropdown');
   assert.equal(legacyDismiss.getAttribute('data-bs-dismiss'), 'modal');
