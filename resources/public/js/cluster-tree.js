@@ -83,11 +83,13 @@ function visualizeInstances(nodesMap, onSvgInstanceWrapper, clusterControl) {
   var i = 0;
   var duration = 0;
 
-  var tree = d3.layout.tree();
+  var tree = d3.tree();
   tree = tree.size([svgHeight, svgWidth]);
 
-  var diagonal = d3.svg.diagonal().projection(function(d) {
-    return [d.y, d.x];
+  var diagonal = d3.linkHorizontal().x(function(d) {
+    return d.y;
+  }).y(function(d) {
+    return d.x;
   });
 
   var svg = d3.select("#cluster_container").append("svg")
@@ -114,32 +116,10 @@ function visualizeInstances(nodesMap, onSvgInstanceWrapper, clusterControl) {
   update(root);
 
   function update(source) {
-    nodesList.where(function(t) {
-      return t.x != 0;
-    }).forEach(function(t) {
-      t.prevX = t.x;
-      t.prevY = t.y;
-    });
     // Compute the new tree layout.
-    var nodes = tree.nodes(root).reverse();
-    var links = tree.links(nodes);
-    nodesList.where(function(t) {
-      return t.prevX != null;
-    }).forEach(function(t) {
-      t.x = t.prevX;
-      t.y = t.prevY;
-    });
-
-    // Normalize for fixed-depth.
-    nodes.forEach(function(d) {
-      // Position on screen according to virtual-depth, not mathematical tree depth
-      // (ignores virtual nodes, which are hidden)
-      if (d.isAnchor) {
-        d.y = (d.virtualDepth * horizontalSpacing) - horizontalSpacing / 2;
-      } else {
-        d.y = d.virtualDepth * horizontalSpacing;
-      }
-    });
+    var layout = OrchestratorTreeLayout.layout(d3, root, tree, horizontalSpacing);
+    var nodes = layout.nodes;
+    var links = layout.links;
 
     // Update the nodes…
     var node = svg.selectAll("g.node").data(nodes,
@@ -186,7 +166,7 @@ function visualizeInstances(nodesMap, onSvgInstanceWrapper, clusterControl) {
     })
 
     // Transition nodes to their new position.
-    var nodeUpdate = node
+    var nodeUpdate = nodeEnter.merge(node)
       //.transition()
       //.duration(duration)
       .attr("transform", function(d) {
@@ -217,7 +197,7 @@ function visualizeInstances(nodesMap, onSvgInstanceWrapper, clusterControl) {
     });
 
     // Enter any new links at the parent's previous position.
-    link.enter().insert("path", "g").attr("class", "link").attr("d", function(d) {
+    var linkEnter = link.enter().insert("path", "g").attr("class", "link").attr("d", function(d) {
       var o = {
         x: source.x0,
         y: source.y0
@@ -231,7 +211,7 @@ function visualizeInstances(nodesMap, onSvgInstanceWrapper, clusterControl) {
     });
 
     // Transition links to their new position.
-    link.transition().duration(duration).attr("d", diagonal);
+    linkEnter.merge(link).transition().duration(duration).attr("d", diagonal);
 
     // Transition exiting nodes to the parent's new position.
     link.exit().transition().duration(duration).attr("d", function(d) {
@@ -259,7 +239,7 @@ function visualizeInstances(nodesMap, onSvgInstanceWrapper, clusterControl) {
   }
 
   // Toggle children on click.
-  function click(d) {
+  function click(event, d) {
     if (d.children) {
       d._children = d.children;
       d.children = null;

@@ -621,3 +621,48 @@ func TestSmokeEndsOnlyMaintenanceCreatedByItsBeginCall(t *testing.T) {
 		t.Error("smoke must never end maintenance by instance")
 	}
 }
+
+func TestTopologyUsesD3V7WithoutCoordinateRestore(t *testing.T) {
+	chdirToRepoRoot(t)
+	treeSource, err := os.ReadFile("resources/public/js/cluster-tree.js")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, forbidden := range []string{"prevX", "prevY", "d3.layout.tree", "d3.svg.diagonal"} {
+		if strings.Contains(string(treeSource), forbidden) {
+			t.Errorf("cluster-tree.js retains legacy topology expression %q", forbidden)
+		}
+	}
+	templateSource, err := os.ReadFile("resources/templates/cluster.tmpl")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, required := range []string{"d3.v7.min.js?v={{.assetVersion}}", "cluster-tree-layout.js?v={{.assetVersion}}"} {
+		if !strings.Contains(string(templateSource), required) {
+			t.Errorf("cluster template missing %q", required)
+		}
+	}
+	if err := filepath.WalkDir("resources/templates", func(path string, entry os.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		if entry.IsDir() {
+			return nil
+		}
+		contents, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		if strings.Contains(string(contents), "d3.v3.min.js") {
+			t.Errorf("template %s still references d3.v3.min.js", path)
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat("resources/public/js/d3.v3.min.js"); err == nil {
+		t.Error("legacy d3.v3.min.js still exists")
+	} else if !os.IsNotExist(err) {
+		t.Fatal(err)
+	}
+}
