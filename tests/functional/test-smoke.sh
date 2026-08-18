@@ -87,6 +87,21 @@ test_body_contains "Cluster workspace stylesheet" "$ORC_URL/web/cluster/mysql1:3
 test_endpoint "Failure analysis workspace" "$ORC_URL/web/clusters-analysis" "200"
 test_body_contains "Failure analysis shell" "$ORC_URL/web/clusters-analysis" 'id="clusters_analysis_workspace"'
 test_body_contains "Failure analysis stylesheet" "$ORC_URL/web/clusters-analysis" 'clusters-analysis-workspace\.css'
+test_body_contains "Clusters workspace" "$ORC_URL/web/clusters" 'id="clusters_workspace"'
+test_body_contains "Topology workspace" "$ORC_URL/web/cluster/mysql1:3306" 'id="cluster_workspace"'
+test_body_contains "Failure analysis workspace" "$ORC_URL/web/clusters-analysis" 'id="clusters_analysis_workspace"'
+test_body_contains "Discover workspace" "$ORC_URL/web/discover" 'id="discover_workspace"'
+test_body_contains "Audit workspace" "$ORC_URL/web/audit" 'id="audit"'
+test_body_contains "Failure detection workspace" "$ORC_URL/web/audit-failure-detection" 'Failure detections'
+test_body_contains "Recovery workspace" "$ORC_URL/web/audit-recovery" 'Recoveries'
+test_body_contains "Status workspace" "$ORC_URL/web/status" 'id="status_workspace"'
+test_body_contains "About workspace" "$ORC_URL/web/about" 'id="about_workspace"'
+test_endpoint "Agents route" "$ORC_URL/web/agents" "200"
+test_endpoint "Seeds route" "$ORC_URL/web/seeds" "200"
+test_body_contains "D3 v7" "$ORC_URL/web/cluster/mysql1:3306" 'd3\.v7\.min\.js?v='
+test_body_contains "Topology layout adapter" "$ORC_URL/web/cluster/mysql1:3306" 'cluster-tree-layout\.js?v='
+test_body_contains "Bootstrap bridge" "$ORC_URL/web/clusters" 'bootstrap-legacy-bridge\.js?v='
+test_body_contains "Bootstrap Icons" "$ORC_URL/web/clusters" 'bootstrap-icons\.min\.css?v='
 
 echo ""
 echo "--- API v1 ---"

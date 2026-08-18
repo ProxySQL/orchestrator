@@ -492,9 +492,10 @@ func isWorkspaceSelector(selector string, workspaceID string) bool {
 	for i := 0; i < len(selector); i++ {
 		c := selector[i]
 		if quote != 0 {
-			if c == '\\' {
+			switch c {
+			case '\\':
 				i++
-			} else if c == quote {
+			case quote:
 				quote = 0
 			}
 			continue
@@ -664,5 +665,33 @@ func TestTopologyUsesD3V7WithoutCoordinateRestore(t *testing.T) {
 		t.Error("legacy d3.v3.min.js still exists")
 	} else if !os.IsNotExist(err) {
 		t.Fatal(err)
+	}
+}
+
+func TestConsolidatedUIAssetContracts(t *testing.T) {
+	chdirToRepoRoot(t)
+	clusterTemplate, err := os.ReadFile("resources/templates/cluster.tmpl")
+	if err != nil {
+		t.Fatal(err)
+	}
+	layoutTemplate, err := os.ReadFile("resources/templates/layout.tmpl")
+	if err != nil {
+		t.Fatal(err)
+	}
+	combined := string(clusterTemplate) + string(layoutTemplate)
+	for _, required := range []string{
+		"d3.v7.min.js?v={{.assetVersion}}",
+		"cluster-tree-layout.js?v={{.assetVersion}}",
+		"bootstrap-legacy-bridge.js?v={{.assetVersion}}",
+		"bootstrap-icons.min.css?v={{.assetVersion}}",
+	} {
+		if !strings.Contains(combined, required) {
+			t.Errorf("consolidated UI is missing %q", required)
+		}
+	}
+	for _, forbidden := range []string{"cdn.jsdelivr.net", "github.com/openark/orchestrator", "d3.v3.min.js"} {
+		if strings.Contains(combined, forbidden) {
+			t.Errorf("consolidated UI retains forbidden reference %q", forbidden)
+		}
 	}
 }
