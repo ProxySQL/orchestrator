@@ -1,6 +1,6 @@
 
 function addPrimaryTableData(name, column1, column2, column3, column4) {
-	$(".status-table-primary").append(
+	$(".status-table-primary tbody").append(
     '<tr><td>' + name + '</td>' +
     '<td>' + column1 + '</td>' +
     '<td><code class="text-info">' + column2 + '</code></td>' +
@@ -9,34 +9,34 @@ function addPrimaryTableData(name, column1, column2, column3, column4) {
 	);
 }
 function addRaftTableData(name, column1, column2) {
-	$(".status-table-raft").append(
+	$(".status-table-raft tbody").append(
     '<tr><td>' + name + '</td>' +
     '<td>' + column1 + '</td>' +
     '<td><code class="text-info">' + column2 + '</code></td></tr>'
 	);
 }
 function addStatusActionButton(name, uri) {
-	$("#orchestratorStatus .panel-footer").append(
+	$("#orchestratorStatus .card-footer").append(
 		'<button type="button" class="btn btn-sm btn-info">'+name+'</button> '
 	);
-	var button = $('#orchestratorStatus .panel-footer button:last');
+	var button = $('#orchestratorStatus .card-footer button:last');
 	button.click(function(){
 		apiCommand("/api/"+uri);
 	});
 }
 
-$(document).ready(function () {
-	var statusObject = $("#orchestratorStatus .panel-body");
-    $.get(appUrl("/api/health/"), function (health) {
-    	statusObject.prepend('<h4>'+health.Message+'</h4>')
-        $(".status-table-primary").append(
-            '<tr><td></td>' +
-            '<td><b>Hostname</b></td>' +
-            '<td><b>Running Since</b></td>' +
-            '<td><b>DB Backend</b></td>' +
-            '<td><b>App Version</b></td></tr>'
-        );
-    	health.Details.AvailableNodes.forEach(function(node) {
+function displayHealth(health) {
+	if (!health || !health.Details) {
+		return false;
+	}
+	var activeNode = health.Details.ActiveNode || {};
+	var availableNodes = health.Details.AvailableNodes || [];
+
+		$("#status_loading").hide();
+		$("#status_unavailable").hide();
+		$("#status_summary").text(health.Message || "Application node is unhealthy");
+		$("#status_content").show();
+		availableNodes.forEach(function(node) {
 				var app_version = node.AppVersion;
 				if (app_version == "") {
 					app_version = "unknown version";
@@ -48,8 +48,8 @@ $(document).ready(function () {
 				message += '</br>';
 
 				message += '<code class="text-info">';
-				if (node.Hostname == health.Details.ActiveNode.Hostname && node.Token == health.Details.ActiveNode.Token) {
-					message += '<span class="text-success">[Elected at '+health.Details.ActiveNode.FirstSeenActive+']</span>';
+				if (node.Hostname == activeNode.Hostname && node.Token == activeNode.Token) {
+					message += '<span class="text-success">[Elected at '+activeNode.FirstSeenActive+']</span>';
 				}
 				if (node.Hostname == health.Details.Hostname) {
 					message += '<span class="text-primary">[This node]</span>';
@@ -70,11 +70,7 @@ $(document).ready(function () {
       addPrimaryTableData("You", userId + ", " + userStatus, "", "", "");
 
 			if (health.Details.RaftLeader != "") {
-				$(".status-table-raft").append(
-            '<tr><td></td>' +
-            '<td><b>Advertised</b></td>' +
-            '<td><b>URI</b></td>'
-        );
+				$(".status-table-raft").show();
 				var message = '';
 				message += '<code class="text-info"><strong>';
 				message += health.Details.RaftLeader;
@@ -105,6 +101,22 @@ $(document).ready(function () {
     		addStatusActionButton("Reset hostname resolve cache", "reset-hostname-resolve-cache");
     		addStatusActionButton("Reelect", "reelect");
     	}
+	return true;
+}
 
-    }, "json");
+function displayStatusUnavailable() {
+		$("#status_loading").hide();
+		$("#status_unavailable").show();
+	}
+
+$(document).ready(function () {
+    $.get(appUrl("/api/health"), function (health) {
+		if (!displayHealth(health)) {
+			displayStatusUnavailable();
+		}
+	}, "json").fail(function(operationResult) {
+		if (!displayHealth(operationResult.responseJSON)) {
+			displayStatusUnavailable();
+		}
+	});
 });

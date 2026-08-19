@@ -1,14 +1,42 @@
-<div class="container clusters" id="clusters">
-</div>
+<link href="{{.prefix}}/css/clusters-workspace.css?v={{.assetVersion}}" rel="stylesheet">
+
+<section id="clusters_workspace" aria-labelledby="clusters_workspace_title">
+	<header class="clusters-workspace-header">
+		<div class="clusters-workspace-heading">
+			<p class="clusters-workspace-eyebrow">Topology estate</p>
+			<h1 id="clusters_workspace_title">Clusters</h1>
+			<p id="clusters_known_count" role="status" aria-live="polite" aria-atomic="true">Loading known clusters&hellip;</p>
+		</div>
+		<a class="clusters-discover-action" href="{{.prefix}}/web/discover">Discover instance</a>
+	</header>
+
+	<main class="clusters-workspace-content" aria-label="Known clusters">
+		<div class="clusters-list-columns" aria-hidden="true">
+			<span>Cluster / primary</span>
+			<span>Members &amp; health</span>
+			<span>Topology</span>
+		</div>
+		<div id="clusters_list">
+			<div class="container clusters" id="clusters">
+			</div>
+		</div>
+	</main>
+</section>
 
 
 <script>
 	function removeTextFromHostnameDisplay() {
 		return "{{.removeTextFromHostnameDisplay}}";
 	}
+
+	onClusters(function(clusters) {
+		var count = (clusters || []).length;
+		var noun = count == 1 ? "cluster" : "clusters";
+		$("#clusters_known_count").text(count + " known " + noun);
+	});
 </script>
-<script src="{{.prefix}}/js/cluster-analysis-shared.js"></script>
-<script src="{{.prefix}}/js/clusters.js"></script>
+<script src="{{.prefix}}/js/cluster-analysis-shared.js?v={{.assetVersion}}"></script>
+<script src="{{.prefix}}/js/clusters.js?v={{.assetVersion}}"></script>
 
 
 <li id="li-dashboard-sort" data-nav-page="relocate method" style="display:none">

@@ -22,6 +22,7 @@ import (
 	"net/http"
 	"net/http/pprof"
 	"strconv"
+	"strings"
 	"text/template"
 
 	"github.com/go-chi/chi/v5"
@@ -195,6 +196,10 @@ func (this *HttpWeb) Search(w http.ResponseWriter, r *http.Request) {
 }
 
 func (this *HttpWeb) Discover(w http.ResponseWriter, r *http.Request) {
+	providerName := "MySQL"
+	if strings.EqualFold(config.Config.ProviderType, "postgresql") {
+		providerName = "PostgreSQL"
+	}
 
 	renderHTML(w, 200, "templates/discover", map[string]interface{}{
 		"agentsHttpActive":    config.Config.ServeAgentsHttp,
@@ -204,6 +209,8 @@ func (this *HttpWeb) Discover(w http.ResponseWriter, r *http.Request) {
 		"autoshow_problems":   false,
 		"prefix":              this.URLPrefix,
 		"webMessage":          config.Config.WebMessage,
+		"providerName":        providerName,
+		"defaultInstancePort": config.Config.DefaultInstancePort,
 	})
 }
 
@@ -294,6 +301,10 @@ func (this *HttpWeb) Agents(w http.ResponseWriter, r *http.Request) {
 }
 
 func (this *HttpWeb) Agent(w http.ResponseWriter, r *http.Request) {
+	if !config.Config.ServeAgentsHttp {
+		this.Agents(w, r)
+		return
+	}
 	renderHTML(w, 200, "templates/agent", map[string]interface{}{
 		"agentsHttpActive":    config.Config.ServeAgentsHttp,
 		"title":               "agent",
@@ -307,6 +318,10 @@ func (this *HttpWeb) Agent(w http.ResponseWriter, r *http.Request) {
 }
 
 func (this *HttpWeb) AgentSeedDetails(w http.ResponseWriter, r *http.Request) {
+	if !config.Config.ServeAgentsHttp {
+		this.Seeds(w, r)
+		return
+	}
 	renderHTML(w, 200, "templates/agent_seed_details", map[string]interface{}{
 		"agentsHttpActive":    config.Config.ServeAgentsHttp,
 		"title":               "agent seed details",

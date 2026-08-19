@@ -1,55 +1,62 @@
-<div id="cluster_sidebar">
-	<div class="navbar" role="navigation">
-		<ul class="nav">
-			<li data-bullet="info">
-				<div>
-					<a data-command="info"><span class="glyphicon glyphicon-time"></span></a>
-				</div>
-			</li>
-			<li data-bullet="colorize-dc">
-				<div>
-					<a data-command="colorize-dc"><span class="glyphicon glyphicon-adjust"></span></a>
-				</div>
-			</li>
-			<li data-bullet="compact-display">
-				<div>
-					<a data-command="compact-display"><span class="glyphicon glyphicon-compressed"></span></a>
-				</div>
-			</li>
-			<li data-bullet="pool-indicator">
-				<div>
-					<a data-command="pool-indicator"><span class="glyphicon glyphicon-tint"></span></a>
-				</div>
-			</li>
-			<li data-bullet="anonymize">
-				<div>
-					<a data-command="anonymize"><span class="glyphicon glyphicon-user"></span></a>
-				</div>
-			</li>
-			<li data-bullet="alias">
-				<div>
-					<a data-command="alias"><span class="glyphicon glyphicon-tag"></span></a>
-				</div>
-			</li>
-			<li data-bullet="silent-ui">
-				<div>
-					<a data-command="silent-ui"><span class="glyphicon glyphicon-volume-off"></span></a>
-				</div>
-			</li>
-		</ul>
-	</div>
-</div>
+<link href="{{.prefix}}/css/cluster-workspace.css?v={{.assetVersion}}" rel="stylesheet">
 
-<div id="cluster_name_info">
-	<div id="cluster_name" class="text-muted"></div>
-	<div id="cluster_subtitle"></div>
-	<div id="cluster_info"></div>
-</div>
+<div id="cluster_workspace">
+	<header class="cluster-workspace-header" aria-label="Cluster overview">
+		<div id="cluster_name_info">
+			<div id="cluster_name" class="text-muted"></div>
+			<div id="cluster_subtitle"></div>
+			<div id="cluster_info"></div>
+		</div>
+		<div id="cluster_live_status" role="status" aria-live="polite" aria-atomic="true" aria-label="Topology status"></div>
+		<aside id="cluster_sidebar" class="cluster-view-menu dropdown" aria-label="Cluster display controls">
+			<button class="cluster-view-toggle dropdown-toggle" type="button" id="cluster_view_toggle" data-bs-toggle="dropdown" aria-expanded="false" aria-controls="cluster_view_menu">View</button>
+			<ul id="cluster_view_menu" class="dropdown-menu dropdown-menu-end" aria-labelledby="cluster_view_toggle">
+				<li data-bullet="info">
+					<div>
+						<a class="dropdown-item" href="#" data-command="info"><i class="bi bi-info-circle" aria-hidden="true"></i>Cluster information</a>
+					</div>
+				</li>
+				<li data-bullet="colorize-dc">
+					<div>
+						<a class="dropdown-item" href="#" data-command="colorize-dc"><i class="bi bi-circle-half" aria-hidden="true"></i>Color by data center</a>
+					</div>
+				</li>
+				<li data-bullet="compact-display">
+					<div>
+						<a class="dropdown-item" href="#" data-command="compact-display"><i class="bi bi-arrows-collapse" aria-hidden="true"></i>Compact display</a>
+					</div>
+				</li>
+				<li data-bullet="pool-indicator">
+					<div>
+						<a class="dropdown-item" href="#" data-command="pool-indicator"><i class="bi bi-droplet-fill" aria-hidden="true"></i>Pool indicator</a>
+					</div>
+				</li>
+				<li data-bullet="anonymize">
+					<div>
+						<a class="dropdown-item" href="#" data-command="anonymize"><i class="bi bi-person" aria-hidden="true"></i>Anonymize display</a>
+					</div>
+				</li>
+				<li data-bullet="alias">
+					<div>
+						<a class="dropdown-item" href="#" data-command="alias"><i class="bi bi-tag" aria-hidden="true"></i>Instance aliases</a>
+					</div>
+				</li>
+				<li data-bullet="silent-ui">
+					<div>
+						<a class="dropdown-item" href="#" data-command="silent-ui"><i class="bi bi-volume-mute" aria-hidden="true"></i>Silent interface</a>
+					</div>
+				</li>
+			</ul>
+		</aside>
+	</header>
 
-<div id="cluster_wrapper">
-	<div id="cluster_container" class="cluster-graph">
-	</div>
-	<div id="cluster_legend"></div>
+	<main id="cluster_canvas" aria-label="Cluster topology">
+		<div id="cluster_wrapper">
+			<div id="cluster_container" class="cluster-graph">
+			</div>
+			<div id="cluster_legend"></div>
+		</div>
+	</main>
 </div>
 
 <li id="li-move-instance-method" data-nav-page="relocate method" style="display:none">
@@ -81,8 +88,9 @@
 	}
 </script>
 
-<script src="{{.prefix}}/js/jquery-ui.min.js"></script>
-<script src="{{.prefix}}/js/d3.v3.min.js"></script>
-<script src="{{.prefix}}/js/cluster-analysis-shared.js"></script>
-<script src="{{.prefix}}/js/cluster.js"></script>
-<script src="{{.prefix}}/js/cluster-tree.js"></script>
+<script src="{{.prefix}}/js/jquery-ui.min.js?v={{.assetVersion}}"></script>
+<script src="{{.prefix}}/js/d3.v7.min.js?v={{.assetVersion}}"></script>
+<script src="{{.prefix}}/js/cluster-tree-layout.js?v={{.assetVersion}}"></script>
+<script src="{{.prefix}}/js/cluster-tree.js?v={{.assetVersion}}"></script>
+<script src="{{.prefix}}/js/cluster-analysis-shared.js?v={{.assetVersion}}"></script>
+<script src="{{.prefix}}/js/cluster.js?v={{.assetVersion}}"></script>

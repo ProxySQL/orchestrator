@@ -1,66 +1,61 @@
-<div class="container">
-  <div class="card">
-    <div class="card-header">
-      About
+<section class="legacy-workspace" id="about_workspace" aria-labelledby="about_title">
+  <header class="legacy-workspace-header">
+    <div>
+      <p class="legacy-workspace-eyebrow">Project</p>
+      <h1 id="about_title">About Orchestrator</h1>
+      <p>High availability, replication management, and topology visibility for MySQL and PostgreSQL.</p>
     </div>
-    <div class="card-body">
-      <p>
-        <strong>Orchestrator</strong> is a MySQL replication topology management and visualization tool, allowing for:
-        <ul>
-          <li>Detection and investigation of replication clusters</li>
-          <li>Safe topology refactoring: moving replicas around the topology</li>
-          <li>Sleek topology visualization</li>
-          <li>Replication problems visualization</li>
-          <li>Topology changes via intuitive drag & drop</li>
-          <li>Maintenance mode declaration and enforcement</li>
-          <li>Auditing of operations</li>
-          <li>More...</li>
-        </ul>
-      </p>
-      <p>
-        Refactoring the topology is a matter of a simple drag & drop. <i>Orchestrator</i> will keep you safe by disallowing invalid replication topologies (e.g. replicating from ROW based to STATEMENT based, from 5.5 to 5.1 etc.)
-      </p>
-      <p>
-        <i>Orchestrator</i> can serve in different modes:
-        <ul>
-          <li>
-            Command line interface
-          </li>
-          <li>
-            Web API
-          </li>
-          <li>
-            Web interface
-          </li>
-        </ul>
+    <a class="btn btn-outline-light" href="https://github.com/ProxySQL/orchestrator" target="_blank" rel="noopener noreferrer">View on GitHub</a>
+  </header>
 
-      </p>
-      <p>
-        <i>Orchestrator</i> is developed at <a href="http://www.github.com">GitHub</a> to answer for the difficulty in managing and recovering replication topologies.
-      </p>
-      <p>
-        <i>Orchestrator</i> is released as open source under the
-        <a href="http://www.apache.org/licenses/LICENSE-2.0">Apache 2.0 license</a> and is available at:
-        <a href="https://github.com/openark/orchestrator">https://github.com/openark/orchestrator</a>
-      </p>
-      <p>
-        Developed by Shlomi Noach.
-      </p>
-      <p>
-        <span id='customized' style='display: none'>This version has customizations and is unsupported.</span>
-        <script type="text/javascript">
-          $.get('../css/custom.css', function( content ) {
-            if (content.length > 0) {
-              $('#customized').css('display', 'block');
-            }
-          });
-          $.get('../js/custom.js', function( content ) {
-            if (content.length > 0) {
-              $('#customized').css('display', 'block');
-            }
-          });
-        </script>
-      </p>
-    </div>
+  <div class="legacy-workspace-grid legacy-workspace-grid--about">
+    <article class="legacy-panel legacy-panel--lead">
+      <span class="legacy-kicker">Current database support</span>
+      <h2>One operational view across modern database fleets</h2>
+      <p>Orchestrator discovers replication topologies, identifies failures, supports controlled topology changes, and can coordinate automated recovery.</p>
+      <div class="legacy-support-grid">
+        <div>
+          <strong>MySQL</strong>
+          <span>Current releases through MySQL 9.7, including the 8.4 LTS line.</span>
+        </div>
+        <div>
+          <strong>PostgreSQL</strong>
+          <span>PostgreSQL 12 and newer, with discovery, failure detection, and failover support.</span>
+        </div>
+      </div>
+    </article>
+
+    <article class="legacy-panel">
+      <span class="legacy-kicker">What it provides</span>
+      <ul class="legacy-feature-list">
+        <li><strong>Discover</strong><span>Continuously map replication relationships and instance health.</span></li>
+        <li><strong>Visualize</strong><span>Explore clusters, replicas, problems, maintenance, and recovery state.</span></li>
+        <li><strong>Recover</strong><span>Analyze failures and coordinate manual or automated topology recovery.</span></li>
+        <li><strong>Audit</strong><span>Review topology operations, failure detections, and recovery history.</span></li>
+      </ul>
+    </article>
+
+    <article class="legacy-panel legacy-panel--project">
+      <span class="legacy-kicker">Open source</span>
+      <h2>Maintained by ProxySQL</h2>
+      <p>The project is maintained at <a href="https://github.com/ProxySQL/orchestrator" target="_blank" rel="noopener noreferrer">ProxySQL/orchestrator</a> and welcomes issues and contributions from the community.</p>
+      <p>Orchestrator is distributed under the <a href="https://www.apache.org/licenses/LICENSE-2.0" target="_blank" rel="noopener noreferrer">Apache License 2.0</a>.</p>
+      <div class="legacy-link-row">
+        <a href="https://proxysql.github.io/orchestrator/" target="_blank" rel="noopener noreferrer">Documentation</a>
+        <a href="https://github.com/ProxySQL/orchestrator/blob/master/docs/faq.md" target="_blank" rel="noopener noreferrer">FAQ</a>
+        <a href="https://github.com/ProxySQL/orchestrator/releases" target="_blank" rel="noopener noreferrer">Releases</a>
+      </div>
+    </article>
   </div>
-</div>
+
+  <p id="customized" class="legacy-workspace-note" style="display: none">This installation includes local UI customizations.</p>
+</section>
+
+<script type="text/javascript">
+  $.get('../css/custom.css', function(content) {
+    if (content.length > 0) $('#customized').show();
+  });
+  $.get('../js/custom.js', function(content) {
+    if (content.length > 0) $('#customized').show();
+  });
+</script>

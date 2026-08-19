@@ -1,5 +1,22 @@
-<div class="container clusters" id="clusters_analysis">
-</div>
+<link href="{{.prefix}}/css/clusters-analysis-workspace.css?v={{.assetVersion}}" rel="stylesheet">
+
+<section id="clusters_analysis_workspace" aria-labelledby="clusters_analysis_title">
+  <header class="clusters-analysis-header">
+    <div>
+      <p class="clusters-analysis-eyebrow">Recovery operations</p>
+      <h1 id="clusters_analysis_title">Failure analysis</h1>
+      <p id="clusters_analysis_summary" role="status" aria-live="polite" aria-atomic="true">Loading active incidents&hellip;</p>
+    </div>
+    <a class="clusters-analysis-dashboard-link" href="{{.prefix}}/web/clusters">Cluster dashboard</a>
+  </header>
+  <main class="clusters-analysis-content" aria-label="Active failure analysis">
+    <div class="clusters-analysis-columns" aria-hidden="true">
+      <span>Cluster</span><span>Active analysis</span><span>Impact / action</span>
+    </div>
+    <div id="clusters_analysis_loading" class="clusters-analysis-state">Loading active incidents&hellip;</div>
+    <div id="clusters_analysis_list"></div>
+  </main>
+</section>
 
 
 <script>
@@ -7,5 +24,5 @@
 		return "{{.removeTextFromHostnameDisplay}}";
 	}
 </script>
-<script src="{{.prefix}}/js/cluster-analysis-shared.js"></script>
-<script src="{{.prefix}}/js/clusters-analysis.js"></script>
+<script src="{{.prefix}}/js/cluster-analysis-shared.js?v={{.assetVersion}}"></script>
+<script src="{{.prefix}}/js/clusters-analysis.js?v={{.assetVersion}}"></script>

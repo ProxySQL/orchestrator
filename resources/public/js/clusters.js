@@ -1,3 +1,50 @@
+function resolveClusterHealthSummary(analysisState, problemBadgeClasses) {
+  var statePriority = {
+    "healthy": 0,
+    "maintenance": 1,
+    "stale": 2,
+    "warning": 3,
+    "errant": 3,
+    "danger": 4,
+    "fatal": 5,
+  };
+  var badgeState = {
+    "label-info": "maintenance",
+    "label-stale": "stale",
+    "label-warning": "warning",
+    "label-errant": "errant",
+    "label-danger": "danger",
+    "label-fatal": "fatal",
+  };
+  var state = statePriority[analysisState] === undefined ? "healthy" : analysisState;
+
+  (problemBadgeClasses || []).forEach(function(badgeClass) {
+    var candidateState = badgeState[badgeClass];
+    if (candidateState && statePriority[candidateState] > statePriority[state]) {
+      state = candidateState;
+    }
+  });
+
+  var label = {
+    "healthy": "No problems",
+    "maintenance": "Maintenance",
+    "stale": "Stale",
+    "warning": "Problems",
+    "errant": "Problems",
+    "danger": "Problems",
+    "fatal": "Problems",
+  }[state];
+
+  return {state: state, label: label};
+}
+
+function clusterTopologyPath(cluster) {
+  if (cluster.ClusterAlias && cluster.ClusterAlias != cluster.ClusterName) {
+    return '/web/cluster/alias/' + encodeURIComponent(cluster.ClusterAlias) + '?compact=true';
+  }
+  return '/web/cluster/' + cluster.ClusterName + '?compact=true';
+}
+
 $(document).ready(function() {
   showLoader();
 
@@ -102,16 +149,16 @@ $(document).ready(function() {
     clusters.forEach(function(cluster) {
       $("#clusters").append('<div xmlns="http://www.w3.org/1999/xhtml" class="popover instance right" data-cluster-name="' + cluster.ClusterName + '"><div class="arrow"></div><h3 class="popover-title"><div class="pull-left"><a href="' + appUrl('/web/cluster/' + cluster.ClusterName) + '"><span>' + cluster.ClusterName + '</span></a></div><div class="pull-right"></div>&nbsp;<br/>&nbsp;</h3><div class="popover-content"></div></div>');
       var popoverElement = $("#clusters [data-cluster-name='" + cluster.ClusterName + "'].popover");
+      var analysisState = "healthy";
 
       if (typeof removeTextFromHostnameDisplay != "undefined" && removeTextFromHostnameDisplay()) {
         var title = cluster.ClusterName.replace(removeTextFromHostnameDisplay(), '');
         popoverElement.find("h3 .pull-left a span").html(title);
       }
-      var compactClusterUri = appUrl('/web/cluster/' + cluster.ClusterName + '?compact=true');
-      if (cluster.ClusterAlias) {
+      var compactClusterUri = appUrl(clusterTopologyPath(cluster));
+      if (cluster.ClusterAlias && cluster.ClusterAlias != cluster.ClusterName) {
         popoverElement.find("h3 .pull-left a span").addClass("small");
         popoverElement.find("h3 .pull-left").prepend('<a href="' + appUrl('/web/cluster/alias/' + encodeURIComponent(cluster.ClusterAlias)) + '"><strong>' + cluster.ClusterAlias + '</strong></a><br/>');
-        compactClusterUri = appUrl('/web/cluster/alias/' + encodeURIComponent(cluster.ClusterAlias) + '?compact=true');
       }
       if (clustersAnalysisProblems[cluster.ClusterName]) {
         var mutedMsg = ""
@@ -137,38 +184,52 @@ $(document).ready(function() {
           }
         });
         if (mutedCnt > 0) {
+          analysisState = "maintenance";
           if (mutedCnt > 1) {
             popoverElement.find("h3 .pull-left").prepend('<span class="overlay-counter">' + mutedCnt +' </span>');
           }
-          popoverElement.find("h3 .pull-left").prepend('<span class="glyphicon glyphicon-exclamation-sign text-muted"' + ' title="' + mutedMsg + '"></span>');          
+          popoverElement.find("h3 .pull-left").prepend('<i class="bi bi-exclamation-triangle-fill text-muted"' + ' title="' + mutedMsg + '" aria-hidden="true"></i>');
         }
         if (warningCnt > 0) {
+          analysisState = "warning";
           if (warningCnt > 1) {
             popoverElement.find("h3 .pull-left").prepend('<span class="overlay-counter">' + warningCnt +' </span>');
           }
-          popoverElement.find("h3 .pull-left").prepend('<span class="glyphicon glyphicon-exclamation-sign text-warning"' + ' title="' + warningMsg + '"></span>');          
+          popoverElement.find("h3 .pull-left").prepend('<i class="bi bi-exclamation-triangle-fill text-warning"' + ' title="' + warningMsg + '" aria-hidden="true"></i>');
         }
         if (dangerCnt > 0) {
+          analysisState = "danger";
           if (dangerCnt > 1) {
             popoverElement.find("h3 .pull-left").prepend('<span class="overlay-counter">' + dangerCnt +' </span>');
           }
-          popoverElement.find("h3 .pull-left").prepend('<span class="glyphicon glyphicon-exclamation-sign text-danger"' + ' title="' + dangerMsg + '"></span>');          
+          popoverElement.find("h3 .pull-left").prepend('<i class="bi bi-exclamation-triangle-fill text-danger"' + ' title="' + dangerMsg + '" aria-hidden="true"></i>');
         }
       }
-      popoverElement.find("h3 .pull-right").append('<a href="' + compactClusterUri + '"><span class="glyphicon glyphicon-compressed" title="Compact display"></span></a>');
+      popoverElement.find("h3 .pull-right").append('<a href="' + compactClusterUri + '" aria-label="Open compact topology" title="Compact display"><i class="bi bi-diagram-3" aria-hidden="true"></i></a>');
       if (cluster.HasAutomatedIntermediateMasterRecovery === true) {
-        popoverElement.find("h3 .pull-right").prepend('<span class="glyphicon glyphicon-heart-empty text-info" title="Automated intermediate master recovery for this cluster ENABLED"></span>');
+        popoverElement.find("h3 .pull-right").prepend('<i class="bi bi-check-circle-fill text-info" title="Automated intermediate master recovery for this cluster ENABLED" aria-hidden="true"></i>');
       }
       if (cluster.HasAutomatedMasterRecovery === true) {
-        popoverElement.find("h3 .pull-right").prepend('<span class="glyphicon glyphicon-heart text-info" title="Automated master recovery for this cluster ENABLED"></span>');
+        popoverElement.find("h3 .pull-right").prepend('<i class="bi bi-check-circle-fill text-info" title="Automated master recovery for this cluster ENABLED" aria-hidden="true"></i>');
       }
 
-      var contentHtml = '' + '<div>Instances: <div class="pull-right"></div></div>';
+      var clusterProblemTypes = [];
+      var clusterProblemBadgeClasses = [];
+      for (var problemType in clustersProblems[cluster.ClusterName]) {
+        clusterProblemTypes.push(problemType);
+        clusterProblemBadgeClasses.push(errorMapping[problemType]["badge"]);
+      }
+      var healthSummary = resolveClusterHealthSummary(analysisState, clusterProblemBadgeClasses);
+      popoverElement.attr("data-health-state", healthSummary.state);
+
+      var contentHtml = '' +
+        '<div><span class="cluster-members-label">Members</span><div class="pull-right"></div>' +
+        '<span class="cluster-health-label">' + healthSummary.label + '</span></div>';
       popoverElement.find(".popover-content").html(contentHtml);
       addInstancesBadge(cluster.ClusterName, cluster.CountInstances, "label-primary", "Total instances in cluster");
-      for (var problemType in clustersProblems[cluster.ClusterName]) {
+      clusterProblemTypes.forEach(function(problemType) {
         addInstancesBadge(cluster.ClusterName, clustersProblems[cluster.ClusterName][problemType], errorMapping[problemType]["badge"], errorMapping[problemType]["description"]);
-      }
+      });
     });
 
     $("div.popover").popover();

@@ -32,10 +32,76 @@ else
 fi
 
 echo ""
+echo "--- Audit persistence ---"
+# Maintenance changes only Orchestrator metadata; it does not alter MySQL roles
+# or replication. Ending it leaves the topology in its original state.
+AUDIT_OWNER="functional-audit-smoke"
+AUDIT_REASON="verify-backend-persistence"
+BEGIN_MAINTENANCE_BODY=$(curl -sS --max-time 10 \
+    -w '\n%{http_code}' "$ORC_URL/api/begin-maintenance/mysql2/3306/$AUDIT_OWNER/$AUDIT_REASON" 2>/dev/null)
+BEGIN_MAINTENANCE_STATUS=${BEGIN_MAINTENANCE_BODY##*$'\n'}
+BEGIN_MAINTENANCE_BODY=${BEGIN_MAINTENANCE_BODY%$'\n'*}
+MAINTENANCE_KEY=""
+if [ "$BEGIN_MAINTENANCE_STATUS" = "200" ]; then
+    MAINTENANCE_KEY=$(printf '%s' "$BEGIN_MAINTENANCE_BODY" | python3 -c '
+import json, sys
+response = json.load(sys.stdin)
+details = response.get("Details")
+key = details.get("MaintenanceKey") if isinstance(details, dict) else None
+expected_message = "Maintenance begun: mysql2:3306"
+if (response.get("Code") != "OK" or response.get("Message") != expected_message
+        or not isinstance(details, dict) or details.get("Hostname") != "mysql2"
+        or details.get("Port") != 3306
+        or not isinstance(key, int) or key <= 0):
+    raise SystemExit(1)
+print(key)
+' 2>/dev/null || true)
+fi
+if [ -n "$MAINTENANCE_KEY" ]; then
+    pass "Begin safe maintenance for audit (HTTP 200, key $MAINTENANCE_KEY)"
+    test_endpoint "End safe maintenance for audit" "$ORC_URL/api/end-maintenance/$MAINTENANCE_KEY" "200"
+else
+    fail "Begin safe maintenance for audit returned this call's maintenance key" \
+        "HTTP $BEGIN_MAINTENANCE_STATUS response: $BEGIN_MAINTENANCE_BODY"
+fi
+AUDIT_ENTRIES=$(curl -s --max-time 10 "$ORC_URL/api/audit/0" 2>/dev/null)
+if echo "$AUDIT_ENTRIES" | python3 -c '
+import json, sys
+entries = json.load(sys.stdin)
+types = {entry.get("AuditType") for entry in entries}
+raise SystemExit(0 if {"begin-maintenance", "end-maintenance"} <= types else 1)
+'; then
+    pass "Audit persistence records maintenance lifecycle"
+else
+    fail "Audit persistence records maintenance lifecycle" "Response: $AUDIT_ENTRIES"
+fi
+
+echo ""
 echo "--- Web UI ---"
 test_endpoint "Web UI root" "$ORC_URL/" "302"
 test_endpoint "Static CSS" "$ORC_URL/css/orchestrator.css" "200"
 test_endpoint "Static JS" "$ORC_URL/js/orchestrator.js" "200"
+test_endpoint "Cluster workspace" "$ORC_URL/web/cluster/mysql1:3306" "200"
+test_body_contains "Cluster workspace shell" "$ORC_URL/web/cluster/mysql1:3306" 'id="cluster_workspace"'
+test_body_contains "Cluster workspace stylesheet" "$ORC_URL/web/cluster/mysql1:3306" 'cluster-workspace\.css'
+test_endpoint "Failure analysis workspace" "$ORC_URL/web/clusters-analysis" "200"
+test_body_contains "Failure analysis shell" "$ORC_URL/web/clusters-analysis" 'id="clusters_analysis_workspace"'
+test_body_contains "Failure analysis stylesheet" "$ORC_URL/web/clusters-analysis" 'clusters-analysis-workspace\.css'
+test_body_contains "Clusters workspace" "$ORC_URL/web/clusters" 'id="clusters_workspace"'
+test_body_contains "Topology workspace" "$ORC_URL/web/cluster/mysql1:3306" 'id="cluster_workspace"'
+test_body_contains "Failure analysis workspace" "$ORC_URL/web/clusters-analysis" 'id="clusters_analysis_workspace"'
+test_body_contains "Discover workspace" "$ORC_URL/web/discover" 'id="discover_workspace"'
+test_body_contains "Audit workspace" "$ORC_URL/web/audit" 'id="audit"'
+test_body_contains "Failure detection workspace" "$ORC_URL/web/audit-failure-detection" 'Failure detections'
+test_body_contains "Recovery workspace" "$ORC_URL/web/audit-recovery" 'Recoveries'
+test_body_contains "Status workspace" "$ORC_URL/web/status" 'id="status_workspace"'
+test_body_contains "About workspace" "$ORC_URL/web/about" 'id="about_workspace"'
+test_endpoint "Agents route" "$ORC_URL/web/agents" "200"
+test_endpoint "Seeds route" "$ORC_URL/web/seeds" "200"
+test_body_contains "D3 v7" "$ORC_URL/web/cluster/mysql1:3306" 'd3\.v7\.min\.js?v='
+test_body_contains "Topology layout adapter" "$ORC_URL/web/cluster/mysql1:3306" 'cluster-tree-layout\.js?v='
+test_body_contains "Bootstrap bridge" "$ORC_URL/web/clusters" 'bootstrap-legacy-bridge\.js?v='
+test_body_contains "Bootstrap Icons" "$ORC_URL/web/clusters" 'bootstrap-icons\.min\.css?v='
 
 echo ""
 echo "--- API v1 ---"

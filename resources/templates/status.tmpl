@@ -1,17 +1,38 @@
-<div class="container" id="orchestratorStatus">
-	<div class="card">
-		<div class="card-header">
-			Status
-		</div>
-		<div class="card-body">
-			<table class="status-table status-table-primary table">
-			</table>
-			<table class="status-table status-table-raft table">
-			</table>
-		</div>
-		<div class="card-footer">
-		</div>
-	</div>
-</div>
+<section class="legacy-workspace" id="status_workspace" aria-labelledby="status_title">
+  <header class="legacy-workspace-header">
+    <div>
+      <p class="legacy-workspace-eyebrow">Runtime</p>
+      <h1 id="status_title">Orchestrator status</h1>
+      <p>Application health, active-node identity, backend connectivity, and Raft membership.</p>
+    </div>
+  </header>
 
-<script src="{{.prefix}}/js/status.js"></script>
+  <div id="orchestratorStatus" class="legacy-panel p-0 overflow-hidden">
+    <div class="card-body p-0">
+      <div id="status_loading" class="legacy-state m-3" role="status">Loading node status…</div>
+      <div id="status_unavailable" class="legacy-state legacy-state--error m-3" role="alert" style="display: none">
+        <h2>Status is unavailable</h2>
+        <p>The Orchestrator health endpoint could not be reached.</p>
+      </div>
+      <div id="status_content" style="display:none">
+        <div class="legacy-status-summary">
+          <span class="legacy-kicker">Health check</span>
+          <h2 id="status_summary"></h2>
+        </div>
+        <div class="legacy-table-shell border-0 rounded-0">
+          <table class="status-table status-table-primary table">
+            <thead><tr><th scope="col">Node</th><th scope="col">Hostname</th><th scope="col">Running since</th><th scope="col">DB backend</th><th scope="col">App version</th></tr></thead>
+            <tbody></tbody>
+          </table>
+          <table class="status-table status-table-raft table" style="display:none">
+            <thead><tr><th scope="col">Raft role</th><th scope="col">Advertised address</th><th scope="col">URI</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div id="status_actions" class="card-footer legacy-status-actions"></div>
+  </div>
+</section>
+
+<script src="{{.prefix}}/js/status.js?v={{.assetVersion}}"></script>

@@ -8,13 +8,22 @@ $(document).ready(function () {
     $.get(appUrl(apiUri), function (auditEntries) {
       auditEntries = auditEntries || [];
       displayAudit(auditEntries);
-  	}, "json");
+	}, "json").fail(function() {
+			hideLoader();
+			$("#audit_empty").hide();
+			$("#audit_unavailable").show();
+			$("#audit .pager li").addClass("disabled");
+		});
     function displayAudit(auditEntries) {
     	var baseWebUri = appUrl("/web/audit/");
     	if (auditHostname()) {
     		baseWebUri += "instance/"+auditHostname()+"/"+auditPort()+"/";
         }
         hideLoader();
+		if (auditEntries.length > 0) {
+			$("#audit_empty").hide();
+			$("#audit_table_container").show();
+		}
         auditEntries.forEach(function (audit) {
       		var row = jQuery('<tr/>');
       		jQuery('<td/>', { text: audit.AuditTimestamp }).appendTo(row);
