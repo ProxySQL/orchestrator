@@ -190,9 +190,49 @@ $(document).ready(function() {
   }
 
   function hasValidClustersAnalysisResponses(clusters, replicationAnalysis, blockedRecoveries) {
-    return Array.isArray(clusters) &&
-      replicationAnalysis && Array.isArray(replicationAnalysis.Details) &&
-      Array.isArray(blockedRecoveries);
+    function isRecord(value) {
+      return value && typeof value == "object" && !Array.isArray(value);
+    }
+
+    function hasValidInstanceKey(instanceKey) {
+      return isRecord(instanceKey) &&
+        typeof instanceKey.Hostname == "string" &&
+        typeof instanceKey.Port == "number";
+    }
+
+    function hasValidStructureAnalysis(entry) {
+      if (!Object.prototype.hasOwnProperty.call(entry, "StructureAnalysis")) {
+        return false;
+      }
+      return entry.StructureAnalysis === null ||
+        (Array.isArray(entry.StructureAnalysis) && entry.StructureAnalysis.every(function(analysis) {
+          return typeof analysis == "string";
+        }));
+    }
+
+    return Array.isArray(clusters) && clusters.every(function(cluster) {
+      return isRecord(cluster) &&
+        typeof cluster.ClusterName == "string" &&
+        typeof cluster.ClusterAlias == "string" &&
+        typeof cluster.CountInstances == "number";
+    }) &&
+      isRecord(replicationAnalysis) && Array.isArray(replicationAnalysis.Details) &&
+      replicationAnalysis.Details.every(function(entry) {
+        return isRecord(entry) &&
+          typeof entry.Analysis == "string" &&
+          hasValidInstanceKey(entry.AnalyzedInstanceKey) &&
+          isRecord(entry.ClusterDetails) &&
+          typeof entry.ClusterDetails.ClusterName == "string" &&
+          typeof entry.CountReplicas == "number" &&
+          typeof entry.IsDowntimed == "boolean" &&
+          (!entry.IsDowntimed || typeof entry.DowntimeEndTimestamp == "string") &&
+          hasValidStructureAnalysis(entry);
+      }) &&
+      Array.isArray(blockedRecoveries) && blockedRecoveries.every(function(recovery) {
+        return isRecord(recovery) &&
+          typeof recovery.Analysis == "string" &&
+          hasValidInstanceKey(recovery.FailedInstanceKey);
+      });
   }
 
   function renderClustersAnalysisState(markup, summary) {

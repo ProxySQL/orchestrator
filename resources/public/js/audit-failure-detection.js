@@ -1,10 +1,92 @@
+function failureDetectionRouteSegment(value) {
+  return encodeURIComponent(String(value == null ? "" : value));
+}
+
+function failureDetectionPagerUrl(baseWebUri, page) {
+  return baseWebUri + page;
+}
+
+function buildFailureDetectionLink(jquery, label, routePrefix, routeSegment, appUrlFunction) {
+  return jquery("<a/>")
+    .text(label == null ? "" : label)
+    .attr("href", appUrlFunction(routePrefix + failureDetectionRouteSegment(routeSegment)));
+}
+
+function buildFailureDetectionMoreInfo(jquery, audit, changelog, appUrlFunction, getInstanceTitleFunction) {
+  var container = jquery("<div/>");
+  container.append(jquery("<div/>").append(
+    jquery("<span/>").text("Detected: "),
+    jquery("<span/>").text(audit.RecoveryStartTimestamp)
+  ));
+
+  if (audit.AnalysisEntry.Replicas && audit.AnalysisEntry.Replicas.length > 0) {
+    var replicas = jquery("<ul/>");
+    audit.AnalysisEntry.Replicas.forEach(function(instanceKey) {
+      replicas.append(jquery("<li/>").append(
+        jquery("<code/>").text(getInstanceTitleFunction(instanceKey.Hostname, instanceKey.Port))
+      ));
+    });
+    container.append(jquery("<div/>").append(
+      jquery("<span/>").text(audit.AnalysisEntry.CountReplicas + " replicating hosts :"),
+      replicas
+    ));
+  }
+
+  if (changelog && changelog.length > 0) {
+    var changelogList = jquery("<ul/>");
+    changelog.slice().reverse().forEach(function(changelogEntry) {
+      var changelogEntryTokens = changelogEntry.split(";");
+      var changelogEntryTimestamp = changelogEntryTokens[0];
+      var changelogEntryAnalysis = changelogEntryTokens.slice(1).join(";");
+      if (changelogEntryTimestamp > audit.RecoveryStartTimestamp) {
+        return;
+      }
+      changelogList.append(jquery("<li/>").append(
+        jquery("<code/>").append(
+          jquery("<span/>").text(changelogEntryTimestamp + " "),
+          jquery("<strong/>").text(changelogEntryAnalysis)
+        )
+      ));
+    });
+    container.append(jquery("<div/>").append(
+      jquery("<span/>").text("Changelog :"),
+      changelogList
+    ));
+  }
+
+  container.append(
+    jquery("<div/>").append(buildFailureDetectionLink(
+      jquery,
+      "Related recovery",
+      "/web/audit-recovery/id/",
+      audit.RelatedRecoveryId,
+      appUrlFunction
+    )),
+    jquery("<div/>").append(
+      jquery("<span/>").text("Processed by "),
+      jquery("<code/>").text(audit.ProcessingNodeHostname)
+    )
+  );
+  return container;
+}
+
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = {
+    buildFailureDetectionLink: buildFailureDetectionLink,
+    buildFailureDetectionMoreInfo: buildFailureDetectionMoreInfo,
+    failureDetectionPagerUrl: failureDetectionPagerUrl,
+    failureDetectionRouteSegment: failureDetectionRouteSegment
+  };
+}
+
+if (typeof document !== "undefined" && typeof $ === "function") {
 $(document).ready(function() {
   showLoader();
   var apiUri = "/api/audit-failure-detection/" + currentPage();
   if (clusterAlias() != "") {
-    apiUri = "/api/audit-failure-detection/alias/" + clusterAlias() + "/" + currentPage();
+    apiUri = "/api/audit-failure-detection/alias/" + failureDetectionRouteSegment(clusterAlias()) + "/" + currentPage();
   } else if (detectionId() > 0) {
-    apiUri = "/api/audit-failure-detection/id/" + detectionId();
+    apiUri = "/api/audit-failure-detection/id/" + failureDetectionRouteSegment(detectionId());
   }
   $.get(appUrl(apiUri), function(auditEntries) {
     auditEntries = auditEntries || [];
@@ -24,7 +106,7 @@ $(document).ready(function() {
   function displayAudit(auditEntries, analysisChangelog) {
     var baseWebUri = appUrl("/web/audit-failure-detection/");
     if (clusterAlias()) {
-      baseWebUri += "alias/" + clusterAlias() + "/";
+      baseWebUri += "alias/" + failureDetectionRouteSegment(clusterAlias()) + "/";
     }
     var changelogMap = {}
     analysisChangelog.forEach(function(changelogEntry) {
@@ -42,53 +124,31 @@ $(document).ready(function() {
       var analysisElement = $('<a class="more-detection-info"/>').attr("data-detection-id", audit.Id).text(audit.AnalysisEntry.Analysis);
 
       $('<td/>').prepend(analysisElement).appendTo(row);
-      $('<a/>', {
-        text: analyzedInstanceDisplay,
-        href: appUrl("/web/search/" + analyzedInstanceDisplay)
-      }).wrap($("<td/>")).parent().appendTo(row);
+      buildFailureDetectionLink($, analyzedInstanceDisplay, "/web/search/", analyzedInstanceDisplay, appUrl)
+        .wrap($("<td/>")).parent().appendTo(row);
       $('<td/>', {
         text: audit.AnalysisEntry.CountReplicas
       }).appendTo(row);
-      $('<a/>', {
-        text: audit.AnalysisEntry.ClusterDetails.ClusterName,
-        href: appUrl("/web/cluster/" + audit.AnalysisEntry.ClusterDetails.ClusterName)
-      }).wrap($("<td/>")).parent().appendTo(row);
-      $('<a/>', {
-        text: audit.AnalysisEntry.ClusterDetails.ClusterAlias,
-        href: appUrl("/web/cluster/alias/" + audit.AnalysisEntry.ClusterDetails.ClusterAlias)
-      }).wrap($("<td/>")).parent().appendTo(row);
+      buildFailureDetectionLink(
+        $,
+        audit.AnalysisEntry.ClusterDetails.ClusterName,
+        "/web/cluster/",
+        audit.AnalysisEntry.ClusterDetails.ClusterName,
+        appUrl
+      ).wrap($("<td/>")).parent().appendTo(row);
+      buildFailureDetectionLink(
+        $,
+        audit.AnalysisEntry.ClusterDetails.ClusterAlias,
+        "/web/cluster/alias/",
+        audit.AnalysisEntry.ClusterDetails.ClusterAlias,
+        appUrl
+      ).wrap($("<td/>")).parent().appendTo(row);
       $('<td/>', {
         text: audit.RecoveryStartTimestamp
       }).appendTo(row);
 
-      var moreInfo = "";
-      moreInfo += '<div>Detected: ' + audit.RecoveryStartTimestamp + '</div>';
-      if (audit.AnalysisEntry.Replicas.length > 0) {
-        moreInfo += '<div>' + audit.AnalysisEntry.CountReplicas + ' replicating hosts :<ul>';
-        audit.AnalysisEntry.Replicas.forEach(function(instanceKey) {
-          moreInfo += "<li><code>" + getInstanceTitle(instanceKey.Hostname, instanceKey.Port) + "</code></li>";
-        });
-        moreInfo += "</ul></div>";
-      }
       var changelog = changelogMap[getInstanceId(audit.AnalysisEntry.AnalyzedInstanceKey.Hostname, audit.AnalysisEntry.AnalyzedInstanceKey.Port)];
-      if (changelog) {
-        moreInfo += '<div>Changelog :<ul>';
-        changelog.reverse().forEach(function(changelogEntry) {
-          var changelogEntryTokens = changelogEntry.split(';');
-          var changelogEntryTimestamp = changelogEntryTokens[0];
-          var changelogEntryAnalysis = changelogEntryTokens[1];
-
-          if (changelogEntryTimestamp > audit.RecoveryStartTimestamp) {
-            // This entry is newer than the detection time; irrelevant
-            return;
-          }
-          moreInfo += "<li><code>" + changelogEntryTimestamp + " <strong>" + changelogEntryAnalysis + "</strong></code></li>";
-        });
-        moreInfo += "</ul></div>";
-      }
-      moreInfo += '<div><a href="' + appUrl('/web/audit-recovery/id/' + audit.RelatedRecoveryId) + '">Related recovery</a></div>';
-
-      moreInfo += "<div>Processed by <code>" + audit.ProcessingNodeHostname + "</code></div>";
+      var moreInfo = buildFailureDetectionMoreInfo($, audit, changelog, appUrl, getInstanceTitle);
       row.appendTo('#audit tbody');
 
       var row = $('<tr/>');
@@ -107,17 +167,20 @@ $(document).ready(function() {
       $("#audit .pager .next").addClass("disabled");
     }
     $("#audit .pager .previous").not(".disabled").find("a").click(function() {
-      window.location.href = appUrl(baseWebUri + (currentPage() - 1));
+      window.location.href = failureDetectionPagerUrl(baseWebUri, currentPage() - 1);
     });
     $("#audit .pager .next").not(".disabled").find("a").click(function() {
-      window.location.href = appUrl(baseWebUri + (currentPage() + 1));
+      window.location.href = failureDetectionPagerUrl(baseWebUri, currentPage() + 1);
     });
     $("#audit .pager .disabled a").click(function() {
       return false;
     });
     $("body").on("click", ".more-detection-info", function(event) {
-      var detectionId = $(event.target).attr("data-detection-id");
-      $('[data-detection-id-more-info=' + detectionId + ']').slideToggle();
+      var selectedDetectionId = $(event.currentTarget).attr("data-detection-id");
+      $("[data-detection-id-more-info]").filter(function() {
+        return String($(this).attr("data-detection-id-more-info")) === String(selectedDetectionId);
+      }).slideToggle();
     });
   }
 });
+}

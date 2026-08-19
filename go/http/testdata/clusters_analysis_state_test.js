@@ -55,6 +55,16 @@ function renderAdapterWithResponses(clusters, replicationAnalysis, blockedRecove
   return rendered;
 }
 
+function assertUnavailableAdapterState(rendered) {
+  assert.equal(rendered.loadingHidden, true);
+  assert.equal(rendered.summary, "Analysis unavailable");
+  assert.match(rendered.markup, /Failure analysis is temporarily unavailable/);
+  assert.doesNotMatch(
+    rendered.markup,
+    /No active failover incidents|All monitored clusters|class="analysis-cluster"|Loading/
+  );
+}
+
 test("analysis links use the cluster-name route when the alias is the default", function() {
   const cluster = {
     ClusterName: "mysql1:3306",
@@ -382,6 +392,65 @@ test("document adapter renders unavailable state for invalid successful incident
     assert.equal(rendered.summary, "Analysis unavailable");
     assert.match(rendered.markup, /Failure analysis is temporarily unavailable/);
   });
+});
+
+test("document adapter renders unavailable when a blocked recovery has no failed instance key", function() {
+  const rendered = renderAdapterWithResponses(
+    [{ClusterName: "mysql1:3306", ClusterAlias: "mysql1:3306", CountInstances: 1}],
+    {Details: []},
+    [{Analysis: "DeadMaster"}]
+  );
+
+  assertUnavailableAdapterState(rendered);
+});
+
+test("document adapter renders unavailable when an analysis has no cluster details", function() {
+  const rendered = renderAdapterWithResponses(
+    [{ClusterName: "mysql1:3306", ClusterAlias: "mysql1:3306", CountInstances: 1}],
+    {Details: [{
+      Analysis: "DeadMaster",
+      AnalyzedInstanceKey: {Hostname: "mysql1", Port: 3306},
+      CountReplicas: 0,
+      IsDowntimed: false,
+      StructureAnalysis: [],
+    }]},
+    []
+  );
+
+  assertUnavailableAdapterState(rendered);
+});
+
+test("document adapter renders unavailable when an analysis has no analyzed instance key", function() {
+  const rendered = renderAdapterWithResponses(
+    [{ClusterName: "mysql1:3306", ClusterAlias: "mysql1:3306", CountInstances: 1}],
+    {Details: [{
+      Analysis: "DeadMaster",
+      ClusterDetails: {ClusterName: "mysql1:3306"},
+      CountReplicas: 0,
+      IsDowntimed: false,
+      StructureAnalysis: [],
+    }]},
+    []
+  );
+
+  assertUnavailableAdapterState(rendered);
+});
+
+test("document adapter renders unavailable when structure analysis is not an array", function() {
+  const rendered = renderAdapterWithResponses(
+    [{ClusterName: "mysql1:3306", ClusterAlias: "mysql1:3306", CountInstances: 1}],
+    {Details: [{
+      Analysis: "DeadMaster",
+      AnalyzedInstanceKey: {Hostname: "mysql1", Port: 3306},
+      ClusterDetails: {ClusterName: "mysql1:3306"},
+      CountReplicas: 0,
+      IsDowntimed: false,
+      StructureAnalysis: "ErrantGTIDStructureWarning",
+    }]},
+    []
+  );
+
+  assertUnavailableAdapterState(rendered);
 });
 
 test("document adapter renders unavailable state when an actionable analysis has no matching cluster", function() {
