@@ -478,6 +478,7 @@ else
             fi
             NODE="${RAFT_NODES[$LIDX]}"
             RPORT="${RAFT_PORTS[$LIDX]}"
+            OLD_LEADER=$(curl -sf --max-time 10 "http://localhost:${RPORT}/api/raft-leader" 2>/dev/null | python3 -c "import json,sys; print(json.load(sys.stdin))" 2>/dev/null || echo "")
             echo "Rolling restart round ${ROUND}: stopping leader ${NODE}"
             docker compose -f "$COMPOSE_FILE" stop "$NODE" > /dev/null 2>&1
 
@@ -485,14 +486,14 @@ else
             for idx in 0 1 2; do
                 [ "$idx" != "$LIDX" ] && REMAINING_PORTS+=("${RAFT_PORTS[$idx]}")
             done
+            # wait for a NEW leader: until the election completes, the remaining
+            # nodes keep reporting the old (stopped) leader
             REELECTED=false
-            NEW_LEADER=""
             for i in $(seq 1 60); do
                 L1=$(curl -sf --max-time 10 "http://localhost:${REMAINING_PORTS[0]}/api/raft-leader" 2>/dev/null | python3 -c "import json,sys; print(json.load(sys.stdin))" 2>/dev/null || echo "")
                 L2=$(curl -sf --max-time 10 "http://localhost:${REMAINING_PORTS[1]}/api/raft-leader" 2>/dev/null | python3 -c "import json,sys; print(json.load(sys.stdin))" 2>/dev/null || echo "")
-                if [ -n "$L1" ] && [ "$L1" = "$L2" ]; then
+                if [ -n "$L1" ] && [ "$L1" = "$L2" ] && [ "$L1" != "$OLD_LEADER" ]; then
                     REELECTED=true
-                    NEW_LEADER="$L1"
                     break
                 fi
                 sleep 1
@@ -505,10 +506,12 @@ else
             fi
 
             docker compose -f "$COMPOSE_FILE" start "$NODE" > /dev/null 2>&1
+            # wait for the restarted node to agree on the leader with a running node
             REJOINED=false
             for i in $(seq 1 60); do
                 RL=$(curl -sf --max-time 10 "http://localhost:${RPORT}/api/raft-leader" 2>/dev/null | python3 -c "import json,sys; print(json.load(sys.stdin))" 2>/dev/null || echo "")
-                if [ -n "$RL" ] && [ "$RL" = "$NEW_LEADER" ]; then
+                CL=$(curl -sf --max-time 10 "http://localhost:${REMAINING_PORTS[0]}/api/raft-leader" 2>/dev/null | python3 -c "import json,sys; print(json.load(sys.stdin))" 2>/dev/null || echo "")
+                if [ -n "$RL" ] && [ "$RL" = "$CL" ]; then
                     REJOINED=true
                     break
                 fi
