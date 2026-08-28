@@ -2694,6 +2694,29 @@ func ReadAllInstanceKeys() ([]InstanceKey, error) {
 	return res, log.Errore(err)
 }
 
+// ReadRecentlySeenInstanceKeyMap returns the set of instance keys whose last_seen is
+// within the given recency window (hours). Used to protect freshly-discovered instances
+// from being purged during raft snapshot restore before they've propagated into a snapshot.
+func ReadRecentlySeenInstanceKeyMap(recencyHours uint) (*InstanceKeyMap, error) {
+	keys := NewInstanceKeyMap()
+	query := `
+		select
+			hostname, port
+		from
+			database_instance
+		where
+			last_seen > NOW() - interval ? hour`
+	err := db.QueryOrchestrator(query, sqlutils.Args(recencyHours), func(m sqlutils.RowMap) error {
+		instanceKey, merr := NewResolveInstanceKey(m.GetString("hostname"), m.GetInt("port"))
+		if merr != nil {
+			return log.Errore(merr)
+		}
+		keys.AddKey(*instanceKey)
+		return nil
+	})
+	return keys, log.Errore(err)
+}
+
 // ReadAllInstanceKeysMasterKeys
 func ReadAllMinimalInstances() ([]MinimalInstance, error) {
 	res := []MinimalInstance{}

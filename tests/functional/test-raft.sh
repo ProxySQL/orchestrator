@@ -340,6 +340,222 @@ else
 fi
 
 # ============================================================
+# Phase 5: Snapshot Restore Retains Recently-Discovered Instances
+# ============================================================
+# Regression test for issue #123 (fixed by PR #124).
+#
+# Restore() in go/logic/snapshot_data.go must not purge locally-known
+# instances that are absent from a (stale) snapshot while they were still
+# seen within UnseenInstanceForgetHours.
+#
+# Deterministic setup (reproduces the production race without timing luck):
+#   1. forget mysql3 (raft-replicated), then force a snapshot on every node:
+#      each node now holds a snapshot WITHOUT mysql3. All earlier commands
+#      (including the discover/forget of mysql3) are at or below the snapshot
+#      index, so restart-time log replay cannot re-add or re-forget mysql3.
+#   2. continuous discovery re-discovers mysql3 on every node independently
+#      (a local side effect of polling mysql1; no raft command is involved).
+#      mysql3 is now present in every local backend, but absent from every
+#      node's last snapshot -- exactly the state the bug report describes.
+#   3. stop mysql3 so that nothing can re-discover it after a restore.
+#   4. rolling restart of all 3 nodes, stopping the current leader each round
+#      (leader change per restart, as in the issue's reproduction steps):
+#      - unpatched: Restore() forgets mysql3 on every node -> cluster-wide loss.
+#      - patched: mysql3 was recently seen -> retained on every node.
+echo ""
+echo "--- Phase 5: Snapshot Restore Retains Recently-Discovered Instances (issue #123) ---"
+
+RAFT_DATA_DIRS=(/tmp/raft1 /tmp/raft2 /tmp/raft3)
+
+# backend_instances <node-index>: list instance hostnames in the node's local backend
+backend_instances() {
+    docker compose -f "$COMPOSE_FILE" exec -T "${RAFT_NODES[$1]}" \
+        sqlite3 "${RAFT_DATA_DIRS[$1]}/orchestrator.sqlite3" \
+        "select hostname from database_instance order by hostname" 2>/dev/null
+}
+
+# wait_all_backends <expected-count> <deadline-seconds>: poll until every node's
+# backend holds exactly <expected-count> instances; when the expected count is 3,
+# mysql3 must be among them
+wait_all_backends() {
+    local expected="$1" deadline="$2" i idx rows count all_match
+    for i in $(seq 1 "$deadline"); do
+        all_match=true
+        for idx in 0 1 2; do
+            rows=$(backend_instances "$idx" | tr '\n' ' ')
+            count=$(echo "$rows" | wc -w | tr -d ' ')
+            if [ "$count" != "$expected" ]; then
+                all_match=false
+                break
+            fi
+            if [ "$expected" = "3" ] && ! echo "$rows" | grep -q "mysql3"; then
+                all_match=false
+                break
+            fi
+        done
+        if $all_match; then
+            return 0
+        fi
+        sleep 1
+    done
+    return 1
+}
+
+# index of the current raft leader ("" if none)
+current_leader_index() {
+    local idx state
+    for idx in 0 1 2; do
+        state=$(curl -sf --max-time 10 "http://localhost:${RAFT_PORTS[$idx]}/api/raft-state" 2>/dev/null | python3 -c "import json,sys; print(json.load(sys.stdin))" 2>/dev/null || echo "")
+        if [ "$state" = "Leader" ]; then
+            echo "$idx"
+            return 0
+        fi
+    done
+    echo ""
+    return 1
+}
+
+LEADER_INDEX=$(current_leader_index)
+if [ -z "$LEADER_INDEX" ] || ! wait_all_backends 3 10; then
+    skip "Raft cluster not healthy with full topology; skipping issue #123 regression phase"
+else
+    LEADER_PORT="${RAFT_PORTS[$LEADER_INDEX]}"
+    PHASE5_OK=true
+
+    # forget mysql3, then snapshot: the new snapshots do not contain mysql3
+    curl -sf --max-time 10 "http://localhost:${LEADER_PORT}/api/forget/mysql3/3306" > /dev/null 2>&1 \
+        || { fail "forget mysql3 failed"; PHASE5_OK=false; }
+    if $PHASE5_OK && wait_all_backends 2 30; then
+        pass "mysql3 forgotten on all nodes"
+    else
+        fail "mysql3 not forgotten on all nodes within 30s"
+        PHASE5_OK=false
+    fi
+
+    if $PHASE5_OK; then
+        for port in "${RAFT_PORTS[@]}"; do
+            curl -sf --max-time 30 "http://localhost:${port}/api/raft-snapshot" > /dev/null 2>&1 || { fail "raft-snapshot failed on :${port}"; PHASE5_OK=false; }
+        done
+        sleep 2
+        $PHASE5_OK && pass "Snapshots without mysql3 taken on all nodes"
+    fi
+
+    if $PHASE5_OK; then
+        # continuous discovery re-discovers mysql3 on each node as a replica of
+        # mysql1 -- purely local writes, no raft commands in the log
+        echo "Waiting for continuous discovery to re-discover mysql3 on all nodes (up to 90s)..."
+        if wait_all_backends 3 90; then
+            pass "mysql3 re-discovered locally on all nodes (no raft command)"
+        else
+            fail "mysql3 not re-discovered on all nodes within 90s"
+            for idx in 0 1 2; do
+                echo "  ${RAFT_NODES[$idx]} backend: $(backend_instances "$idx" | tr '\n' ' ')"
+            done
+            PHASE5_OK=false
+        fi
+    fi
+
+    if $PHASE5_OK; then
+        # stop mysql3: without it, nothing can re-discover mysql3 after a
+        # restore, so any loss caused by Restore() becomes observable
+        echo "Stopping mysql3 to block re-discovery after restore..."
+        docker compose -f "$COMPOSE_FILE" stop mysql3 > /dev/null 2>&1 \
+            && pass "mysql3 stopped" \
+            || { fail "Could not stop mysql3"; PHASE5_OK=false; }
+        # let in-flight discovery attempts drain
+        sleep 3
+    fi
+
+    if $PHASE5_OK; then
+        # rolling restart: stop the current leader, wait for re-election, restart;
+        # repeat so that all 3 nodes restore from their snapshots
+        for ROUND in 1 2 3; do
+            LIDX=$(current_leader_index)
+            if [ -z "$LIDX" ]; then
+                fail "Rolling restart round ${ROUND}: no leader found"
+                PHASE5_OK=false
+                break
+            fi
+            NODE="${RAFT_NODES[$LIDX]}"
+            RPORT="${RAFT_PORTS[$LIDX]}"
+            OLD_LEADER=$(curl -sf --max-time 10 "http://localhost:${RPORT}/api/raft-leader" 2>/dev/null | python3 -c "import json,sys; print(json.load(sys.stdin))" 2>/dev/null || echo "")
+            echo "Rolling restart round ${ROUND}: stopping leader ${NODE}"
+            docker compose -f "$COMPOSE_FILE" stop "$NODE" > /dev/null 2>&1
+
+            REMAINING_PORTS=()
+            for idx in 0 1 2; do
+                [ "$idx" != "$LIDX" ] && REMAINING_PORTS+=("${RAFT_PORTS[$idx]}")
+            done
+            # wait for a NEW leader: until the election completes, the remaining
+            # nodes keep reporting the old (stopped) leader
+            REELECTED=false
+            for i in $(seq 1 60); do
+                L1=$(curl -sf --max-time 10 "http://localhost:${REMAINING_PORTS[0]}/api/raft-leader" 2>/dev/null | python3 -c "import json,sys; print(json.load(sys.stdin))" 2>/dev/null || echo "")
+                L2=$(curl -sf --max-time 10 "http://localhost:${REMAINING_PORTS[1]}/api/raft-leader" 2>/dev/null | python3 -c "import json,sys; print(json.load(sys.stdin))" 2>/dev/null || echo "")
+                if [ -n "$L1" ] && [ "$L1" = "$L2" ] && [ "$L1" != "$OLD_LEADER" ]; then
+                    REELECTED=true
+                    break
+                fi
+                sleep 1
+            done
+            if ! $REELECTED; then
+                fail "Rolling restart round ${ROUND}: no re-election within 60s"
+                PHASE5_OK=false
+                docker compose -f "$COMPOSE_FILE" start "$NODE" > /dev/null 2>&1
+                break
+            fi
+
+            docker compose -f "$COMPOSE_FILE" start "$NODE" > /dev/null 2>&1
+            # wait for the restarted node to agree on the leader with a running node
+            REJOINED=false
+            for i in $(seq 1 60); do
+                RL=$(curl -sf --max-time 10 "http://localhost:${RPORT}/api/raft-leader" 2>/dev/null | python3 -c "import json,sys; print(json.load(sys.stdin))" 2>/dev/null || echo "")
+                CL=$(curl -sf --max-time 10 "http://localhost:${REMAINING_PORTS[0]}/api/raft-leader" 2>/dev/null | python3 -c "import json,sys; print(json.load(sys.stdin))" 2>/dev/null || echo "")
+                if [ -n "$RL" ] && [ "$RL" = "$CL" ]; then
+                    REJOINED=true
+                    break
+                fi
+                sleep 1
+            done
+            if $REJOINED; then
+                pass "Round ${ROUND}: leader change + ${NODE} restarted and rejoined"
+            else
+                fail "Rolling restart round ${ROUND}: ${NODE} did not rejoin within 60s"
+                PHASE5_OK=false
+                break
+            fi
+        done
+    fi
+
+    if $PHASE5_OK; then
+        # The actual regression check: every node's local backend must still
+        # contain mysql3, which was recently seen but absent from the snapshots
+        RETAINED=true
+        for idx in 0 1 2; do
+            ROWS=$(backend_instances "$idx" | tr '\n' ' ')
+            if ! echo "$ROWS" | grep -q "mysql3"; then
+                RETAINED=false
+                echo "  ${RAFT_NODES[$idx]} backend after restart: ${ROWS}"
+            fi
+        done
+        if $RETAINED; then
+            pass "Recently-discovered instance retained on all nodes after rolling restart (issue #123)"
+        else
+            fail "Recently-discovered instance lost after rolling restart (issue #123 regression)"
+        fi
+    fi
+
+    # restore the environment: mysql3 back up, topology healed
+    echo "Restarting mysql3..."
+    docker compose -f "$COMPOSE_FILE" start mysql3 > /dev/null 2>&1
+    if wait_all_backends 3 90; then
+        pass "Topology healed after issue #123 regression phase"
+    else
+        skip "Topology not fully healed after issue #123 regression phase (mysql3 may need more time)"
+    fi
+fi
+
+# ============================================================
 # Cleanup
 # ============================================================
 echo ""
