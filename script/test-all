@@ -5,3 +5,6 @@ script/test-build
 script/test-unit
 script/test-integration
 script/test-docs
+tests/release/test-release-artifacts.sh
+tests/release/test-release-workflow.sh
+tests/release/test-package-signature-docs.sh

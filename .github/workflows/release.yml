@@ -6,11 +6,11 @@ on:
       - 'v*'
 
 permissions:
-  contents: write
+  contents: read
   packages: write
 
 jobs:
-  build-and-release:
+  build-packages:
     strategy:
       fail-fast: false
       matrix:
@@ -55,13 +55,47 @@ jobs:
         cp /tmp/orchestrator-release/*.rpm    dist/ 2>/dev/null || true
         ls -la dist/
 
-    - name: Upload release assets
-      uses: softprops/action-gh-release@v2
+    - name: Upload unsigned package stage
+      uses: actions/upload-artifact@v4
       with:
-        files: dist/*
-        generate_release_notes: true
-        draft: false
-        prerelease: ${{ contains(github.ref_name, 'rc') }}
+        name: orchestrator-packages-${{ matrix.goarch }}
+        path: dist/*
+        if-no-files-found: error
+        retention-days: 14
+
+  validate-package-stage:
+    needs: build-packages
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Download package stages
+      uses: actions/download-artifact@v4
+      with:
+        pattern: orchestrator-packages-*
+        path: dist
+        merge-multiple: true
+
+    - name: Validate unsigned package stage
+      env:
+        TAG_NAME: ${{ github.ref_name }}
+        EXPECTED_SHA: ${{ github.sha }}
+      run: |
+        set -euo pipefail
+        version="${TAG_NAME#v}"
+        test "$(git rev-parse HEAD)" = "${EXPECTED_SHA}"
+        script/release-artifacts validate-unsigned "${version}" dist
+        script/release-artifacts validate-packages "${version}" dist
+        script/release-artifacts write-unsigned-checksums \
+          "${version}" dist unsigned-SHA256SUMS
+
+    - name: Upload unsigned manifest
+      uses: actions/upload-artifact@v4
+      with:
+        name: orchestrator-unsigned-manifest
+        path: unsigned-SHA256SUMS
+        if-no-files-found: error
+        retention-days: 14
 
   docker-build:
     strategy:
@@ -111,48 +145,4 @@ jobs:
         name: digests-${{ matrix.arch }}
         path: /tmp/digests/*
         if-no-files-found: error
-        retention-days: 1
-
-  docker-merge:
-    needs: docker-build
-    runs-on: ubuntu-latest
-    steps:
-    - name: Download digests
-      uses: actions/download-artifact@v4
-      with:
-        pattern: digests-*
-        path: /tmp/digests
-        merge-multiple: true
-
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
-
-    - name: Login to GHCR
-      uses: docker/login-action@v3
-      with:
-        registry: ghcr.io
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
-
-    - name: Extract metadata
-      id: meta
-      uses: docker/metadata-action@v5
-      with:
-        images: ghcr.io/proxysql/orchestrator
-        tags: |
-          type=semver,pattern={{version}}
-          type=semver,pattern={{major}}.{{minor}}
-          type=raw,value=latest,enable=${{ !contains(github.ref_name, 'rc') }}
-
-    - name: Create manifest list and push
-      working-directory: /tmp/digests
-      run: |
-        docker buildx imagetools create \
-          $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
-          $(printf 'ghcr.io/proxysql/orchestrator@sha256:%s ' *)
-
-    - name: Inspect image
-      env:
-        VERSION: ${{ steps.meta.outputs.version }}
-      run: |
-        docker buildx imagetools inspect "ghcr.io/proxysql/orchestrator:${VERSION}"
+        retention-days: 14

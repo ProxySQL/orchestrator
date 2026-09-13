@@ -1,0 +1,196 @@
+name: Promote Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Published signed release tag (vMAJOR.MINOR.PATCH or vMAJOR.MINOR.PATCH-rcNUMBER)
+        required: true
+        type: string
+      build_run_id:
+        description: Successful Release workflow run containing the image digests
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+  packages: write
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    environment: orchestrator-production
+    steps:
+    - name: Check out the release tag
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ inputs.tag }}
+
+    - name: Validate signed release and build run
+      id: preflight
+      env:
+        GH_TOKEN: ${{ github.token }}
+        TAG: ${{ inputs.tag }}
+        BUILD_RUN_ID: ${{ inputs.build_run_id }}
+      run: |
+        set -euo pipefail
+        [[ "${TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-rc[0-9]+)?$ ]]
+        [[ "${BUILD_RUN_ID}" =~ ^[0-9]+$ ]]
+
+        tag_sha=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${TAG}" --jq .sha)
+        test "$(git rev-parse HEAD)" = "${tag_sha}"
+
+        run_json=$(gh run view "${BUILD_RUN_ID}" -R "${GITHUB_REPOSITORY}" \
+          --json databaseId,workflowName,event,headBranch,headSha,status,conclusion)
+        test "$(jq -r .databaseId <<<"${run_json}")" = "${BUILD_RUN_ID}"
+        test "$(jq -r .workflowName <<<"${run_json}")" = Release
+        test "$(jq -r .event <<<"${run_json}")" = push
+        test "$(jq -r .headBranch <<<"${run_json}")" = "${TAG}"
+        test "$(jq -r .headSha <<<"${run_json}")" = "${tag_sha}"
+        test "$(jq -r .status <<<"${run_json}")" = completed
+        test "$(jq -r .conclusion <<<"${run_json}")" = success
+
+        release_json=$(gh release view "${TAG}" -R "${GITHUB_REPOSITORY}" \
+          --json assets,isDraft,isPrerelease,tagName,targetCommitish)
+        test "$(jq -r .isDraft <<<"${release_json}")" = false
+        test "$(jq -r .tagName <<<"${release_json}")" = "${TAG}"
+        test "$(jq -r .targetCommitish <<<"${release_json}")" = "${tag_sha}"
+
+        version=${TAG#v}
+        prerelease=false
+        [[ "${TAG}" != *-rc* ]] || prerelease=true
+        test "$(jq -r .isPrerelease <<<"${release_json}")" = "${prerelease}"
+
+        expected=$(
+          {
+            script/release-artifacts expected-unsigned "${version}"
+            printf '%s\n' \
+              "orchestrator-${version}-linux-amd64.tar.gz.asc" \
+              "orchestrator-${version}-linux-arm64.tar.gz.asc" \
+              SHA256SUMS SHA256SUMS.asc
+          } | LC_ALL=C sort
+        )
+        actual=$(jq -r '.assets[].name' <<<"${release_json}" | LC_ALL=C sort)
+        test "${actual}" = "${expected}"
+
+        printf 'tag=%s\nversion=%s\nprerelease=%s\n' \
+          "${TAG}" "${version}" "${prerelease}" >>"${GITHUB_OUTPUT}"
+
+    - name: Verify signed release assets
+      env:
+        GH_TOKEN: ${{ github.token }}
+        TAG: ${{ steps.preflight.outputs.tag }}
+        SIGNING_FINGERPRINT: 653F85BB38256DF8A96206C3E8CA2E8D8217C97E
+        PUBLIC_KEY_URL: https://repo.proxysql.com/ProxySQL/repo_pub_key
+      run: |
+        set -euo pipefail
+        verification_root=$(mktemp -d)
+        trap 'rm -rf "${verification_root}"' EXIT
+        assets=${verification_root}/assets
+        export GNUPGHOME=${verification_root}/gnupg
+        mkdir -m 700 "${assets}" "${GNUPGHOME}"
+
+        gh release download "${TAG}" -R "${GITHUB_REPOSITORY}" --dir "${assets}"
+        curl -fSLo "${verification_root}/repo_pub_key" "${PUBLIC_KEY_URL}"
+        primary_fingerprints=$(
+          gpg --batch --show-keys --with-colons --with-fingerprint \
+            "${verification_root}/repo_pub_key" |
+            awk -F: '
+              $1 == "pub" {want_primary_fingerprint=1; next}
+              want_primary_fingerprint && $1 == "fpr" {
+                print $10
+                want_primary_fingerprint=0
+              }
+            '
+        )
+        test "${primary_fingerprints}" = "${SIGNING_FINGERPRINT}"
+        gpg --batch --import "${verification_root}/repo_pub_key" >/dev/null 2>&1
+
+        cd "${assets}"
+        expected_checksum_names=$(
+          "${GITHUB_WORKSPACE}/script/release-artifacts" expected-unsigned \
+            "${{ steps.preflight.outputs.version }}"
+        )
+        test "$(wc -l <SHA256SUMS)" -eq 14
+        actual_checksum_names=$(
+          sed -nE 's/^[0-9a-f]{64}  ([^/]+)$/\1/p' SHA256SUMS | LC_ALL=C sort
+        )
+        test "${actual_checksum_names}" = "${expected_checksum_names}"
+        signature_status=$(gpg --batch --status-fd=1 \
+          --verify SHA256SUMS.asc SHA256SUMS 2>/dev/null)
+        awk -v expected="${SIGNING_FINGERPRINT}" '
+          $1 == "[GNUPG:]" && $2 == "VALIDSIG" &&
+            ($3 == expected || $NF == expected) {valid=1}
+          END {exit valid ? 0 : 1}
+        ' <<<"${signature_status}"
+        sha256sum -c SHA256SUMS
+
+    - name: Download image digests from the selected build
+      uses: actions/download-artifact@v4
+      with:
+        run-id: ${{ inputs.build_run_id }}
+        pattern: digests-*
+        path: /tmp/digests
+        merge-multiple: true
+        github-token: ${{ github.token }}
+
+    - name: Validate image digests
+      run: |
+        set -euo pipefail
+        mapfile -t digests < <(find /tmp/digests -maxdepth 1 -type f -printf '%f\n' | LC_ALL=C sort)
+        test "${#digests[@]}" -eq 2
+        test "${digests[0]}" != "${digests[1]}"
+        for digest in "${digests[@]}"; do
+          [[ "${digest}" =~ ^[0-9a-f]{64}$ ]]
+        done
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Login to GHCR
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Extract image metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ghcr.io/proxysql/orchestrator
+        tags: |
+          type=semver,pattern={{version}},value=${{ steps.preflight.outputs.tag }}
+          type=semver,pattern={{major}}.{{minor}},value=${{ steps.preflight.outputs.tag }}
+          type=raw,value=latest,enable=${{ steps.preflight.outputs.prerelease == 'false' }}
+
+    - name: Promote image digests
+      working-directory: /tmp/digests
+      env:
+        METADATA_JSON: ${{ steps.meta.outputs.json }}
+      run: |
+        set -euo pipefail
+        mapfile -t digests < <(find . -maxdepth 1 -type f -printf '%f\n' | LC_ALL=C sort)
+        mapfile -t tags < <(jq -r '.tags[]' <<<"${METADATA_JSON}")
+        tag_args=()
+        sources=()
+        for tag in "${tags[@]}"; do
+          tag_args+=(-t "${tag}")
+        done
+        for digest in "${digests[@]}"; do
+          sources+=("ghcr.io/proxysql/orchestrator@sha256:${digest}")
+        done
+        docker buildx imagetools create "${tag_args[@]}" "${sources[@]}"
+
+    - name: Verify multi-architecture image
+      env:
+        VERSION: ${{ steps.preflight.outputs.version }}
+      run: |
+        set -euo pipefail
+        actual=$(docker buildx imagetools inspect --raw \
+          "ghcr.io/proxysql/orchestrator:${VERSION}" |
+          jq -r '.manifests[].platform | "\(.os)/\(.architecture)"' |
+          LC_ALL=C sort -u)
+        expected=$'linux/amd64\nlinux/arm64'
+        test "${actual}" = "${expected}"

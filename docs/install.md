@@ -2,12 +2,18 @@
 
 For production deployments, see [Orchestrator deployment](deployment.md). The following text walks you through the manual way of installation and the necessary configuration to make it work.
 
+Before installing a release artifact, follow [Package signature
+verification](package-signatures.md). Signature availability depends on the
+release version documented there.
+
 The following assumes you will be using the same machine for both the `orchestrator` binary and the MySQL backend.
 If not, replace `127.0.0.1` with appropriate host name. Replace `orch_backend_password` with your own super secret password.
 
 #### Which package do I need?
 
-Each release publishes three package variants (as `.deb`, `.rpm`, and `.tar.gz`, for both `amd64` and `arm64`):
+Each release publishes three package variants for both `amd64` and `arm64`.
+All three have `.deb` and `.rpm` packages; only the full `orchestrator` variant
+has a `.tar.gz` archive:
 
 - **`orchestrator`** — the full server install. Contains the `orchestrator` binary, the web UI resources, sample config files, and the systemd unit. This is what you want on the host(s) that will run the `orchestrator` service with the HTTP API and web interface.
 - **`orchestrator-cli`** — the `orchestrator` binary only. Pick this when you want to run `orchestrator` from the command line (CLI mode) or as an HTTP API server without the web UI, and you do not need the sample configs or systemd unit.

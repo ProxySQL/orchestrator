@@ -1,0 +1,146 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+usage() {
+  cat >&2 <<'EOF'
+Usage:
+  release-artifacts expected-unsigned VERSION
+  release-artifacts validate-unsigned VERSION DIRECTORY
+  release-artifacts validate-packages VERSION DIRECTORY
+  release-artifacts write-unsigned-checksums VERSION DIRECTORY OUTPUT
+EOF
+  exit 2
+}
+
+validate_version() {
+  [[ ${1:-} =~ ^[0-9]+\.[0-9]+\.[0-9]+(-rc[0-9]+)?$ ]] || {
+    printf 'invalid release version: %s\n' "${1:-}" >&2
+    return 1
+  }
+}
+
+expected_unsigned() {
+  local version=$1 package arch deb_arch rpm_arch
+
+  validate_version "${version}"
+  for arch in amd64 arm64; do
+    case ${arch} in
+      amd64)
+        deb_arch=amd64
+        rpm_arch=x86_64
+        ;;
+      arm64)
+        deb_arch=arm64
+        rpm_arch=aarch64
+        ;;
+    esac
+    printf 'orchestrator-%s-linux-%s.tar.gz\n' "${version}" "${arch}"
+    for package in orchestrator orchestrator-cli orchestrator-client; do
+      printf '%s_%s-1_%s.deb\n' "${package}" "${version}" "${deb_arch}"
+      printf '%s-%s-1.%s.rpm\n' "${package}" "${version}" "${rpm_arch}"
+    done
+  done | LC_ALL=C sort
+}
+
+validate_unsigned() {
+  local version=$1 directory=$2 expected actual duplicates
+
+  [[ -d ${directory} ]] || {
+    printf 'artifact directory does not exist: %s\n' "${directory}" >&2
+    return 1
+  }
+
+  expected=$(expected_unsigned "${version}")
+  actual=$(find "${directory}" -type f -printf '%f\n' | LC_ALL=C sort)
+  duplicates=$(uniq -d <<<"${actual}")
+  if [[ -n ${duplicates} ]]; then
+    printf 'duplicate artifact basenames:\n%s\n' "${duplicates}" >&2
+    return 1
+  fi
+  if [[ ${actual} != "${expected}" ]]; then
+    printf 'unsigned artifact manifest does not match\n' >&2
+    diff -u <(printf '%s\n' "${expected}") <(printf '%s\n' "${actual}") >&2 || true
+    return 1
+  fi
+}
+
+validate_packages() {
+  local version=$1 directory=$2 asset path
+  local expected_package expected_version expected_arch rpm_suffix
+  local actual_package actual_version actual_release actual_arch
+
+  validate_unsigned "${version}" "${directory}"
+  while IFS= read -r asset; do
+    path=${directory}/${asset}
+    case ${asset} in
+      *.deb)
+        expected_package=${asset%%_*}
+        expected_version=1:${version}-1
+        expected_arch=${asset##*_}
+        expected_arch=${expected_arch%.deb}
+        actual_package=$(dpkg-deb -f "${path}" Package)
+        actual_version=$(dpkg-deb -f "${path}" Version)
+        actual_arch=$(dpkg-deb -f "${path}" Architecture)
+        [[ ${actual_package} == "${expected_package}" ]]
+        [[ ${actual_version} == "${expected_version}" ]]
+        [[ ${actual_arch} == "${expected_arch}" ]]
+        ;;
+      *.rpm)
+        expected_arch=${asset%.rpm}
+        expected_arch=${expected_arch##*.}
+        rpm_suffix=-${version}-1.${expected_arch}.rpm
+        expected_package=${asset%"${rpm_suffix}"}
+        IFS=$'\t' read -r actual_package actual_version actual_release actual_arch < <(
+          rpm -qp --qf $'%{NAME}\t%{VERSION}\t%{RELEASE}\t%{ARCH}\n' "${path}"
+        )
+        [[ ${actual_package} == "${expected_package}" ]]
+        [[ ${actual_version} == "${version}" ]]
+        [[ ${actual_release} == 1 ]]
+        [[ ${actual_arch} == "${expected_arch}" ]]
+        ;;
+      *.tar.gz)
+        tar -tzf "${path}" | grep -Fx './usr/local/orchestrator/orchestrator' \
+          >/dev/null
+        ;;
+    esac
+  done < <(expected_unsigned "${version}")
+}
+
+write_unsigned_checksums() {
+  local version=$1 directory=$2 output=$3 asset output_dir temporary
+
+  validate_unsigned "${version}" "${directory}"
+  output_dir=$(dirname "${output}")
+  mkdir -p "${output_dir}"
+  temporary=$(mktemp "${output_dir}/.unsigned-SHA256SUMS.XXXXXX")
+  trap 'rm -f "${temporary}"' RETURN
+  while IFS= read -r asset; do
+    (cd "${directory}" && sha256sum -- "${asset}") >>"${temporary}"
+  done < <(expected_unsigned "${version}")
+  mv "${temporary}" "${output}"
+  trap - RETURN
+}
+
+command=${1:-}
+case ${command} in
+  expected-unsigned)
+    [[ $# -eq 2 ]] || usage
+    expected_unsigned "$2"
+    ;;
+  validate-unsigned)
+    [[ $# -eq 3 ]] || usage
+    validate_unsigned "$2" "$3"
+    ;;
+  validate-packages)
+    [[ $# -eq 3 ]] || usage
+    validate_packages "$2" "$3"
+    ;;
+  write-unsigned-checksums)
+    [[ $# -eq 4 ]] || usage
+    write_unsigned_checksums "$2" "$3" "$4"
+    ;;
+  *)
+    usage
+    ;;
+esac
