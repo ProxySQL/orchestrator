@@ -68,6 +68,9 @@ jobs:
         retention-days: 7
 
   draft-release:
+    concurrency:
+      group: package-draft-${{ github.ref }}
+      cancel-in-progress: false
     needs: build-packages
     runs-on: ubuntu-latest
     permissions:
@@ -98,7 +101,14 @@ jobs:
         TAG_NAME: ${{ github.ref_name }}
         PRERELEASE: ${{ contains(github.ref_name, 'rc') }}
       run: |
-        # gh release create refuses an existing release; never clobber signed assets.
+        # List drafts as well as published releases. An API failure stops this step.
+        existing_tags="$(gh api --paginate "repos/$GITHUB_REPOSITORY/releases?per_page=100" --jq '.[].tag_name')"
+        while IFS= read -r existing_tag; do
+          if [[ "$existing_tag" == "$TAG_NAME" ]]; then
+            echo "Release $TAG_NAME already exists; refusing to overwrite or duplicate it." >&2
+            exit 1
+          fi
+        done <<< "$existing_tags"
         extra=()
         if [[ "$PRERELEASE" == "true" ]]; then
           extra+=(--prerelease)

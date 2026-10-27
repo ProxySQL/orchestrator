@@ -137,7 +137,8 @@ it write a local `uploaded.json` receipt. The release remains a draft.
 `--clobber` deletes an old asset before uploading its replacement. Original
 packages remain in `unsigned/`. If an upload fails, rerun the same upload command;
 it accepts already uploaded verified files and restores missing RPMs from the
-verified signed output. Unexpected asset changes or changed release identity
+verified signed output. Empty `starter` assets left by interrupted RPM/checksum
+uploads are also replaced; malformed completed assets still stop the operation. Unexpected asset changes or changed release identity
 stop the operation. Never use returned server metadata to replace the original
 trusted local `release.json` or `unsigned/` directory.
 
@@ -187,8 +188,9 @@ rejected by preparation and upload commands.
   confirming no signing/publication operation is in progress, then rerun the build.
 - Preparation failures leave any downloaded bytes for inspection. Fix the source
   issue and choose another fresh preparation directory.
-- A changed workflow run attempt or tag stops the tools. Prepare the intended
-  complete draft again; do not edit trusted inventory files to bypass the check.
+- The recorded workflow attempt must have succeeded and the tag must still point
+  at its commit. A later workflow rerun does not invalidate an earlier successful
+  attempt. Do not edit trusted inventory files to bypass a failed check.
 - Container builds and manifest merging keep their existing independent jobs.
   Inspect images with `docker buildx imagetools inspect
   ghcr.io/proxysql/orchestrator:4.32.1`.

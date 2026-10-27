@@ -42,7 +42,8 @@ the approved proposal.
   keyrings; it requires actual RPM signatures, complete manifest coverage, and
   unchanged RPM header/payload digests and unchanged non-RPM bytes.
 - Upload checks draft identity, tag/commit/run and original/current asset state,
-  supports resuming a partial upload, replaces the RPM files themselves, then
+  supports resuming a partial upload (including empty GitHub starter assets),
+  validates the recorded workflow attempt even after later reruns, replaces RPMs, then
   uploads checksum files. Re-download and verify all seventeen uploaded assets.
 - Publication is a separate command that re-verifies the uploaded draft and changes
   only its draft flag. Preserve prerelease state.

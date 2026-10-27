@@ -104,6 +104,17 @@ class InventoryTests(ReleaseTestCase):
 
 
 class BundleTests(ReleaseTestCase):
+    def test_recorded_successful_attempt_remains_usable_after_later_rerun(self):
+        directory, record = self.bundle()
+        original = {"id": 123, "run_attempt": 1, "event": "push", "head_branch": "v4.32.0",
+                    "head_sha": "a" * 40, "path": ".github/workflows/release.yml",
+                    "status": "completed", "conclusion": "success", "repository": {"full_name": "ProxySQL/orchestrator"}}
+        responses = {"commits/v4.32.0": {"sha": "a" * 40},
+                     "actions/runs/123": dict(original, run_attempt=2, conclusion="failure"),
+                     "actions/runs/123/attempts/1": original}
+        with patch.object(self.release, "api", side_effect=lambda repo, path: responses[path]):
+            self.release.check_source(record)
+
     def test_original_checksums_are_required(self):
         directory, record = self.bundle()
         self.assertEqual(self.release.load_bundle(directory), record)
@@ -132,7 +143,7 @@ class BundleTests(ReleaseTestCase):
                "head_sha": "a" * 40, "path": ".github/workflows/release.yml",
                "status": "completed", "conclusion": "success", "repository": {"full_name": "ProxySQL/orchestrator"}}
         responses = {"releases/tags/v4.32.0": record["release"], "commits/v4.32.0": {"sha": "a" * 40},
-                     "actions/runs/123": run}
+                     "actions/runs/123/attempts/1": run}
         def download(repo, tag, dest):
             shutil.copytree(directory / "unsigned", dest)
         with patch.object(self.release, "api", side_effect=lambda repo, path: responses[path]), patch.object(self.release, "release_metadata", return_value=record["release"]), patch.object(self.release, "download", side_effect=download):
@@ -285,7 +296,7 @@ class CryptoTests(ReleaseTestCase):
                 return json.loads(json.dumps(state))
             if path.startswith("commits/"):
                 return {"sha": record["build"]["commit"]}
-            self.assertEqual(path, "actions/runs/123")
+            self.assertEqual(path, "actions/runs/123/attempts/1")
             return {"id": 123, "run_attempt": 1, "event": "push", "head_branch": record["build"]["tag"],
                     "head_sha": record["build"]["commit"], "path": ".github/workflows/release.yml",
                     "status": "completed", "conclusion": "success", "repository": {"full_name": repo}}
@@ -370,6 +381,35 @@ class CryptoTests(ReleaseTestCase):
             self.signer.sign(directory, output=output)
         self.assertFalse(output.exists())
         self.assertEqual(self.release.load_bundle(directory), record)
+
+
+    def test_upload_recovers_starter_rpm_and_checksum_assets(self):
+        directory, signed = self.signed_bundle()
+        record = self.release.load_bundle(directory)
+        complete = self.remote_assets(record, signed)
+        state = json.loads(json.dumps(record["release"]))
+        name = "orchestrator-4.32.0-1.x86_64.rpm"
+        for asset in state["assets"]:
+            if asset["name"] == name:
+                asset.update(state="starter", size=0, digest=None)
+        state["assets"].append({"id": 3000, "name": "SHA256SUMS", "state": "starter", "size": 0, "digest": None})
+        original_run = self.release.run
+        commands = []
+        def run(args, **kwargs):
+            if args[0] != "gh":
+                return original_run(args, **kwargs)
+            commands.append([str(a) for a in args])
+            self.assertEqual(args[2], "upload")
+            names = {pathlib.Path(p).name for p in args[7:]}
+            by_name = {a["name"]: a for a in state["assets"]}
+            by_name.update({a["name"]: a for a in complete if a["name"] in names})
+            state["assets"] = list(by_name.values())
+            return ""
+        with patch.object(self.release, "api", side_effect=self.remote_api(record, state)), patch.object(self.release, "release_metadata", side_effect=lambda repo, tag: json.loads(json.dumps(state))), patch.object(self.release, "download", side_effect=lambda repo, tag, dest: shutil.copytree(signed, dest)), patch.object(self.release, "run", side_effect=run):
+            self.assertEqual(len(self.release.upload(directory, signed, self.public_key)), 17)
+        self.assertTrue(state["draft"])
+        self.assertTrue(any(any(pathlib.Path(arg).name == name for arg in command[7:]) for command in commands))
+        self.assertTrue((directory / "uploaded.json").exists())
 
 
 if __name__ == "__main__":

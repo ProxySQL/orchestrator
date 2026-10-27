@@ -157,7 +157,7 @@ def check_source(record):
     tag = info["tag"]
     commit = api(repo, f"commits/{quote(tag, safe='')}")["sha"]
     require(commit == info["commit"], "Release tag no longer points at the prepared commit")
-    workflow = api(repo, f"actions/runs/{info['workflow_run']}")
+    workflow = api(repo, f"actions/runs/{info['workflow_run']}/attempts/{info['workflow_attempt']}")
     expected = {"id": info["workflow_run"], "run_attempt": info["workflow_attempt"],
                 "event": "push", "head_branch": tag, "head_sha": commit,
                 "path": ".github/workflows/release.yml", "status": "completed", "conclusion": "success"}
@@ -332,7 +332,14 @@ def upload(directory, signed=None, public_key=None):
     current_names = {a["name"] for a in meta["assets"]}
     require({name for name in original if not name.endswith(".rpm")} <= current_names <= set(hashes),
             "Draft asset coverage changed since preparation")
-    current = assets_by_name(meta, current_names)
+    # A failed GitHub upload may leave an empty `starter` asset. Only our
+    # replaceable RPM/checksum names may be treated as pending replacements.
+    require(len(current_names) == len(meta["assets"]), "Duplicate draft asset names")
+    replaceable = {name for name in hashes if name.endswith(".rpm") or name in ("SHA256SUMS", "SHA256SUMS.asc")}
+    starters = {a["name"] for a in meta["assets"] if a["name"] in replaceable
+                and a.get("state") == "starter" and a.get("size") == 0 and a.get("digest") is None}
+    completed = dict(meta, assets=[a for a in meta["assets"] if a["name"] not in starters])
+    current = assets_by_name(completed, current_names - starters)
     for name, asset in current.items():
         allowed = {"sha256:" + hashes[name]}
         if name in original:
