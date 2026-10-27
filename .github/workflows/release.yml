@@ -10,7 +10,9 @@ permissions:
   packages: write
 
 jobs:
-  build-and-release:
+  build-packages:
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:
@@ -46,22 +48,74 @@ jobs:
         export GOPATH="$(go env GOPATH)"
         ./build.sh -a "$GOARCH"
 
-    - name: Collect artifacts
+    - name: Collect and validate packages
+      env:
+        TAG_NAME: ${{ github.ref_name }}
+        GOARCH: ${{ matrix.goarch }}
       run: |
-        mkdir -p dist
-        shopt -s nullglob
-        cp /tmp/orchestrator-release/*.tar.gz dist/ 2>/dev/null || true
-        cp /tmp/orchestrator-release/*.deb    dist/ 2>/dev/null || true
-        cp /tmp/orchestrator-release/*.rpm    dist/ 2>/dev/null || true
-        ls -la dist/
+        mkdir dist
+        shopt -s failglob
+        cp /tmp/orchestrator-release/*.tar.gz /tmp/orchestrator-release/*.deb /tmp/orchestrator-release/*.rpm dist/
+        python3 script/release.py check-packages "$TAG_NAME" dist --arch "$GOARCH"
 
-    - name: Upload release assets
-      uses: softprops/action-gh-release@v2
+    - name: Upload intermediate packages
+      uses: actions/upload-artifact@v4
       with:
-        files: dist/*
-        generate_release_notes: true
-        draft: false
-        prerelease: ${{ contains(github.ref_name, 'rc') }}
+        name: packages-${{ matrix.goarch }}
+        path: dist/*
+        if-no-files-found: error
+        compression-level: 0
+        retention-days: 7
+
+  draft-release:
+    concurrency:
+      group: package-draft-${{ github.ref }}
+      cancel-in-progress: false
+    needs: build-packages
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Download amd64 packages
+      uses: actions/download-artifact@v4
+      with:
+        name: packages-amd64
+        path: dist
+
+    - name: Download arm64 packages
+      uses: actions/download-artifact@v4
+      with:
+        name: packages-arm64
+        path: dist
+
+    - name: Validate complete inventory and record build provenance
+      env:
+        TAG_NAME: ${{ github.ref_name }}
+      run: python3 script/release.py build-info "$TAG_NAME" dist
+
+    - name: Create draft for manual signing
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        TAG_NAME: ${{ github.ref_name }}
+        PRERELEASE: ${{ contains(github.ref_name, 'rc') }}
+      run: |
+        # List drafts as well as published releases. An API failure stops this step.
+        existing_tags="$(gh api --paginate "repos/$GITHUB_REPOSITORY/releases?per_page=100" --jq '.[].tag_name')"
+        while IFS= read -r existing_tag; do
+          if [[ "$existing_tag" == "$TAG_NAME" ]]; then
+            echo "Release $TAG_NAME already exists; refusing to overwrite or duplicate it." >&2
+            exit 1
+          fi
+        done <<< "$existing_tags"
+        extra=()
+        if [[ "$PRERELEASE" == "true" ]]; then
+          extra+=(--prerelease)
+        fi
+        gh release create "$TAG_NAME" dist/* \
+          --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+          --verify-tag --draft --generate-notes "${extra[@]}"
 
   docker-build:
     strategy:
