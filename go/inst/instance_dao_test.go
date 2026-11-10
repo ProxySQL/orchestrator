@@ -146,3 +146,16 @@ func fmtArgs(args []interface{}) string {
 	}
 	return b.String()
 }
+
+func TestInitializeInstanceDaoCaches(t *testing.T) {
+	// The configuration is never marked loaded in unit tests, so the background
+	// initializeInstanceDao() goroutine never creates the caches; only the
+	// synchronous call can.
+	InitializeInstanceDaoCaches()
+	InitializeInstanceDaoCaches()
+	test.S(t).ExpectNotNil(forgetInstanceKeys)
+	test.S(t).ExpectNotNil(instanceKeyInformativeClusterName)
+	test.S(t).ExpectNotNil(clusterInjectedPseudoGTIDCache)
+	test.S(t).ExpectNotNil(instanceWriteBuffer)
+	test.S(t).ExpectFalse(InstanceIsForgotten(&i710k))
+}

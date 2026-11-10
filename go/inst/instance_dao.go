@@ -168,12 +168,23 @@ func init() {
 	go initializeInstanceDao()
 }
 
+var instanceDaoCachesOnce sync.Once
+
+// InitializeInstanceDaoCaches creates the instance write buffer and the instance caches.
+// It is called synchronously once the configuration is loaded, before anything (such as a
+// raft snapshot restore) can read the caches; later calls do nothing.
+func InitializeInstanceDaoCaches() {
+	instanceDaoCachesOnce.Do(func() {
+		instanceWriteBuffer = make(chan instanceUpdateObject, config.Config.InstanceWriteBufferSize)
+		instanceKeyInformativeClusterName = cache.New(time.Duration(config.Config.InstancePollSeconds/2)*time.Second, time.Second)
+		forgetInstanceKeys = cache.New(time.Duration(config.Config.InstancePollSeconds*3)*time.Second, time.Second)
+		clusterInjectedPseudoGTIDCache = cache.New(time.Minute, time.Second)
+	})
+}
+
 func initializeInstanceDao() {
 	config.WaitForConfigurationToBeLoaded()
-	instanceWriteBuffer = make(chan instanceUpdateObject, config.Config.InstanceWriteBufferSize)
-	instanceKeyInformativeClusterName = cache.New(time.Duration(config.Config.InstancePollSeconds/2)*time.Second, time.Second)
-	forgetInstanceKeys = cache.New(time.Duration(config.Config.InstancePollSeconds*3)*time.Second, time.Second)
-	clusterInjectedPseudoGTIDCache = cache.New(time.Minute, time.Second)
+	InitializeInstanceDaoCaches()
 	// spin off instance write buffer flushing
 	go func() {
 		flushTick := time.Tick(time.Duration(config.Config.InstanceFlushIntervalMilliseconds) * time.Millisecond)
