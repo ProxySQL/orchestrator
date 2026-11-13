@@ -153,9 +153,9 @@ func TestInitializeInstanceDaoCaches(t *testing.T) {
 	// synchronous call can.
 	InitializeInstanceDaoCaches()
 	InitializeInstanceDaoCaches()
-	test.S(t).ExpectNotNil(forgetInstanceKeys)
-	test.S(t).ExpectNotNil(instanceKeyInformativeClusterName)
-	test.S(t).ExpectNotNil(clusterInjectedPseudoGTIDCache)
-	test.S(t).ExpectNotNil(instanceWriteBuffer)
+	test.S(t).ExpectTrue(forgetInstanceKeys != nil)
+	test.S(t).ExpectTrue(instanceKeyInformativeClusterName != nil)
+	test.S(t).ExpectTrue(clusterInjectedPseudoGTIDCache != nil)
+	test.S(t).ExpectTrue(instanceWriteBuffer != nil)
 	test.S(t).ExpectFalse(InstanceIsForgotten(&i710k))
 }
