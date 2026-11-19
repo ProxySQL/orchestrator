@@ -9,7 +9,7 @@ on:
       - master
   workflow_dispatch:
   schedule:
-    - cron:  '13 */4 * * *'
+    - cron:  '13 3 * * *'  # nightly, 03:13 UTC
 
 jobs:
   build:
