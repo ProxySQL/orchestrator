@@ -148,9 +148,10 @@ func fmtArgs(args []interface{}) string {
 }
 
 func TestInitializeInstanceDaoCaches(t *testing.T) {
-	// The configuration is never marked loaded in unit tests, so the background
-	// initializeInstanceDao() goroutine never creates the caches; only the
-	// synchronous call can.
+	// The synchronous initializer must create the caches by itself, and calling it
+	// more than once must be harmless. (Other test files in this package mark the
+	// configuration as loaded, so the background initializeInstanceDao() goroutine
+	// may also run and call it concurrently; sync.Once makes that safe.)
 	InitializeInstanceDaoCaches()
 	InitializeInstanceDaoCaches()
 	test.S(t).ExpectTrue(forgetInstanceKeys != nil)
