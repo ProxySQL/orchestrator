@@ -210,21 +210,28 @@ package_linux() {
 
   cd $tmp_build_path
 
+  # The same orchestrator binary ships in both the orchestrator and orchestrator-cli
+  # packages. Modern rpmbuild adds a /usr/lib/.build-id/<xx>/<id> symlink for every
+  # ELF file, so both RPMs would own the same build-id path and fail to install
+  # together (https://github.com/ProxySQL/orchestrator/issues/136). We don't ship
+  # debuginfo packages, so build-id links are not needed.
+  local rpm_build_opts=(--rpm-rpmbuild-define "_build_id_links none")
+
   debug "Creating Linux Tar package"
   [ $do_tar -eq 1 ] && tar -C $build_path/orchestrator -czf $release_base_path/orchestrator-"${RELEASE_VERSION}"-$target-$arch.tar.gz ./
 
   debug "Creating Distro full packages"
-  [ $do_rpm -eq 1 ] && fpm -v "${RELEASE_VERSION}" --epoch 1 -f -s dir -n orchestrator -m shlomi-noach --description "MySQL replication topology management and HA" --url "https://github.com/openark/orchestrator" --vendor "GitHub" --license "Apache 2.0" -C $build_path/orchestrator --prefix=/ --config-files /usr/local/orchestrator/resources/public/css/custom.css --config-files /usr/local/orchestrator/resources/public/js/custom.js --depends 'jq >= 1.5' -t rpm .
+  [ $do_rpm -eq 1 ] && fpm -v "${RELEASE_VERSION}" --epoch 1 -f -s dir -n orchestrator -m shlomi-noach --description "MySQL replication topology management and HA" --url "https://github.com/openark/orchestrator" --vendor "GitHub" --license "Apache 2.0" -C $build_path/orchestrator --prefix=/ --config-files /usr/local/orchestrator/resources/public/css/custom.css --config-files /usr/local/orchestrator/resources/public/js/custom.js --depends 'jq >= 1.5' -t rpm "${rpm_build_opts[@]}" .
   [ $do_deb -eq 1 ] && fpm -v "${RELEASE_VERSION}" --epoch 1 -f -s dir -n orchestrator -m shlomi-noach --description "MySQL replication topology management and HA" --url "https://github.com/openark/orchestrator" --vendor "GitHub" --license "Apache 2.0" -C $build_path/orchestrator --prefix=/ --config-files /usr/local/orchestrator/resources/public/css/custom.css --config-files /usr/local/orchestrator/resources/public/js/custom.js --depends 'jq >= 1.5' -t deb --deb-no-default-config-files .
 
   debug "Creating Distro cli packages"
   # orchestrator-cli packaging -- executable only
-  [ $do_rpm -eq 1 ] && fpm -v "${RELEASE_VERSION}" --epoch 1  -f -s dir -n orchestrator-cli -m shlomi-noach --description "MySQL replication topology management and HA: binary only" --url "https://github.com/openark/orchestrator" --vendor "GitHub" --license "Apache 2.0" -C $build_path/orchestrator-cli --prefix=/ --depends 'jq >= 1.5' -t rpm .
+  [ $do_rpm -eq 1 ] && fpm -v "${RELEASE_VERSION}" --epoch 1  -f -s dir -n orchestrator-cli -m shlomi-noach --description "MySQL replication topology management and HA: binary only" --url "https://github.com/openark/orchestrator" --vendor "GitHub" --license "Apache 2.0" -C $build_path/orchestrator-cli --prefix=/ --depends 'jq >= 1.5' -t rpm "${rpm_build_opts[@]}" .
   [ $do_deb -eq 1 ] && fpm -v "${RELEASE_VERSION}" --epoch 1  -f -s dir -n orchestrator-cli -m shlomi-noach --description "MySQL replication topology management and HA: binary only" --url "https://github.com/openark/orchestrator" --vendor "GitHub" --license "Apache 2.0" -C $build_path/orchestrator-cli --prefix=/ --depends 'jq >= 1.5' -t deb --deb-no-default-config-files .
 
   debug "Creating Distro orchestrator-client packages"
   # orchestrator-client packaging -- shell script only
-  [ $do_rpm -eq 1 ] && fpm -v "${RELEASE_VERSION}" --epoch 1  -f -s dir -n orchestrator-client -m shlomi-noach --description "MySQL replication topology management and HA: client script" --url "https://github.com/openark/orchestrator" --vendor "GitHub" --license "Apache 2.0" -C $build_path/orchestrator-client --prefix=/ --depends 'jq >= 1.5' -t rpm .
+  [ $do_rpm -eq 1 ] && fpm -v "${RELEASE_VERSION}" --epoch 1  -f -s dir -n orchestrator-client -m shlomi-noach --description "MySQL replication topology management and HA: client script" --url "https://github.com/openark/orchestrator" --vendor "GitHub" --license "Apache 2.0" -C $build_path/orchestrator-client --prefix=/ --depends 'jq >= 1.5' -t rpm "${rpm_build_opts[@]}" .
   [ $do_deb -eq 1 ] && fpm -v "${RELEASE_VERSION}" --epoch 1  -f -s dir -n orchestrator-client -m shlomi-noach --description "MySQL replication topology management and HA: client script" --url "https://github.com/openark/orchestrator" --vendor "GitHub" --license "Apache 2.0" -C $build_path/orchestrator-client --prefix=/ --depends 'jq >= 1.5' -t deb --deb-no-default-config-files .
 
   if [ -n "$package_name_extra" ] ; then
