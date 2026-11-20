@@ -1,121 +1,210 @@
-# Releasing and publishing packages
+# Releasing and signing packages
 
-`orchestrator` release artifacts are built and published automatically by the [`Release` workflow](../.github/workflows/release.yml). The workflow fires on any pushed tag matching `v*` and produces:
+A pushed `v*` tag starts the [Release workflow](../.github/workflows/release.yml).
+Native amd64 and arm64 jobs each build seven Linux packages. A final job waits
+for **both** builds, validates all fourteen packages, and creates a **draft**
+GitHub Release with `BUILD-INFO.json`. An operator signs and verifies the packages
+before explicitly publishing the draft.
 
-- `tar.gz`, `.deb`, and `.rpm` packages attached to a GitHub Release
-- A multi-arch Docker image pushed to `ghcr.io/proxysql/orchestrator`
+Container images still publish automatically to `ghcr.io/proxysql/orchestrator`.
+Holding the package release as a draft does not hold back GHCR images. Container
+signing and coordinated container publication are outside this procedure.
 
-Both artifact sets cover `linux/amd64` and `linux/arm64`.
+## Approved signing key
 
-## Triggering a release
+- Identity: `ProxySQL Package Builder <builder@proxysql.com>`
+- Full fingerprint: `653F85BB38256DF8A96206C3E8CA2E8D8217C97E`
+- [Public key](https://repo.proxysql.com/ProxySQL/proxysql-3.0.x/repo_pub_key)
 
-```
-    git tag v4.30.1
-    git push origin v4.30.1
-```
+RPMs receive embedded RSA/SHA256 signatures. DEBs and tarballs remain unchanged
+and are authenticated by the detached signature on `SHA256SUMS`; they do not
+receive embedded package signatures. The manifest also covers `BUILD-INFO.json`.
+The private key remains in the signing server's existing keyring. GitHub Actions
+has no signing key, passphrase, or SSH access to that server.
 
-That's the whole trigger. The workflow picks up the tag name as the release version, strips the leading `v`, and uses `4.30.1` for package versions and Docker tags.
+## Trigger a release
 
-### Prerelease (release candidate) tags
-
-Tags that contain `rc` (e.g. `v4.30.1-rc1`) are handled specially:
-
-- The GitHub Release is marked as a prerelease.
-- The Docker `latest` tag is **not** updated — only the specific version tags are pushed.
-
-Use this for testing the release pipeline end-to-end on a fork before cutting a real release.
-
-## What runs
-
-The workflow has three jobs:
-
-### 1. `build-and-release` (matrix: amd64, arm64)
-
-Runs on `ubuntu-latest` (amd64) and `ubuntu-24.04-arm` (arm64) — GitHub's native ARM runners, free for public repos. No QEMU, no cross-compilation: each job builds on its own native architecture, so CGO (`go-sqlite3`) works without any special toolchain.
-
-Each matrix job:
-
-1. Installs Go, `fpm`, and `rpmbuild`.
-2. Runs `./build.sh -a <goarch>` with `RELEASE_VERSION` set from the tag.
-3. Collects everything `build.sh` writes to `/tmp/orchestrator-release/` and uploads it to the GitHub Release.
-
-Per arch, `build.sh` produces three variants (see `package_linux` in [`build.sh`](../build.sh)):
-
-- `orchestrator` — full package (binary + web resources + sample configs + systemd unit)
-- `orchestrator-cli` — binary only
-- `orchestrator-client` — the `orchestrator-client` shell script only
-
-Each variant is emitted as `.tar.gz`, `.deb`, and `.rpm`. Package names differ by arch (`_amd64.deb` / `_arm64.deb`, `.x86_64.rpm` / `.aarch64.rpm`), so the two matrix jobs don't collide when uploading to the same Release.
-
-Both matrix jobs call `softprops/action-gh-release@v2` — the action is idempotent and will attach to the existing Release created by whichever job finishes first.
-
-### 2. `docker-build` (matrix: linux/amd64, linux/arm64)
-
-Each arch builds [`docker/Dockerfile`](../docker/Dockerfile) natively on its own runner and pushes **by digest** to `ghcr.io/proxysql/orchestrator` (no tag yet). The digest is uploaded as a workflow artifact for the merge job to consume.
-
-### 3. `docker-merge`
-
-Downloads both digests, runs `docker/metadata-action` to compute tags from the git tag:
-
-- `type=semver,pattern={{version}}` — e.g. `4.30.1`
-- `type=semver,pattern={{major}}.{{minor}}` — e.g. `4.30`
-- `type=raw,value=latest` — only when the tag does **not** contain `rc`
-
-Then uses `docker buildx imagetools create` to assemble a multi-arch manifest under all those tags, and inspects the result.
-
-## Verifying a release
-
-### GitHub Release page
-
-After the workflow completes, the Release page should list (for version `X.Y.Z`):
-
-```
-orchestrator-X.Y.Z-linux-amd64.tar.gz
-orchestrator-X.Y.Z-linux-arm64.tar.gz
-orchestrator_X.Y.Z-1_amd64.deb
-orchestrator_X.Y.Z-1_arm64.deb
-orchestrator-X.Y.Z-1.x86_64.rpm
-orchestrator-X.Y.Z-1.aarch64.rpm
+```bash
+git tag v4.32.1
+git push origin v4.32.1
 ```
 
-Plus the `-cli` and `-client` variants in `.deb` and `.rpm` form for each arch.
+Wait for the entire Release workflow to succeed, then locate its draft release.
+The workflow fails rather than creating a partial draft if a build or inventory
+check fails. Each architecture produces:
 
-### Docker manifest
+- Full `orchestrator` tarball.
+- Full, CLI-only and client-only variants in both `.deb` and `.rpm` formats.
 
+The final job records the repository, tag, exact commit, workflow run and attempt,
+and original package SHA-256 hashes in `BUILD-INFO.json`. There are fifteen assets
+at this stage: fourteen packages and build provenance.
+
+### Release candidates
+
+Tags containing `rc`, such as `v4.32.1-rc1`, retain the existing behavior:
+
+- The draft and published GitHub Release are marked as a prerelease.
+- GHCR does not update `latest`; version tags still publish automatically.
+- RPM filenames use `4.32.1_rc1`; DEB and tarball filenames use `4.32.1-rc1`.
+
+## Prepare, sign, verify and upload
+
+These commands can all run on `repo.proxysql.com`. Alternatively, run preparation,
+verification, upload and publication on a laptop and transfer the bundle manually
+for signing as described below. Use a checkout containing these scripts; Python
+3.9+, authenticated `gh`, GnuPG and RPM tools (`rpm`, `rpmkeys`, `rpmsign`) are
+required. On macOS the verification tools are available through `brew install gnupg rpm`; on Ubuntu install `gnupg rpm`.
+
+Use one operator per tag. Keep the original preparation directory until the
+release has been published and verified. It contains the trusted local release
+identity, unsigned checksums, provenance and original package backups.
+
+### 1. Download one specific draft into a fresh directory
+
+```bash
+cd /path/to/orchestrator
+python3 script/release.py prepare v4.32.1 /path/to/releases/v4.32.1
 ```
-    docker buildx imagetools inspect ghcr.io/proxysql/orchestrator:X.Y.Z
+
+`--repo OWNER/REPO` selects a fork when testing. The command requires a draft,
+exact artifact coverage, matching GitHub and CI digests, a tag pointing at the
+recorded commit, and a successful matching workflow run/attempt. It refuses an
+existing preparation directory. The result is:
+
+```text
+v4.32.1/
+  release.json           # trusted local snapshot of the draft and build identity
+  UNSIGNED-SHA256SUMS     # original checksums, including BUILD-INFO.json
+  unsigned/              # original fourteen packages and BUILD-INFO.json
 ```
 
-The output should list both `linux/amd64` and `linux/arm64` entries.
+### 2. Sign manually using the existing server keyring
 
-Pull and smoke-test each arch:
+On the signing server, from the same script checkout:
 
-```
-    docker run --rm --platform linux/amd64 ghcr.io/proxysql/orchestrator:X.Y.Z orchestrator --version
-    docker run --rm --platform linux/arm64 ghcr.io/proxysql/orchestrator:X.Y.Z orchestrator --version
-```
-
-## Local reproduction
-
-The release workflow does the same thing you can do locally with `build.sh` — see [Building and testing](build.md) and [`build.sh`](../build.sh). To produce ARM64 packages on a non-ARM host (outside of CI), run inside an arm64 container:
-
-```
-    docker run --rm -it --platform linux/arm64 \
-      -v $PWD:/src -w /src \
-      ubuntu:24.04 bash -c '
-        apt-get update &&
-        apt-get install -y golang git ruby ruby-dev build-essential rpm &&
-        gem install --no-document fpm &&
-        ./build.sh -a arm64
-      '
+```bash
+python3 script/sign-release.py /path/to/releases/v4.32.1
 ```
 
-## Permissions and secrets
+Use an interactive terminal if the existing key requires a passphrase. An
+established server-side GPG wrapper can be selected with `--gpg
+/root/path/to/signing-gpg`; credentials must stay in the existing root-only
+configuration or GPG agent. The script does not provision credentials or change
+GPG/RPM configuration. Its RPM command-line macros select the approved full
+fingerprint and SHA256, including compatibility with the server's RPM 4.17.
 
-The workflow relies on `GITHUB_TOKEN` with `contents: write` (for the Release) and `packages: write` (for GHCR) — both declared in [`release.yml`](../.github/workflows/release.yml). No additional secrets are required.
+The script validates the original inventory/checksums first and creates a fresh
+`signed/` directory. It signs **all six RPM files**, computes checksums **after**
+RPM signing, and creates `SHA256SUMS.asc`. It then verifies the result using an
+isolated public keyring. All fifteen original files are returned, with the RPMs
+replaced by their signed versions, plus the two checksum files: seventeen files.
+An existing signing output is never overwritten; `--output /fresh/path` selects
+a different output directory after an interrupted attempt.
 
-## Troubleshooting
+### 3. Verify against the original preparation directory
 
-- **Workflow didn't run after tagging.** The tag must start with `v` (see the `on.push.tags` filter). Tags pushed without `git push --tags` or without pushing the specific ref won't trigger it.
-- **A matrix job failed mid-way and part of the release is missing.** The workflow uses `fail-fast: false`, so the other arch still completes. Re-running only the failed job from the Actions UI is safe — the GitHub Release and GHCR both accept re-uploads (fpm uses `-f` to overwrite, `action-gh-release` replaces files of the same name).
-- **Docker manifest is missing one arch.** If `docker-build` succeeded for only one arch, `docker-merge` will still run but `imagetools create` will produce a single-arch manifest. Re-run the failed `docker-build` job, then re-run `docker-merge`.
+```bash
+python3 script/release.py verify /path/to/releases/v4.32.1
+```
+
+The public key is downloaded from the approved URL, and its **full fingerprint**
+is checked before import into temporary GPG and RPM keyrings containing only that
+key. `--public-key /path/to/repo_pub_key` uses a previously downloaded certificate
+with the same mandatory fingerprint check. Verification requires:
+
+- A valid SHA256 signature on the complete checksum manifest.
+- A valid RSA/SHA256 signature on every RPM; an unsigned RPM is rejected even if
+  `rpmkeys --checksig` returns success for its digests alone.
+- Unchanged RPM header/payload digests relative to the original downloads.
+- Unchanged DEB, tarball and provenance bytes.
+- Exact artifact coverage, with no missing, extra, empty or symlinked files.
+
+### 4. Upload verified files and check their uploaded bytes
+
+```bash
+python3 script/release.py upload /path/to/releases/v4.32.1
+```
+
+The command verifies again, confirms the draft identity and tag/build context,
+then replaces the **RPM files themselves** using `gh release upload --clobber`.
+It uploads the checksum manifest/signature after the RPMs. Existing DEBs, tarballs
+and provenance are left in place. It downloads all seventeen release assets into
+a fresh temporary directory, repeats signature/inventory checks, and requires
+byte-for-byte digest agreement with the locally verified result. Only then does
+it write a local `uploaded.json` receipt. The release remains a draft.
+
+`--clobber` deletes an old asset before uploading its replacement. Original
+packages remain in `unsigned/`. If an upload fails, rerun the same upload command;
+it accepts already uploaded verified files and restores missing RPMs from the
+verified signed output. Empty `starter` assets left by interrupted RPM/checksum
+uploads are also replaced; malformed completed assets still stop the operation. Unexpected asset changes or changed release identity
+stop the operation. Never use returned server metadata to replace the original
+trusted local `release.json` or `unsigned/` directory.
+
+## Manual transfer when using a laptop
+
+The repository scripts do not connect to any server. Transfer the prepared bundle
+and make the same `script/release.py` and `script/sign-release.py` available on the
+signing server. For example, run these transfers yourself:
+
+```bash
+scp -P 1022 -r /laptop/releases/v4.32.1 root@repo.proxysql.com:/root/orchestrator-signing/
+ssh -t -p 1022 root@repo.proxysql.com
+# On the server, from the script checkout:
+python3 script/sign-release.py /root/orchestrator-signing/v4.32.1
+# Back on the laptop, download ONLY the signed output into a fresh directory:
+scp -P 1022 -r root@repo.proxysql.com:/root/orchestrator-signing/v4.32.1/signed /laptop/returned-v4.32.1
+python3 script/release.py verify /laptop/releases/v4.32.1 --signed /laptop/returned-v4.32.1
+python3 script/release.py upload /laptop/releases/v4.32.1 --signed /laptop/returned-v4.32.1
+```
+
+Return the signed RPMs, unchanged DEBs/tarballs and provenance, and **both**
+checksum files. Returning only the manifest would leave unsigned RPMs on GitHub.
+Private keys and passphrases are never part of the transferred bundle.
+
+## Publish explicitly
+
+After upload succeeds and release notes are ready, run a separate command:
+
+```bash
+python3 script/release.py publish /path/to/releases/v4.32.1
+```
+
+This requires the local upload receipt and re-downloads/re-verifies the current
+remote assets against it. It then invokes `gh release edit --draft=false`,
+preserving the release's prerelease flag. Published or replaced drafts are
+rejected by preparation and upload commands.
+
+## Workflow reruns and troubleshooting
+
+- Architecture jobs retain intermediate packages for seven days. Only the final
+  job creates the draft, so the two architecture jobs cannot race on release assets.
+- A failed architecture job prevents draft creation. Re-run the failed build and
+  the dependent final job.
+- The final job refuses any existing release, including a draft, rather than
+  overwriting packages after signing has started. Continue using an existing
+  complete draft. To rebuild an unused draft, explicitly remove it first after
+  confirming no signing/publication operation is in progress, then rerun the build.
+- Preparation failures leave any downloaded bytes for inspection. Fix the source
+  issue and choose another fresh preparation directory.
+- The recorded workflow attempt must have succeeded and the tag must still point
+  at its commit. A later workflow rerun does not invalidate an earlier successful
+  attempt. Do not edit trusted inventory files to bypass a failed check.
+- Container builds and manifest merging keep their existing independent jobs.
+  Inspect images with `docker buildx imagetools inspect
+  ghcr.io/proxysql/orchestrator:4.32.1`.
+
+For local build reproduction see [Building and testing](build.md) and
+[`build.sh`](../build.sh).
+
+## Tests
+
+```bash
+python3 -m unittest discover -s tests/release -v
+```
+
+Crypto integration tests generate a temporary test key and build temporary RPM
+fixtures; they do not sign with the production key or access live releases. They
+require `gpg`, `rpm`, `rpmkeys`, `rpmbuild` and `rpmsign`; the release-tools CI job
+installs these dependencies. Network-facing tests stub the GitHub boundary.
