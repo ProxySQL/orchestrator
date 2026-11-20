@@ -158,6 +158,7 @@ func main() {
 	}
 	config.RuntimeCLIFlags.ConfiguredVersion = AppVersion
 	config.MarkConfigurationLoaded()
+	inst.InitializeInstanceDaoCaches()
 
 	if len(flag.Args()) == 0 && *command == "" {
 		// No command, no argument: just prompt
