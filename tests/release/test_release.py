@@ -269,7 +269,10 @@ class CryptoTests(ReleaseTestCase):
         directory, signed = self.signed_bundle()
         target = signed / "orchestrator-4.32.0-1.x86_64.rpm"
         shutil.copyfile(self.rpms[1], target)
-        subprocess.run(["rpmsign", "--define", "_gpg_name " + self.fingerprint, "--define", "_gpg_digest_algo sha256", "--addsign", str(target)], check=True, capture_output=True)
+        # Pass __gpg explicitly like sign-release.py: some distributions default it to a missing gpg2.
+        subprocess.run(["rpmsign", "--define", "__gpg " + shutil.which("gpg"), "--define", "_gpg_name " + self.fingerprint,
+                        "--define", "_openpgp_sign_id " + self.fingerprint, "--define", "_gpg_digest_algo sha256",
+                        "--addsign", str(target)], check=True, capture_output=True)
         self.resign_manifest(signed)
         with self.assertRaisesRegex(self.release.ReleaseError, "header|payload"):
             self.release.verify(directory, signed, self.public_key)

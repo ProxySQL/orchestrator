@@ -17,7 +17,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - runner: ubuntu-latest
+          # Same Ubuntu release on both architectures, so both get the same fpm/rpmbuild toolchain.
+          - runner: ubuntu-24.04
             goarch: amd64
           - runner: ubuntu-24.04-arm
             goarch: arm64

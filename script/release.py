@@ -259,6 +259,35 @@ def verification_keys(temp, public_key):
     return gpg, rpm
 
 
+def rpm_signature_info(rpm, path):
+    """Describe the RPM header signature(s), e.g. 'RSA/SHA256, <date>, Key ID <id>'."""
+    info = run(rpm + ["-qp", "--qf", "%{RSAHEADER:pgpsig}", path]).strip()
+    if info in ("", "(none)"):
+        # RPM 6 stores OpenPGP signatures in the OPENPGP tag instead of RSAHEADER.
+        # Older RPM versions do not know the tag; then the package has no signature.
+        try:
+            info = run(rpm + ["-qp", "--qf", "[%{OPENPGP:pgpsig}\n]", path]).strip()
+        except ReleaseError:
+            info = ""
+        if "error:" in info or info == "(none)":
+            info = ""
+    return info
+
+
+def rpm_content_digests(rpm, path):
+    """Return the SHA256 header digest and the payload digest, one per line."""
+    # RPM 6 renamed PAYLOADDIGEST to PAYLOADSHA256. An unknown tag may still exit 0
+    # with empty output, so validate the result rather than relying on the exit code.
+    for payload_tag in ("PAYLOADDIGEST", "PAYLOADSHA256"):
+        try:
+            output = run(rpm + ["-qp", "--qf", "%{SHA256HEADER}\n%{" + payload_tag + "}\n", path])
+        except ReleaseError:
+            continue
+        if re.fullmatch(r"[0-9a-f]{64}\n[0-9a-f]{64}\n", output):
+            return output
+    raise ReleaseError(f"Could not read the RPM header and payload digests: {path}")
+
+
 def verify(directory, signed=None, public_key=None):
     directory = Path(directory)
     record = load_bundle(directory)
@@ -282,11 +311,10 @@ def verify(directory, signed=None, public_key=None):
                 continue
             result = run(["rpmkeys", "--define", "_keyring rpmdb", "--dbpath", Path(scratch) / "rpmdb", "--checksig", "--verbose", path])
             require(re.search(r"(?im)^.*signature.*:\s+OK\s*$", result), f"RPM has no verified signature: {name}")
-            signature = run(rpm + ["-qp", "--qf", "%{RSAHEADER:pgpsig}", path])
+            signature = rpm_signature_info(rpm, path)
             require("RSA/SHA256" in signature and KEY[-16:].lower() in signature.lower(), f"RPM signature uses an unexpected key or digest: {name}")
-            query = ["-qp", "--qf", "%{SHA256HEADER}\n%{PAYLOADDIGEST}\n"]
-            original = run(rpm + query + [directory / "unsigned" / name])
-            current = run(rpm + query + [path])
+            original = rpm_content_digests(rpm, directory / "unsigned" / name)
+            current = rpm_content_digests(rpm, path)
             require(original == current and len(original.splitlines()) == 2
                     and all(re.fullmatch(r"[0-9a-f]{64}", value) for value in current.splitlines()),
                     f"RPM header or payload changed during signing: {name}")
