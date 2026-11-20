@@ -5,7 +5,7 @@ on: [pull_request]
 jobs:
   upgrade:
 
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04  # needs the preinstalled MySQL; ubuntu-26.04 (ubuntu-latest) has none
     # strategy:
     #   matrix:
     #     backend: [sqlite, MySQL]
