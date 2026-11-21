@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"math/rand"
 	"net"
-	"strings"
+	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -93,7 +93,7 @@ func FatalRaftError(err error) error {
 	return err
 }
 
-func computeLeaderURI() (uri string, err error) {
+func computeLeaderURI(raftAdvertise string) (uri string, err error) {
 	if config.Config.HTTPAdvertise != "" {
 		// Explicitly given
 		return config.Config.HTTPAdvertise, nil
@@ -104,14 +104,16 @@ func computeLeaderURI() (uri string, err error) {
 		scheme = "https"
 	}
 
-	hostname := strings.Split(config.Config.RaftAdvertise, ":")[0]
-	listenTokens := strings.Split(config.Config.ListenAddress, ":")
-	if len(listenTokens) < 2 {
+	hostname, _, err := net.SplitHostPort(raftAdvertise)
+	if err != nil {
+		hostname = raftAdvertise
+	}
+	_, port, err := net.SplitHostPort(config.Config.ListenAddress)
+	if err != nil {
 		return uri, fmt.Errorf("computeLeaderURI: cannot determine listen port out of config.Config.ListenAddress: %+v", config.Config.ListenAddress)
 	}
-	port := listenTokens[1]
 
-	uri = fmt.Sprintf("%s://%s:%s", scheme, hostname, port)
+	uri = fmt.Sprintf("%s://%s", scheme, net.JoinHostPort(hostname, port))
 	return uri, nil
 }
 
@@ -146,7 +148,7 @@ func Setup(applier CommandApplier, snapshotCreatorApplier SnapshotCreatorApplier
 		return log.Errorf("failed to open raft store: %s", err.Error())
 	}
 
-	thisLeaderURI, err = computeLeaderURI()
+	thisLeaderURI, err = computeLeaderURI(raftAdvertise)
 	if err != nil {
 		return FatalRaftError(err)
 	}
@@ -175,37 +177,24 @@ func getRaft() *raft.Raft {
 	return store.raft
 }
 
-func normalizeRaftHostnameIP(host string) (string, error) {
-	if ip := net.ParseIP(host); ip != nil {
-		// this is a valid IP address.
-		return host, nil
-	}
-	ips, err := net.LookupIP(host)
-	if err != nil {
-		// resolve failed. But we don't want to fail the entire operation for that
-		_ = log.Errore(err)
-		return host, nil
-	}
-	// resolve success!
-	for _, ip := range ips {
-		return ip.String(), nil
-	}
-	return host, fmt.Errorf("%+v resolved but no IP found", host)
-}
-
 // normalizeRaftNode attempts to make sure there's a port to the given node.
-// It consults the DefaultRaftPort when there isn't
+// It consults the DefaultRaftPort when there isn't. The host is kept as
+// given (never resolved to an IP), since it becomes this node's persistent
+// raft ServerID.
 func normalizeRaftNode(node string) (string, error) {
-	hostPort := strings.Split(node, ":")
-	host, err := normalizeRaftHostnameIP(hostPort[0])
+	host, port, err := net.SplitHostPort(node)
 	if err != nil {
-		return host, err
+		host, port = node, ""
 	}
-	if len(hostPort) > 1 {
-		return fmt.Sprintf("%s:%s", host, hostPort[1]), nil
+	if net.ParseIP(host) == nil {
+		if _, err := net.LookupHost(host); err != nil {
+			_ = log.Errore(err)
+		}
+	}
+	if port != "" {
+		return net.JoinHostPort(host, port), nil
 	} else if config.Config.DefaultRaftPort != 0 {
-		// No port specified, add one
-		return fmt.Sprintf("%s:%d", host, config.Config.DefaultRaftPort), nil
+		return net.JoinHostPort(host, strconv.Itoa(config.Config.DefaultRaftPort)), nil
 	} else {
 		return host, nil
 	}
